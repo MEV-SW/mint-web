@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   crawlAllToDiscovery,
   crawlSource,
@@ -48,7 +49,13 @@ function sourceToForm(s: Source): SourceCreate {
 export function SourcesPage() {
   const toast = useToast()
   const qc = useQueryClient()
-  const [q, setQ] = useState('')
+  const [searchParams] = useSearchParams()
+  const [q, setQ] = useState(() => searchParams.get('q') ?? '')
+
+  useEffect(() => {
+    const param = searchParams.get('q')
+    if (param != null) setQ(param)
+  }, [searchParams])
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<Source | null>(null)
   const [form, setForm] = useState<SourceCreate>(emptyForm)
@@ -60,7 +67,14 @@ export function SourcesPage() {
     queryFn: listSources,
   })
 
-  const rows = sources.filter((s) => !q || s.name.includes(q) || s.url.includes(q))
+  const qLower = q.trim().toLowerCase()
+  const rows = sources.filter(
+    (s) =>
+      !qLower ||
+      s.name.toLowerCase().includes(qLower) ||
+      s.url.toLowerCase().includes(qLower) ||
+      (s.category && s.category.toLowerCase().includes(qLower)),
+  )
 
   const save = useMutation({
     mutationFn: () => createSource(form),

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchMe, login } from '../api/authApi'
-import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { MintLogo } from '../components/common/MintLogo'
 import { useAuthStore } from '../store/authStore'
@@ -38,81 +37,116 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login-wrap page-fade">
-      <div className="login-aside">
-        <div className="login-brand-row">
-          <MintLogo size={38} />
-          <div>
-            <div style={{ fontWeight: 760, fontSize: 21, letterSpacing: '-0.01em' }}>MINT</div>
-            <div className="login-tagline">Intelligence &amp; News Tracker</div>
+    <div className="login-shell page-fade">
+      <div className="login-bg-orbit" aria-hidden />
+      <div className="login-shell-inner">
+        <header className="login-shell-head">
+          <div className="login-shell-brand">
+            <MintLogo size={34} />
+            <div className="login-shell-brand-meta">
+              <span className="nm">MINT</span>
+              <span className="tag">EV · Charging Intelligence</span>
+            </div>
           </div>
-        </div>
-        <div className="login-hero">
-          <h1>
-            EV 충전·에너지 업계의
-            <br />
-            흐름을 한곳에서.
-          </h1>
-          <p>
-            신뢰 소스를 자동으로 수집하고, AI가 요약·중요도를 판단해 데일리 리포트를 만들어 Slack으로
-            전달합니다.
-          </p>
-          <div className="login-flow">
-            <span>신뢰 소스 크롤링</span>
-            <span>AI 요약·중요도</span>
-            <span>데일리 리포트</span>
-            <span>Slack 알림</span>
+          <div className="login-shell-badge">
+            <span className="pill">Internal</span>
+            <span className="dot" />
+            <span>for MotrexEV</span>
           </div>
-        </div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 12, opacity: 0.75 }}>
-          MotrexEV · 사내 전용 서비스
-        </div>
-      </div>
+        </header>
 
-      <div className="login-form-side">
-        <form className="login-card" onSubmit={submit}>
-          <h2>로그인</h2>
-          <p className="sub">사내 계정으로 로그인하세요.</p>
-          {error && (
-            <div style={{ color: 'var(--high)', fontSize: 13, marginBottom: 12 }}>{error}</div>
-          )}
-          <div className="field">
-            <label>이메일</label>
-            <input
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@motrexev.com"
-            />
-          </div>
-          <div className="field">
-            <label>비밀번호</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호"
-            />
-          </div>
-          <Btn variant="primary" className="btn-block" type="submit" disabled={loading}>
-            {loading ? (
-              <>
-                <Icon name="refresh" className="spin" /> 로그인 중…
-              </>
-            ) : (
-              <>
-                로그인 <Icon name="arrowRight" />
-              </>
-            )}
-          </Btn>
-          <p style={{ marginTop: 20, fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
-            계정이 없으신가요?{' '}
-            <Link to="/register" style={{ color: 'var(--mint-deep)', fontWeight: 600 }}>
-              회원가입
-            </Link>
-          </p>
-        </form>
+        <main className="login-main">
+          <section className="login-main-copy">
+            <h1>
+              EV 충전 인텔리전스를
+              <br />
+              한눈에 모아보는 대시보드.
+            </h1>
+            <p>
+              신뢰 소스를 자동으로 수집하고, AI가 요약·중요도를 판단해
+              <br />
+              데일리 리포트와 Slack 알림까지 한 번에 제공합니다.
+            </p>
+            <div className="login-main-flow">
+              <div className="itm">
+                <span className="k">1</span>
+                <span>Trusted Source 크롤링</span>
+              </div>
+              <div className="itm">
+                <span className="k">2</span>
+                <span>AI 요약·중요도 판단</span>
+              </div>
+              <div className="itm">
+                <span className="k">3</span>
+                <span>데일리 리포트 &amp; Slack</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="login-main-card">
+            <form className="login-card-modern" onSubmit={submit}>
+              <div className="login-card-head">
+                <div>
+                  <h2>관리자 로그인</h2>
+                  <p>사내 계정으로 MINT 콘솔에 접속하세요.</p>
+                </div>
+                <span className="login-env-pill">Production</span>
+              </div>
+
+              {error && <div className="login-error">{error}</div>}
+
+              <div className="field">
+                <label>이메일</label>
+                <input
+                  className="input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@motrexev.com"
+                  autoComplete="email"
+                />
+              </div>
+              <div className="field">
+                <label>비밀번호</label>
+                <input
+                  className="input"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호"
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <button className="login-cta" type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Icon name="refresh" className="spin" />
+                    <span>로그인 중…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>대시보드 입장하기</span>
+                    <Icon name="arrowRight" />
+                  </>
+                )}
+              </button>
+
+              <div className="login-foot-row">
+                <span className="hint">
+                  계정이 없으신가요?{' '}
+                  <Link to="/register" className="link">
+                    회원가입 요청
+                  </Link>
+                </span>
+              </div>
+            </form>
+          </section>
+        </main>
+
+        <footer className="login-shell-foot">
+          <span>© {new Date().getFullYear()} MotrexEV · MINT</span>
+          <span>EV Charging · Energy Intelligence</span>
+        </footer>
       </div>
     </div>
   )

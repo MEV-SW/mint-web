@@ -9,7 +9,10 @@ import { MintLogo } from '../common/MintLogo'
 const NAV = [
   {
     group: '개요',
-    items: [{ path: '/', label: '대시보드', icon: 'dashboard' }],
+    items: [
+      { path: '/', label: '대시보드', icon: 'dashboard' },
+      { path: '/help', label: '도움말', icon: 'help' },
+    ],
   },
   {
     group: '게시판',
@@ -28,7 +31,11 @@ const NAV = [
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
@@ -53,6 +60,7 @@ export function Sidebar() {
               to={it.path}
               end={it.path === '/'}
               className={({ isActive }) => cx('nav-item', isActive && 'active')}
+              onClick={onNavigate}
             >
               <Icon name={it.icon} />
               <span>{it.label}</span>

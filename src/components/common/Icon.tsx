@@ -22,6 +22,8 @@ const ICONS: Record<string, string> = {
   trash: 'M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6',
   promote: 'M12 19V5M5 12l7-7 7 7',
   eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z M12 15a3 3 0 100-6 3 3 0 000 6z',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  help: 'M12 22a10 10 0 100-20 10 10 0 000 20zM9.5 9.5a2.5 2.5 0 115 0 2.5 2.5M12 17h.01',
 }
 
 interface IconProps {

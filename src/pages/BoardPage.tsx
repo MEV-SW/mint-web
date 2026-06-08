@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   approvePost,
   deletePost,
@@ -22,9 +22,15 @@ interface BoardPageProps {
 
 export function BoardPage({ boardType }: BoardPageProps) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const toast = useToast()
   const qc = useQueryClient()
-  const [keyword, setKeyword] = useState('')
+  const [keyword, setKeyword] = useState(() => searchParams.get('keyword') ?? '')
+
+  useEffect(() => {
+    const kw = searchParams.get('keyword')
+    if (kw != null) setKeyword(kw)
+  }, [searchParams])
   const [importance, setImportance] = useState<string>('all')
   const [status, setStatus] = useState<string>('all')
   const [page, setPage] = useState(1)

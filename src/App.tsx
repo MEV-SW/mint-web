@@ -4,12 +4,13 @@ import { ToastProvider } from './components/common/Toast'
 import { AppLayout } from './components/layout/AppLayout'
 import { BoardPage } from './pages/BoardPage'
 import { DashboardPage } from './pages/DashboardPage'
-import { LoginPage } from './pages/LoginPage'
+import { LegacyLoginPage as LoginPage } from './pages/LoginPage.legacy'
 import { RegisterPage } from './pages/RegisterPage'
 import { PostDetailPage } from './pages/PostDetailPage'
 import { ReportDetailPage } from './pages/ReportDetailPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SlackSettingsPage } from './pages/SlackSettingsPage'
+import { HelpPage } from './pages/HelpPage'
 import { SourcesPage } from './pages/SourcesPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
@@ -35,6 +36,7 @@ export default function App() {
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/reports/:id" element={<ReportDetailPage />} />
                 <Route path="/slack" element={<SlackSettingsPage />} />
+                <Route path="/help" element={<HelpPage />} />
               </Route>
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
