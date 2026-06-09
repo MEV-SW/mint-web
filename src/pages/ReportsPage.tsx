@@ -57,7 +57,9 @@ export function ReportsPage() {
       <div className="page-intro" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <h2>데일리 리포트</h2>
-          <p>선택한 날짜에 수집된 중요·AI 발견 게시글을 기반으로 AI가 일일 브리핑을 생성합니다.</p>
+          <p>
+            선택한 날짜에 수집된 중요 게시판과 AI 발견 게시판을 함께 분석해 하루 전체 인사이트 리포트를 생성합니다.
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <input

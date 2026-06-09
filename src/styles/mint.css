@@ -684,6 +684,7 @@ select.input { appearance: none; cursor: pointer;
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-muted);
+  white-space: pre-line;
 }
 .job-status-error { color: var(--high); }
 .job-status-bar {
