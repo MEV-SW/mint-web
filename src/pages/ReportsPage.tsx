@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { generateReport, listReports } from '../api/reportApi'
+import { deleteReport, generateReport, listReports } from '../api/reportApi'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
+import { useActiveJobs } from '../hooks/useJobsQuery'
+import { apiErrorDetail } from '../utils/apiError'
 import { formatDate } from '../utils/date'
 
 function todayInputValue(): string {
@@ -18,20 +20,37 @@ function todayInputValue(): string {
 export function ReportsPage() {
   const toast = useToast()
   const qc = useQueryClient()
+  const { busy, activeLabel } = useActiveJobs()
   const [reportDate, setReportDate] = useState(todayInputValue)
   const { data: reports = [] } = useQuery({ queryKey: ['reports'], queryFn: listReports })
 
   const gen = useMutation({
     mutationFn: () => generateReport(reportDate),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['reports'] })
-      toast('데일리 리포트를 생성했습니다.', 'info')
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('리포트 생성을 백그라운드에서 시작했습니다. 작업 패널에서 진행 상태를 확인하세요.', 'info')
     },
     onError: (e: unknown) => {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast(msg || '리포트 생성 실패 — 게시글이 필요합니다.', 'err')
+      toast(apiErrorDetail(e) || '리포트 생성 요청 실패', 'err')
     },
   })
+
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteReport(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reports'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      toast('리포트를 삭제했습니다.')
+    },
+    onError: (e: unknown) => {
+      toast(apiErrorDetail(e) || '리포트 삭제 실패', 'err')
+    },
+  })
+
+  function confirmDelete(id: string, title: string) {
+    if (!window.confirm(`「${title}」 리포트를 삭제할까요?\n삭제 후에는 복구할 수 없습니다.`)) return
+    remove.mutate(id)
+  }
 
   return (
     <div className="content-inner page-fade">
@@ -48,11 +67,27 @@ export function ReportsPage() {
             onChange={(e) => setReportDate(e.target.value)}
             style={{ width: 160 }}
           />
-          <Btn variant="primary" icon="doc" onClick={() => gen.mutate()} disabled={gen.isPending}>
-            {gen.isPending ? '생성 중…' : '리포트 수동 생성'}
+          <Btn
+            variant="primary"
+            icon="doc"
+            onClick={() => gen.mutate()}
+            disabled={busy || gen.isPending}
+            title={busy ? `진행 중인 작업: ${activeLabel ?? '백그라운드 작업'}` : undefined}
+          >
+            {busy ? '다른 작업 실행 중…' : gen.isPending ? '요청 중…' : '리포트 수동 생성'}
           </Btn>
         </div>
       </div>
+
+      {busy && (
+        <div className="busy-banner" role="status">
+          <Icon name="clock" />
+          <span>
+            이미 진행 중인 작업이 있습니다
+            {activeLabel ? ` (${activeLabel})` : ''}. 완료 후 다시 시도해 주세요.
+          </span>
+        </div>
+      )}
 
       <div className="tbl-wrap">
         <table className="tbl">
@@ -62,11 +97,12 @@ export function ReportsPage() {
               <th>제목</th>
               <th style={{ width: 160 }}>생성일</th>
               <th style={{ width: 120 }}>Slack</th>
+              <th style={{ width: 56 }} />
             </tr>
           </thead>
           <tbody>
             {reports.map((r) => (
-              <tr key={r.id} style={{ cursor: 'pointer' }}>
+              <tr key={r.id}>
                 <td className="mono">{r.report_date}</td>
                 <td>
                   <Link to={`/reports/${r.id}`} className="link" style={{ fontWeight: 600 }}>
@@ -85,11 +121,21 @@ export function ReportsPage() {
                     <span className="badge badge-unknown">미발송</span>
                   )}
                 </td>
+                <td>
+                  <Btn
+                    variant="outline"
+                    size="sm"
+                    icon="trash"
+                    title="리포트 삭제"
+                    disabled={remove.isPending}
+                    onClick={() => confirmDelete(r.id, r.title)}
+                  />
+                </td>
               </tr>
             ))}
             {!reports.length && (
               <tr>
-                <td colSpan={4} style={{ color: 'var(--text-muted)' }}>
+                <td colSpan={5} style={{ color: 'var(--text-muted)' }}>
                   리포트가 없습니다. 게시글 수집 후 생성하세요.
                 </td>
               </tr>

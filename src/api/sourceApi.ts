@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { BackgroundJob } from '../types/job'
 import type { Source, SourceCreate } from '../types/source'
 
 export async function listSources(): Promise<Source[]> {
@@ -22,28 +23,20 @@ export async function deleteSource(id: string): Promise<void> {
   await apiClient.delete(`/api/v1/sources/${id}`)
 }
 
-export type CrawlResult = {
-  source_id: string
-  created: number
-  skipped: number
-  message: string
-  error?: string | null
-}
-
-export async function crawlSource(id: string): Promise<CrawlResult> {
-  const { data } = await apiClient.post(`/api/v1/sources/${id}/crawl`)
+export async function crawlSource(id: string): Promise<BackgroundJob> {
+  const { data } = await apiClient.post<BackgroundJob>(`/api/v1/sources/${id}/crawl`)
   return data
 }
 
-export async function crawlSourceToDiscovery(id: string): Promise<CrawlResult> {
-  const { data } = await apiClient.post(`/api/v1/sources/${id}/crawl-to-discovery`)
+export async function crawlSourceToDiscovery(id: string): Promise<BackgroundJob> {
+  const { data } = await apiClient.post<BackgroundJob>(`/api/v1/sources/${id}/crawl-to-discovery`)
   return data
 }
 
 export async function crawlAllToDiscovery(params?: {
   trusted_only?: boolean
-}): Promise<CrawlResult[]> {
-  const { data } = await apiClient.post(`/api/v1/sources/crawl-all-to-discovery`, null, {
+}): Promise<BackgroundJob> {
+  const { data } = await apiClient.post<BackgroundJob>(`/api/v1/sources/crawl-all-to-discovery`, null, {
     params: params?.trusted_only === undefined ? undefined : { trusted_only: params.trusted_only },
   })
   return data

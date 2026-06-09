@@ -17,6 +17,8 @@ import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
 import { SourceFormFields } from '../components/sources/SourceFormFields'
 import type { Source, SourceCreate } from '../types/source'
+import { useActiveJobs } from '../hooks/useJobsQuery'
+import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
 
 const emptyForm: SourceCreate = {
@@ -61,6 +63,8 @@ export function SourcesPage() {
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
   const [runningPipeline, setRunningPipeline] = useState(false)
+
+  const { busy, activeLabel } = useActiveJobs()
 
   const { data: sources = [] } = useQuery({
     queryKey: ['sources'],
@@ -118,12 +122,11 @@ export function SourcesPage() {
   async function crawl(s: Source) {
     setCrawling(s.id)
     try {
-      const res = await crawlSource(s.id)
-      qc.invalidateQueries({ queryKey: ['sources'] })
-      qc.invalidateQueries({ queryKey: ['posts'] })
-      toast(res.message)
-    } catch {
-      toast('크롤링 실패', 'err')
+      await crawlSource(s.id)
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('크롤링을 백그라운드에서 시작했습니다. 상단 작업 패널에서 진행 상태를 확인하세요.', 'info')
+    } catch (e) {
+      toast(apiErrorDetail(e) || '크롤링 요청 실패', 'err')
     } finally {
       setCrawling(null)
     }
@@ -132,12 +135,11 @@ export function SourcesPage() {
   async function crawlDiscoveryPipeline(s: Source) {
     setCrawling(s.id)
     try {
-      const res = await crawlSourceToDiscovery(s.id)
-      qc.invalidateQueries({ queryKey: ['sources'] })
-      qc.invalidateQueries({ queryKey: ['posts'] })
-      toast(`[발견] ${res.message}`)
-    } catch {
-      toast('[발견] 크롤링 실패', 'err')
+      await crawlSourceToDiscovery(s.id)
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('[발견] 백그라운드에서 실행 중입니다. 작업 패널에서 진행 상태를 확인하세요.', 'info')
+    } catch (e) {
+      toast(apiErrorDetail(e) || '[발견] 크롤링 요청 실패', 'err')
     } finally {
       setCrawling(null)
     }
@@ -146,24 +148,19 @@ export function SourcesPage() {
   async function runDailyDiscoveryPipeline() {
     setRunningPipeline(true)
     try {
-      const res = await crawlAllToDiscovery({ trusted_only: true })
-      qc.invalidateQueries({ queryKey: ['sources'] })
-      qc.invalidateQueries({ queryKey: ['posts'] })
-      const created = res.reduce((acc, r) => acc + (r.created || 0), 0)
-      const skipped = res.reduce((acc, r) => acc + (r.skipped || 0), 0)
-      const failed = res.filter((r) => r.error).length
-      toast(
-        failed
-          ? `[발견] 완료: created ${created}, skipped ${skipped}, 실패 ${failed}개 소스`
-          : `[발견] 전체 파이프라인 완료: created ${created}, skipped ${skipped}`,
-        failed ? 'err' : 'ok',
-      )
-    } catch {
-      toast('[발견] 전체 파이프라인 실패', 'err')
+      await crawlAllToDiscovery({ trusted_only: true })
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('[발견] 전체 파이프라인을 백그라운드에서 시작했습니다.', 'info')
+    } catch (e) {
+      toast(apiErrorDetail(e) || '[발견] 전체 파이프라인 요청 실패', 'err')
     } finally {
       setRunningPipeline(false)
     }
   }
+
+  const crawlBlockedTitle = busy
+    ? `진행 중인 작업: ${activeLabel ?? '백그라운드 작업'}`
+    : undefined
 
   function openAdd() {
     setForm(emptyForm)
@@ -191,14 +188,34 @@ export function SourcesPage() {
           <p>크롤링 대상 소스를 등록·관리합니다. 신뢰도와 자동 게시 여부에 따라 수집 글 처리 방식이 달라집니다.</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Btn variant="soft" icon="sparkles" onClick={runDailyDiscoveryPipeline} disabled={runningPipeline}>
-            {runningPipeline ? 'AI 발견 파이프라인 실행 중…' : 'AI 발견 파이프라인 (신뢰소스 전체)'}
+          <Btn
+            variant="soft"
+            icon="sparkles"
+            onClick={runDailyDiscoveryPipeline}
+            disabled={busy || runningPipeline}
+            title={crawlBlockedTitle}
+          >
+            {busy
+              ? '다른 작업 실행 중…'
+              : runningPipeline
+                ? 'AI 발견 파이프라인 요청 중…'
+                : 'AI 발견 파이프라인 (신뢰소스 전체)'}
           </Btn>
           <Btn variant="primary" icon="plus" onClick={openAdd}>
             소스 추가
           </Btn>
         </div>
       </div>
+
+      {busy && (
+        <div className="busy-banner" role="status">
+          <Icon name="clock" />
+          <span>
+            이미 진행 중인 작업이 있습니다
+            {activeLabel ? ` (${activeLabel})` : ''}. 완료 후 다시 시도해 주세요.
+          </span>
+        </div>
+      )}
 
       <div className="toolbar">
         <div className="search">
@@ -274,8 +291,8 @@ export function SourcesPage() {
                       variant="soft"
                       size="sm"
                       onClick={() => crawl(s)}
-                      disabled={crawling === s.id || !s.is_active}
-                      title="수동 크롤링"
+                      disabled={busy || crawling === s.id || !s.is_active}
+                      title={busy ? crawlBlockedTitle : '수동 크롤링'}
                     >
                       <Icon name="refresh" className={crawling === s.id ? 'spin' : ''} />
                     </Btn>
@@ -283,8 +300,8 @@ export function SourcesPage() {
                       variant="soft"
                       size="sm"
                       onClick={() => crawlDiscoveryPipeline(s)}
-                      disabled={crawling === s.id || !s.is_active}
-                      title="AI 발견으로 수동 크롤링"
+                      disabled={busy || crawling === s.id || !s.is_active}
+                      title={busy ? crawlBlockedTitle : 'AI 발견으로 수동 크롤링'}
                     >
                       <Icon name="sparkles" className={crawling === s.id ? 'spin' : ''} />
                     </Btn>

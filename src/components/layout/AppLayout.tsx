@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ChatWidget } from '../chat/ChatWidget'
+import { JobStatusPanel } from '../jobs/JobStatusPanel'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 
@@ -48,6 +49,7 @@ export function AppLayout() {
           onMenuToggle={() => setNavOpen((v) => !v)}
           navOpen={navOpen}
         />
+        <JobStatusPanel />
         <div className="content">
           <Outlet />
         </div>

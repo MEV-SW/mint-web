@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
-import { getReport, sendReportSlack } from '../api/reportApi'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { deleteReport, getReport, sendReportSlack } from '../api/reportApi'
 import { ImportanceBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
+import { apiErrorDetail } from '../utils/apiError'
 import type { KeyChange } from '../types/report'
 
 export function ReportDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const toast = useToast()
   const qc = useQueryClient()
 
@@ -26,10 +28,28 @@ export function ReportDetailPage() {
       toast(res.success ? 'Slack 발송 완료' : res.message, res.success ? 'ok' : 'err')
     },
     onError: (e: unknown) => {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast(msg || 'Slack 발송 실패 — Webhook을 등록하세요.', 'err')
+      toast(apiErrorDetail(e) || 'Slack 발송 실패 — Webhook을 등록하세요.', 'err')
     },
   })
+
+  const remove = useMutation({
+    mutationFn: () => deleteReport(id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reports'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      toast('리포트를 삭제했습니다.')
+      navigate('/reports')
+    },
+    onError: (e: unknown) => {
+      toast(apiErrorDetail(e) || '리포트 삭제 실패', 'err')
+    },
+  })
+
+  function confirmDelete() {
+    if (!report) return
+    if (!window.confirm(`「${report.title}」 리포트를 삭제할까요?\n삭제 후에는 복구할 수 없습니다.`)) return
+    remove.mutate()
+  }
 
   if (isLoading || !report) return <div className="content-inner">로딩 중…</div>
 
@@ -51,7 +71,7 @@ export function ReportDetailPage() {
       >
         <h2 style={{ margin: '0 0 8px' }}>{report.title}</h2>
         <p style={{ opacity: 0.9, margin: 0 }}>{report.summary}</p>
-        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+        <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn
             variant="outline"
             size="sm"
@@ -61,6 +81,16 @@ export function ReportDetailPage() {
             style={{ background: 'oklch(1 0 0 / 0.15)', borderColor: 'oklch(1 0 0 / 0.3)', color: '#fff' }}
           >
             {sendSlack.isPending ? '발송 중…' : report.slack_sent ? 'Slack 재발송' : 'Slack 발송'}
+          </Btn>
+          <Btn
+            variant="outline"
+            size="sm"
+            icon="trash"
+            onClick={confirmDelete}
+            disabled={remove.isPending}
+            style={{ background: 'oklch(1 0 0 / 0.1)', borderColor: 'oklch(1 0 0 / 0.25)', color: '#fff' }}
+          >
+            {remove.isPending ? '삭제 중…' : '삭제'}
           </Btn>
         </div>
       </div>
