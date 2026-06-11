@@ -24,6 +24,7 @@ export interface DashboardStats {
     id: string
     title: string
     report_date: string
+    summary: string
     slack_sent: boolean
   } | null
   trusted_preview: DashboardPostPreview[]

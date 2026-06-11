@@ -69,8 +69,9 @@ export function ReportDetailPage() {
           marginBottom: 20,
         }}
       >
+        <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 6 }}>한눈에</div>
         <h2 style={{ margin: '0 0 8px' }}>{report.title}</h2>
-        <p style={{ opacity: 0.9, margin: 0 }}>{report.summary}</p>
+        <p style={{ opacity: 0.9, margin: 0, lineHeight: 1.6 }}>{report.summary}</p>
         <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn
             variant="outline"
@@ -97,47 +98,87 @@ export function ReportDetailPage() {
 
       {keyChanges.length > 0 && (
         <div className="card card-pad" style={{ marginBottom: 20 }}>
-          <h3>핵심 변화</h3>
-          {keyChanges.map((k, i) => (
-            <div key={i} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <strong>{k.title}</strong>
-                {k.importance && <ImportanceBadge level={k.importance} />}
-              </div>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>{k.description}</p>
+          <h3 style={{ marginTop: 0 }}>오늘 보면 좋은 소식</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {keyChanges.map((k, i) => {
+              const relatedItem = report.items.find((item) =>
+                k.related_post_ids?.includes(item.post_id),
+              )
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: 12,
+                    padding: '12px 14px',
+                    borderRadius: 10,
+                    background: 'var(--surface-2, oklch(0.97 0 0))',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      background: 'var(--accent-muted, oklch(0.55 0.11 168 / 0.15))',
+                      color: 'var(--accent)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: 15 }}>{k.title}</strong>
+                      {k.importance && <ImportanceBadge level={k.importance} />}
+                    </div>
+                    {k.description && (
+                      <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+                        {k.description}
+                      </p>
+                    )}
+                    {relatedItem?.post && (
+                      <Link
+                        to={`/posts/${relatedItem.post_id}`}
+                        className="link"
+                        style={{ fontSize: 13, display: 'inline-block', marginTop: 8 }}
+                      >
+                        게시글 보기 →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {report.items.length > 0 && (
+        <div className="card card-pad">
+          <h3 style={{ marginTop: 0 }}>관련 게시글 ({report.items.length})</h3>
+          {report.items.map((item) => (
+            <div key={item.id} style={{ marginBottom: 12 }}>
+              {item.post ? (
+                <Link to={`/posts/${item.post_id}`} className="link">
+                  {item.post.title}
+                </Link>
+              ) : (
+                <span className="mono">{item.post_id}</span>
+              )}
+              {item.reason && (
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{item.reason}</div>
+              )}
             </div>
           ))}
         </div>
       )}
-
-      {report.risks && report.risks.length > 0 && (
-        <div className="card card-pad" style={{ marginBottom: 20 }}>
-          <h3>리스크</h3>
-          <ul>
-            {report.risks.map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="card card-pad">
-        <h3>관련 게시글 ({report.items.length})</h3>
-        {report.items.map((item) => (
-          <div key={item.id} style={{ marginBottom: 12 }}>
-            {item.post ? (
-              <Link to={`/posts/${item.post_id}`} className="link">
-                {item.post.title}
-              </Link>
-            ) : (
-              <span className="mono">{item.post_id}</span>
-            )}
-            {item.reason && (
-              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{item.reason}</div>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
