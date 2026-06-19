@@ -8,7 +8,7 @@ export type JobType =
   | 'send_slack_report'
   | 'summarize_post'
 
-export type JobStatus = 'pending' | 'running' | 'success' | 'failed'
+export type JobStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
 
 export interface BackgroundJob {
   id: string
@@ -32,4 +32,5 @@ export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   running: '실행 중',
   success: '완료',
   failed: '실패',
+  cancelled: '취소됨',
 }

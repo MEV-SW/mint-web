@@ -772,6 +772,27 @@ select.input { appearance: none; cursor: pointer;
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
 }
+.job-status-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.job-status-clear {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.job-status-clear:hover:not(:disabled) {
+  border-color: var(--mint);
+  color: var(--mint-deep);
+}
+.job-status-clear:disabled { opacity: 0.5; cursor: not-allowed; }
 .job-status-head strong { font-size: 14px; }
 .job-status-close {
   display: flex;
@@ -811,12 +832,43 @@ select.input { appearance: none; cursor: pointer;
 .job-status-item.status-pending { background: var(--mint-soft); }
 .job-status-item.status-success { background: oklch(0.97 0.03 145); }
 .job-status-item.status-failed { background: oklch(0.97 0.04 25); }
+.job-status-item.status-cancelled { background: oklch(0.97 0.02 250); }
 .job-status-item-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
+.job-status-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.job-status-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.job-status-action svg { width: 12px; height: 12px; }
+.job-status-action.cancel:hover:not(:disabled) {
+  border-color: oklch(0.75 0.1 80);
+  color: oklch(0.45 0.12 80);
+}
+.job-status-action.delete:hover:not(:disabled) {
+  border-color: oklch(0.75 0.08 25);
+  color: var(--high);
+}
+.job-status-action:disabled { opacity: 0.5; cursor: not-allowed; }
 .job-status-label { font-size: 13px; font-weight: 600; line-height: 1.4; }
 .job-status-badge {
   flex-shrink: 0;
@@ -828,6 +880,7 @@ select.input { appearance: none; cursor: pointer;
 .badge-pending, .badge-running { background: var(--mint-soft); color: var(--mint-deep); }
 .badge-success { background: oklch(0.92 0.06 145); color: oklch(0.45 0.12 145); }
 .badge-failed { background: oklch(0.94 0.06 25); color: var(--high); }
+.badge-cancelled { background: oklch(0.93 0.03 250); color: oklch(0.45 0.08 250); }
 .job-status-msg, .job-status-result, .job-status-error {
   margin-top: 6px;
   font-size: 12px;

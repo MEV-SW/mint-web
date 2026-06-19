@@ -1,13 +1,20 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
+import { cancelJob, clearFinishedJobs, deleteJob } from '../../api/jobApi'
 import { useJobsQuery } from '../../hooks/useJobsQuery'
 import type { BackgroundJob, JobStatus } from '../../types/job'
 import { JOB_STATUS_LABEL } from '../../types/job'
+import { apiErrorDetail } from '../../utils/apiError'
 import { formatDate } from '../../utils/date'
+import { useToast } from '../common/Toast'
 import { Icon } from '../common/Icon'
 
 function isActive(status: JobStatus) {
   return status === 'pending' || status === 'running'
+}
+
+function isFinished(status: JobStatus) {
+  return status === 'success' || status === 'failed' || status === 'cancelled'
 }
 
 function progressPct(job: BackgroundJob) {
@@ -17,11 +24,44 @@ function progressPct(job: BackgroundJob) {
 
 export function JobStatusPanel() {
   const qc = useQueryClient()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const prevActiveRef = useRef(0)
   const { data: jobs = [] } = useJobsQuery()
 
   const activeCount = jobs.filter((j) => isActive(j.status)).length
+  const finishedCount = jobs.filter((j) => isFinished(j.status)).length
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['jobs'] })
+
+  const cancelMut = useMutation({
+    mutationFn: cancelJob,
+    onSuccess: () => {
+      toast('작업을 취소했습니다.', 'info')
+      invalidate()
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '작업 취소 실패', 'err'),
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: deleteJob,
+    onSuccess: () => {
+      toast('작업 내역을 삭제했습니다.')
+      invalidate()
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '삭제 실패', 'err'),
+  })
+
+  const clearMut = useMutation({
+    mutationFn: clearFinishedJobs,
+    onSuccess: (res) => {
+      toast(res.deleted ? `완료된 작업 ${res.deleted}건을 정리했습니다.` : '정리할 작업이 없습니다.', 'info')
+      invalidate()
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '정리 실패', 'err'),
+  })
+
+  const actionBusy = cancelMut.isPending || deleteMut.isPending || clearMut.isPending
 
   useEffect(() => {
     if (prevActiveRef.current > 0 && activeCount === 0) {
@@ -36,6 +76,22 @@ export function JobStatusPanel() {
   useEffect(() => {
     if (activeCount > 0) setOpen(true)
   }, [activeCount])
+
+  const handleCancel = (job: BackgroundJob) => {
+    if (!window.confirm(`「${job.label}」 작업을 취소할까요?`)) return
+    cancelMut.mutate(job.id)
+  }
+
+  const handleDelete = (job: BackgroundJob) => {
+    if (!window.confirm(`「${job.label}」 작업 내역을 삭제할까요?`)) return
+    deleteMut.mutate(job.id)
+  }
+
+  const handleClearFinished = () => {
+    if (!finishedCount) return
+    if (!window.confirm('완료·실패·취소된 모든 작업 내역을 목록에서 정리할까요?')) return
+    clearMut.mutate()
+  }
 
   return (
     <div className={`job-status-wrap${open ? ' open' : ''}`}>
@@ -58,12 +114,24 @@ export function JobStatusPanel() {
         <div className="job-status-panel" role="region" aria-label="작업 목록">
           <div className="job-status-head">
             <strong>백그라운드 작업</strong>
-            <button type="button" className="job-status-close" onClick={() => setOpen(false)} aria-label="닫기">
-              <Icon name="x" />
-            </button>
+            <div className="job-status-head-actions">
+              {finishedCount > 0 && (
+                <button
+                  type="button"
+                  className="job-status-clear"
+                  onClick={handleClearFinished}
+                  disabled={actionBusy}
+                >
+                  완료 정리
+                </button>
+              )}
+              <button type="button" className="job-status-close" onClick={() => setOpen(false)} aria-label="닫기">
+                <Icon name="x" />
+              </button>
+            </div>
           </div>
           <p className="job-status-hint">
-            다른 크롤링·리포트 작업이 실행 중이면 새 작업을 시작할 수 없습니다. 완료 후 다시 시도해 주세요.
+            잘못 시작한 작업은 취소할 수 있습니다. 완료된 내역은 개별 삭제 또는 「완료 정리」로 목록에서 제거하세요.
           </p>
           <ul className="job-status-list">
             {jobs.map((job) => {
@@ -72,9 +140,33 @@ export function JobStatusPanel() {
                 <li key={job.id} className={`job-status-item status-${job.status}`}>
                   <div className="job-status-item-top">
                     <span className="job-status-label">{job.label}</span>
-                    <span className={`job-status-badge badge-${job.status}`}>
-                      {JOB_STATUS_LABEL[job.status]}
-                    </span>
+                    <div className="job-status-item-meta">
+                      <span className={`job-status-badge badge-${job.status}`}>
+                        {JOB_STATUS_LABEL[job.status]}
+                      </span>
+                      {isActive(job.status) && (
+                        <button
+                          type="button"
+                          className="job-status-action cancel"
+                          onClick={() => handleCancel(job)}
+                          disabled={actionBusy}
+                          aria-label="작업 취소"
+                        >
+                          취소
+                        </button>
+                      )}
+                      {isFinished(job.status) && (
+                        <button
+                          type="button"
+                          className="job-status-action delete"
+                          onClick={() => handleDelete(job)}
+                          disabled={actionBusy}
+                          aria-label="작업 내역 삭제"
+                        >
+                          <Icon name="trash" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {(job.status === 'running' || job.status === 'pending') && job.progress_message && (
                     <div className="job-status-msg">{job.progress_message}</div>
@@ -85,6 +177,9 @@ export function JobStatusPanel() {
                     </div>
                   )}
                   {job.status === 'success' && job.result_message && (
+                    <div className="job-status-result">{job.result_message}</div>
+                  )}
+                  {job.status === 'cancelled' && job.result_message && (
                     <div className="job-status-result">{job.result_message}</div>
                   )}
                   {job.status === 'failed' && job.error && (
