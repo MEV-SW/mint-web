@@ -1,3 +1,5 @@
+import { DISCOVERY_BOARD_LABEL } from '../../constants/boardLabels'
+
 export interface NavItem {
   path: string
   label: string
@@ -7,9 +9,9 @@ export interface NavItem {
 }
 
 export const APP_NAV_MAIN: NavItem[] = [
-  { path: '/', label: '대시보드', icon: 'dashboard', end: true },
+  { path: '/', label: '1면', icon: 'dashboard', end: true },
   { path: '/trusted', label: '중요', icon: 'shield' },
-  { path: '/discovery', label: 'AI 발견', icon: 'sparkles', countKey: 'pending' },
+  { path: '/discovery', label: DISCOVERY_BOARD_LABEL, icon: 'sparkles', countKey: 'pending' },
   { path: '/reports', label: '리포트', icon: 'doc' },
 ]
 

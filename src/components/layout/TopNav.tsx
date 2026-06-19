@@ -13,15 +13,32 @@ import {
   SETTINGS_PATHS,
 } from './navItems'
 import { JobStatusPanel } from '../jobs/JobStatusPanel'
+import { DISCOVERY_BOARD_LABEL } from '../../constants/boardLabels'
 
 const PATH_LABELS: Record<string, string> = {
   '/': '1면',
   '/trusted': '중요',
-  '/discovery': 'AI 발견',
+  '/discovery': DISCOVERY_BOARD_LABEL,
   '/reports': '리포트',
   '/sources': '설정 · 소스',
   '/slack': '설정 · Slack',
   '/help': '도움말',
+}
+
+function resolveSectionLabel(pathname: string, state: unknown): string {
+  const exact = PATH_LABELS[pathname]
+  if (exact) return exact
+
+  const from = (state as { from?: string } | null)?.from
+  if (from) {
+    const fromLabel = PATH_LABELS[from.split('?')[0]]
+    if (fromLabel) return fromLabel
+  }
+
+  if (pathname.startsWith('/posts/')) return '기사'
+  if (pathname.startsWith('/reports/')) return '리포트'
+
+  return 'MINT'
 }
 
 function NavSeparator() {
@@ -61,7 +78,7 @@ export function TopNav() {
     day: 'numeric',
     weekday: 'long',
   })
-  const sectionLabel = PATH_LABELS[location.pathname] ?? location.pathname
+  const sectionLabel = resolveSectionLabel(location.pathname, location.state)
 
   return (
     <header className="topnav">

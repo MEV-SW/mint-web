@@ -44,6 +44,7 @@ export function SlackSettingsPage() {
       section="운영 · 알림"
       title="Slack 설정"
       lead="Incoming Webhook URL을 등록하고 테스트 메시지를 보냅니다. URL은 암호화되어 저장됩니다."
+      leadSingleLine
       actions={
         <>
           <Btn variant="outline" onClick={() => test.mutate()} disabled={test.isPending || !webhooks.length}>

@@ -11,6 +11,7 @@ export interface DailyReport {
   action_items: string[] | null
   model: string
   slack_sent: boolean
+  illustration_url: string | null
   created_at: string
   updated_at: string
 }

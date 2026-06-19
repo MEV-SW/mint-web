@@ -1,20 +1,21 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '../components/common/Icon'
 import { PageShell } from '../components/layout/PageShell'
+import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
 
 const FLOW = [
   { step: '1', title: '소스 등록', desc: '신뢰할 수 있는 EV·충전 뉴스/공지 URL을 등록합니다.', to: '/sources' },
   { step: '2', title: '자동 수집', desc: '크롤링으로 게시글을 수집하고 AI가 요약·중요도를 판단합니다.', to: '/sources' },
-  { step: '3', title: '게시판 검토', desc: '중요 게시판과 AI 발견 게시판에서 내용을 확인합니다.', to: '/trusted' },
+  { step: '3', title: '게시판 검토', desc: `중요 게시판과 ${DISCOVERY_BOARD_LABEL}에서 내용을 확인합니다.`, to: '/trusted' },
   { step: '4', title: '리포트·알림', desc: '데일리 리포트를 생성하고 Slack으로 공유합니다.', to: '/reports' },
 ]
 
 const SECTIONS = [
   {
     icon: 'dashboard',
-    title: '대시보드',
-    body: '오늘의 수집 현황, 최근 중요 게시글·AI 발견 미리보기, 최신 데일리 리포트를 한눈에 확인합니다.',
-    link: { label: '대시보드 열기', to: '/' },
+    title: '1면',
+    body: `오늘의 수집 현황, 최근 중요 게시글·${DISCOVERY_BOARD_LABEL} 미리보기, 최신 데일리 리포트를 한눈에 확인합니다.`,
+    link: { label: '1면 열기', to: '/' },
   },
   {
     icon: 'shield',
@@ -24,14 +25,14 @@ const SECTIONS = [
   },
   {
     icon: 'sparkles',
-    title: 'AI 발견 게시판',
-    body: 'AI가 EV·충전 관련 기사를 발굴한 후보입니다. 검토 후 검토 완료 처리하거나 중요 게시판으로 승격할 수 있습니다. 검토 대기 상태로 14일 넘게 남은 글은 자동 삭제됩니다.',
-    link: { label: 'AI 발견 게시판', to: '/discovery' },
+    title: DISCOVERY_BOARD_LABEL,
+    body: 'AI가 EV·충전 관련 기사를 발굴한 탐문 후보입니다. 검토 후 검토 완료 처리하거나 중요 게시판으로 승격할 수 있습니다. 검토 대기 상태로 14일 넘게 남은 글은 자동 삭제됩니다.',
+    link: { label: DISCOVERY_BOARD_LABEL, to: '/discovery' },
   },
   {
     icon: 'feed',
     title: '소스 관리',
-    body: 'RSS·웹페이지 등 소스를 등록하고, 개별 크롤 또는「AI 발견 파이프라인」으로 신뢰 소스 전체를 한 번에 수집할 수 있습니다.',
+    body: `RSS·웹페이지 등 소스를 등록하고, 개별 크롤 또는「${DISCOVERY_PIPELINE_LABEL}」으로 신뢰 소스 전체를 한 번에 수집할 수 있습니다.`,
     link: { label: '소스 관리', to: '/sources' },
   },
   {
@@ -54,11 +55,11 @@ const FAQ = [
     a: 'MINT는 원문 링크 + AI 요약 중심으로 표시합니다. 상세 페이지에서「원문 보기」링크로 기사를 확인하세요.',
   },
   {
-    q: 'AI 발견과 중요 게시판의 차이는?',
-    a: '중요 게시판은 신뢰 소스에서 자동 수집된 글이고, AI 발견은 AI가 관련성을 판단해 올린 검토 대기 후보입니다.',
+    q: `${DISCOVERY_BOARD_LABEL}와 중요 게시판의 차이는?`,
+    a: `중요 게시판은 신뢰 소스에서 자동 수집된 글이고, ${DISCOVERY_BOARD_LABEL}는 AI가 관련성을 판단해 올린 검토 대기 후보입니다.`,
   },
   {
-    q: 'AI 발견 후보는 언제 자동 삭제되나요?',
+    q: '탐문 후보는 언제 자동 삭제되나요?',
     a: '검토 대기(pending) 상태로 14일 이상 남은 글은 매일 05:30(KST)에 자동 삭제됩니다. 검토 완료·승격·숨김 처리한 글은 해당되지 않습니다. 보관 기간은 서버 설정 DISCOVERY_PENDING_RETENTION_DAYS로 조정할 수 있습니다.',
   },
   {
@@ -71,7 +72,7 @@ const FAQ = [
   },
   {
     q: '자동 수집 스케줄은?',
-    a: '서버에 Celery worker·beat가 실행 중이면 매일 05:30 미승인 AI 발견 후보 정리, 06:00 AI 발견 파이프라인, 08:00 데일리 리포트가 자동 실행됩니다. 수동 실행은 소스 관리·리포트 화면에서 가능합니다.',
+    a: `서버에 Celery worker·beat가 실행 중이면 매일 05:30 미승인 탐문 후보 정리, 06:00 ${DISCOVERY_PIPELINE_LABEL}, 08:00 데일리 리포트가 자동 실행됩니다. 수동 실행은 소스 관리·리포트 화면에서 가능합니다.`,
   },
 ]
 

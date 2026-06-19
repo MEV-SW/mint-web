@@ -6,6 +6,8 @@ import { ImportanceBadge, StatusPill } from '../components/common/Badges'
 import { Icon } from '../components/common/Icon'
 import { DailyCorner } from '../components/dashboard/DailyCorner'
 import { formatDate } from '../utils/date'
+import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
+import { mediaUrl } from '../utils/mediaUrl'
 
 function ArticleByline({ post }: { post: DashboardPostPreview }) {
   return (
@@ -93,95 +95,117 @@ export function DashboardPage() {
 
       <div className="np-front">
         <section className="np-briefing">
-          <div className="np-section-label">
-            <span>AI 데일리 브리핑</span>
-            {stats?.latest_report?.slack_sent && (
-              <span className="np-briefing-sent">
-                <Icon name="slack" /> Slack 발송
-              </span>
+          <div className="np-briefing-shell">
+            <div className="np-section-label">
+              <span>AI 데일리 브리핑</span>
+              {stats?.latest_report?.slack_sent && (
+                <span className="np-briefing-sent">
+                  <Icon name="slack" /> Slack 발송
+                </span>
+              )}
+            </div>
+
+            {stats?.latest_report ? (
+              <>
+                <div className="np-briefing-main">
+                  <div className="np-briefing-hero">
+                    <div className="np-briefing-copy">
+                      <Link to={`/reports/${stats.latest_report.id}`} className="np-briefing-link">
+                        <h2 className="np-briefing-headline">{stats.latest_report.title}</h2>
+                      </Link>
+                      {stats.latest_report.summary && (
+                        <p className="np-briefing-lead">{stats.latest_report.summary}</p>
+                      )}
+                    </div>
+                    {mediaUrl(stats.latest_report.illustration_url) && (
+                      <figure className="np-briefing-illustration">
+                        <img
+                          src={mediaUrl(stats.latest_report.illustration_url)!}
+                          alt=""
+                          loading="lazy"
+                        />
+                        <figcaption>오늘의 스케치</figcaption>
+                      </figure>
+                    )}
+                  </div>
+                  {stats.latest_report.highlights.length > 0 && (
+                    <ol className="np-briefing-picks">
+                      {stats.latest_report.highlights.map((h, i) => (
+                        <li key={i}>
+                          <Link to={`/reports/${stats.latest_report!.id}`} className="np-pick-row">
+                            <span className="np-pick-num">{i + 1}</span>
+                            <span className="np-pick-body">
+                              <strong>{h.title}</strong>
+                              {h.description && <span>{h.description}</span>}
+                            </span>
+                            {h.importance && (
+                              <span className="np-pick-badge">
+                                <ImportanceBadge level={h.importance as Importance} />
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+                <Link to={`/reports/${stats.latest_report.id}`} className="np-read-more np-briefing-footer">
+                  브리핑 전문 보기 →
+                </Link>
+              </>
+            ) : (
+              <div className="np-briefing-empty">
+                <p>생성된 데일리 브리핑이 없습니다. 게시글이 쌓이면 AI가 하루 동향을 정리합니다.</p>
+                <Link to="/reports" className="np-read-more">
+                  리포트 생성 →
+                </Link>
+              </div>
             )}
           </div>
-
-          {stats?.latest_report ? (
-            <>
-              <Link to={`/reports/${stats.latest_report.id}`} className="np-briefing-link">
-                <h2 className="np-briefing-headline">{stats.latest_report.title}</h2>
-              </Link>
-              {stats.latest_report.summary && (
-                <p className="np-briefing-lead">{stats.latest_report.summary}</p>
-              )}
-              {stats.latest_report.highlights.length > 0 && (
-                <ol className="np-briefing-picks">
-                  {stats.latest_report.highlights.map((h, i) => (
-                    <li key={i}>
-                      <Link to={`/reports/${stats.latest_report!.id}`} className="np-pick-row">
-                        <span className="np-pick-num">{i + 1}</span>
-                        <span className="np-pick-body">
-                          <strong>{h.title}</strong>
-                          {h.description && <span>{h.description}</span>}
-                        </span>
-                        {h.importance && (
-                          <span className="np-pick-badge">
-                            <ImportanceBadge level={h.importance as Importance} />
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              <Link to={`/reports/${stats.latest_report.id}`} className="np-read-more">
-                브리핑 전문 보기 →
-              </Link>
-            </>
-          ) : (
-            <div className="np-briefing-empty">
-              <p>생성된 데일리 브리핑이 없습니다. 게시글이 쌓이면 AI가 하루 동향을 정리합니다.</p>
-              <Link to="/reports" className="np-read-more">
-                리포트 생성 →
-              </Link>
-            </div>
-          )}
         </section>
 
         <aside className="np-edition-panel">
-          <div className="np-section-label">오늘의 판</div>
-          {isLoading ? (
-            <p className="np-empty">집계 중…</p>
-          ) : (
-            <dl className="np-stats">
-              <div>
-                <dt>오늘 수집</dt>
-                <dd>{stats?.new_today ?? 0}</dd>
-              </div>
-              <div>
-                <dt>중요 게시판</dt>
-                <dd>{stats?.trusted_count ?? 0}</dd>
-              </div>
-              <div>
-                <dt>고중요도</dt>
-                <dd>{stats?.high_importance ?? 0}</dd>
-              </div>
-              <div>
-                <dt>AI 발견 대기</dt>
-                <dd className={stats?.pending_discovery ? 'np-stat-alert' : undefined}>
-                  {stats?.pending_discovery ?? 0}
-                </dd>
-              </div>
-            </dl>
-          )}
-          {(stats?.pending_discovery ?? 0) > 0 && (
-            <Link to="/discovery" className="np-edition-cta">
-              <Icon name="sparkles" />
-              발견 후보 {stats!.pending_discovery}건 검토
-            </Link>
-          )}
-          {stats?.latest_report && (
-            <p className="np-edition-note">
-              최신 브리핑 · {stats.latest_report.report_date}
-            </p>
-          )}
-          <DailyCorner />
+          <div className="np-edition-shell">
+            <div className="np-edition-stats-block">
+              <div className="np-section-label">오늘의 판</div>
+              {isLoading ? (
+                <p className="np-empty">집계 중…</p>
+              ) : (
+                <dl className="np-stats">
+                  <div>
+                    <dt>오늘 수집</dt>
+                    <dd>{stats?.new_today ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt>중요 게시판</dt>
+                    <dd>{stats?.trusted_count ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt>고중요도</dt>
+                    <dd>{stats?.high_importance ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt>{DISCOVERY_BOARD_LABEL} 대기</dt>
+                    <dd className={stats?.pending_discovery ? 'np-stat-alert' : undefined}>
+                      {stats?.pending_discovery ?? 0}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+              {(stats?.pending_discovery ?? 0) > 0 && (
+                <Link to="/discovery" className="np-edition-cta">
+                  <Icon name="sparkles" />
+                  탐문 후보 {stats!.pending_discovery}건 검토
+                </Link>
+              )}
+              {stats?.latest_report && (
+                <p className="np-edition-note">
+                  최신 브리핑 · {stats.latest_report.report_date}
+                </p>
+              )}
+            </div>
+            <DailyCorner />
+          </div>
         </aside>
       </div>
 
@@ -223,7 +247,7 @@ export function DashboardPage() {
 
       <section className="np-section np-section-discovery">
         <div className="np-section-head">
-          <h2 className="np-section-title">AI 발견 · 검토 대기</h2>
+          <h2 className="np-section-title">{DISCOVERY_BOARD_LABEL} · 검토 대기</h2>
           <Link to="/discovery" className="np-section-more">
             전체 보기 →
           </Link>
@@ -233,8 +257,8 @@ export function DashboardPage() {
           <p className="np-empty">불러오는 중…</p>
         ) : discovery.length === 0 ? (
           <EmptyBlock
-            message="검토할 AI 발견 후보가 없습니다."
-            action={{ label: 'AI 발견 실행', to: '/sources' }}
+            message="검토할 탐문 후보가 없습니다."
+            action={{ label: `${DISCOVERY_PIPELINE_LABEL} 실행`, to: '/sources' }}
           />
         ) : (
           <div className="np-discovery-row">

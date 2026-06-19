@@ -20,12 +20,14 @@ export interface DashboardStats {
   high_importance: number
   active_sources: number
   total_sources: number
+  discovery_pending_retention_days: number
   latest_report: {
     id: string
     title: string
     report_date: string
     summary: string
     slack_sent: boolean
+    illustration_url: string | null
     highlights: {
       title: string
       description: string | null

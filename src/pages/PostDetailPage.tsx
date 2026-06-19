@@ -15,6 +15,7 @@ import { useToast } from '../components/common/Toast'
 import { PostAiSummaryPanel } from '../components/posts/PostAiSummaryPanel'
 import { PostOriginalPane } from '../components/posts/PostOriginalPane'
 import { formatDateTime } from '../utils/date'
+import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
 
 export function PostDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -76,7 +77,7 @@ export function PostDetailPage() {
       </Link>
 
       <article className="pg-article-hero">
-        <div className="np-section-label">{isDiscovery ? 'AI 발견' : '중요 뉴스'}</div>
+        <div className="np-section-label">{isDiscovery ? DISCOVERY_BOARD_LABEL : '중요 뉴스'}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
           <StatusPill status={post.status} />
           <ImportanceBadge level={post.importance} />
@@ -123,7 +124,12 @@ export function PostDetailPage() {
 
       {showSplit ? (
         <div className="post-split-view">
-          <PostOriginalPane url={post.original_url} rawContent={post.raw_content} title={post.title} />
+          <PostOriginalPane
+            postId={post.id}
+            url={post.original_url}
+            rawContent={post.raw_content}
+            title={post.title}
+          />
           <PostAiSummaryPanel
             ai={ai}
             isDiscovery={isDiscovery}

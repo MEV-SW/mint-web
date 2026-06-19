@@ -4,11 +4,12 @@ interface PageShellProps {
   section: string
   title: string
   lead?: string
+  leadSingleLine?: boolean
   actions?: ReactNode
   children: ReactNode
 }
 
-export function PageShell({ section, title, lead, actions, children }: PageShellProps) {
+export function PageShell({ section, title, lead, leadSingleLine, actions, children }: PageShellProps) {
   return (
     <div className="content-inner page-fade np-sheet">
       <header className="pg-masthead">
@@ -16,10 +17,12 @@ export function PageShell({ section, title, lead, actions, children }: PageShell
           <div className="pg-masthead-main">
             <div className="np-section-label">{section}</div>
             <h1 className="pg-title">{title}</h1>
-            {lead && <p className="pg-lead">{lead}</p>}
           </div>
           {actions && <div className="pg-actions">{actions}</div>}
         </div>
+        {lead && (
+          <p className={`pg-lead${leadSingleLine ? ' pg-lead-single' : ''}`}>{lead}</p>
+        )}
       </header>
       {children}
     </div>

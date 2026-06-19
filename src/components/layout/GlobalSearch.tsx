@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { globalSearch } from '../../api/searchApi'
 import { Icon } from '../common/Icon'
+import { DISCOVERY_BOARD_LABEL, TRUSTED_BOARD_LABEL } from '../../constants/boardLabels'
 
 function useDebounced(value: string, ms = 300): string {
   const [debounced, setDebounced] = useState(value)
@@ -121,7 +122,7 @@ export function GlobalSearch() {
                 >
                   <span className="global-search-item-title">{p.title}</span>
                   <span className="global-search-item-meta">
-                    {p.board_type === 'trusted' ? '중요' : 'AI 발견'}
+                    {p.board_type === 'trusted' ? TRUSTED_BOARD_LABEL : DISCOVERY_BOARD_LABEL}
                     {p.source_name ? ` · ${p.source_name}` : ''}
                   </span>
                   {p.summary && <span className="global-search-item-snippet">{p.summary}</span>}
@@ -131,7 +132,7 @@ export function GlobalSearch() {
                 중요 게시판에서 더 보기
               </button>
               <button type="button" className="global-search-more" onClick={() => goBoard('discovery')}>
-                AI 발견에서 더 보기
+                {DISCOVERY_BOARD_LABEL}에서 더 보기
               </button>
             </div>
           )}

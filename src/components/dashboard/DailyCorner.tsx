@@ -33,12 +33,19 @@ function DailyQuizBlock({ quiz }: { quiz: DailyQuiz }) {
           )
         })}
       </ul>
-      {answered && (
-        <div className={`np-daily-quiz-result${correct ? ' ok' : ' no'}`}>
-          <strong>{correct ? '정답!' : '아쉽지만…'}</strong>
-          <p>{quiz.explanation}</p>
-        </div>
-      )}
+      <div
+        className={`np-daily-quiz-result${answered ? (correct ? ' ok' : ' no') : ' idle'}`}
+        aria-live="polite"
+      >
+        {answered ? (
+          <>
+            <strong>{correct ? '정답!' : '아쉽지만…'}</strong>
+            <p>{quiz.explanation}</p>
+          </>
+        ) : (
+          <p className="np-daily-quiz-result-hint">보기를 고르면 해설이 표시됩니다.</p>
+        )}
+      </div>
     </div>
   )
 }

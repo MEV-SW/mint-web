@@ -7,7 +7,9 @@ import {
   crawlSourceToDiscovery,
   createSource,
   deleteSource,
+  getCollectionSettings,
   listSources,
+  updateCollectionSettings,
   updateSource,
 } from '../api/sourceApi'
 import { TrustBadge } from '../components/common/Badges'
@@ -21,6 +23,7 @@ import type { Source, SourceCreate } from '../types/source'
 import { useActiveJobs } from '../hooks/useJobsQuery'
 import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
+import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
 
 const emptyForm: SourceCreate = {
   name: '',
@@ -64,6 +67,7 @@ export function SourcesPage() {
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
   const [runningPipeline, setRunningPipeline] = useState(false)
+  const [retentionDays, setRetentionDays] = useState('14')
 
   const { busy, activeLabel } = useActiveJobs()
 
@@ -71,6 +75,17 @@ export function SourcesPage() {
     queryKey: ['sources'],
     queryFn: listSources,
   })
+
+  const { data: collectionSettings } = useQuery({
+    queryKey: ['collection-settings'],
+    queryFn: getCollectionSettings,
+  })
+
+  useEffect(() => {
+    if (collectionSettings) {
+      setRetentionDays(String(collectionSettings.discovery_pending_retention_days))
+    }
+  }, [collectionSettings])
 
   const qLower = q.trim().toLowerCase()
   const rows = sources.filter(
@@ -80,6 +95,7 @@ export function SourcesPage() {
       s.url.toLowerCase().includes(qLower) ||
       (s.category && s.category.toLowerCase().includes(qLower)),
   )
+  const activeCount = sources.filter((s) => s.is_active).length
 
   const save = useMutation({
     mutationFn: () => createSource(form),
@@ -119,6 +135,26 @@ export function SourcesPage() {
       toast('소스를 삭제했습니다.')
     },
   })
+
+  const saveRetention = useMutation({
+    mutationFn: () => updateCollectionSettings(Number(retentionDays)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['collection-settings'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      toast('탐문 후보 삭제 기한을 저장했습니다.')
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '저장 실패', 'err'),
+  })
+
+  const retentionValid =
+    retentionDays.trim() !== '' &&
+    Number.isInteger(Number(retentionDays)) &&
+    Number(retentionDays) >= 0 &&
+    Number(retentionDays) <= 365
+  const retentionDirty =
+    collectionSettings != null &&
+    retentionValid &&
+    Number(retentionDays) !== collectionSettings.discovery_pending_retention_days
 
   async function crawl(s: Source) {
     setCrawling(s.id)
@@ -186,26 +222,7 @@ export function SourcesPage() {
       section="운영 · 수집"
       title="소스 관리"
       lead="크롤링 대상 소스를 등록·관리합니다. 신뢰도와 자동 게시 여부에 따라 수집 글 처리 방식이 달라집니다."
-      actions={
-        <>
-          <Btn
-            variant="soft"
-            icon="sparkles"
-            onClick={runDailyDiscoveryPipeline}
-            disabled={busy || runningPipeline}
-            title={crawlBlockedTitle}
-          >
-            {busy
-              ? '다른 작업 실행 중…'
-              : runningPipeline
-                ? 'AI 발견 파이프라인 요청 중…'
-                : 'AI 발견 파이프라인 (신뢰소스 전체)'}
-          </Btn>
-          <Btn variant="primary" icon="plus" onClick={openAdd}>
-            소스 추가
-          </Btn>
-        </>
-      }
+      leadSingleLine
     >
       {busy && (
         <div className="busy-banner" role="status">
@@ -217,101 +234,205 @@ export function SourcesPage() {
         </div>
       )}
 
-      <div className="toolbar">
-        <div className="search">
-          <Icon name="search" />
-          <input placeholder="소스명·URL 검색" value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
-        <div className="spacer" />
-        <span className="result-count">
-          {rows.length}개 소스 · {sources.filter((s) => s.is_active).length}개 활성
-        </span>
-      </div>
+      <div className="sources-page">
+        <section className="sources-block" aria-label="수집 운영">
+          <div className="sources-ops-grid">
+            <article className="sources-op-card">
+              <div className="sources-op-card-copy">
+                <div className="sources-op-card-icon sources-op-card-icon-pipeline" aria-hidden>
+                  <Icon name="sparkles" />
+                </div>
+                <div className="sources-op-card-text">
+                  <h3 className="sources-op-card-title">{DISCOVERY_PIPELINE_LABEL}</h3>
+                  <p className="sources-op-card-desc np-copy-single">
+                    신뢰 소스 전체 크롤링 · {DISCOVERY_BOARD_LABEL} 후보 수집
+                  </p>
+                </div>
+              </div>
+              <div className="sources-op-card-controls">
+                <Btn variant="primary" size="sm" icon="plus" onClick={openAdd}>
+                  추가
+                </Btn>
+                <Btn
+                  variant="soft"
+                  size="sm"
+                  icon="sparkles"
+                  onClick={runDailyDiscoveryPipeline}
+                  disabled={busy || runningPipeline}
+                  title={crawlBlockedTitle}
+                >
+                  {busy ? '…' : runningPipeline ? '…' : '실행'}
+                </Btn>
+              </div>
+            </article>
 
-      <div className="tbl-wrap">
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>소스</th>
-              <th style={{ width: 100 }}>유형</th>
-              <th style={{ width: 90 }}>카테고리</th>
-              <th style={{ width: 130 }}>신뢰도</th>
-              <th style={{ width: 90 }}>자동 게시</th>
-              <th style={{ width: 130 }}>마지막 크롤링</th>
-              <th style={{ width: 76 }}>활성</th>
-              <th style={{ width: 140 }} />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  <div className="nm">{s.name}</div>
-                  <div className="url" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
-                    {s.url}
-                  </div>
-                </td>
-                <td>
-                  <span className="type-tag">{s.source_type}</span>
-                </td>
-                <td>
-                  <span className="ctag">{s.category}</span>
-                </td>
-                <td>
-                  <TrustBadge level={s.trust_level} score={s.reliability_score} />
-                </td>
-                <td>
-                  {s.auto_publish ? (
-                    <span className="badge badge-mint">
-                      <span className="dot" />
-                      자동
-                    </span>
-                  ) : (
-                    <span className="badge badge-unknown">검토</span>
-                  )}
-                </td>
-                <td className="mono" style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-                  {relativeCrawl(s.last_crawled_at)}
-                </td>
-                <td>
-                  <div
-                    className={`switch ${s.is_active ? 'on' : ''}`}
-                    onClick={() => toggleActive.mutate(s)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && toggleActive.mutate(s)}
+            <article className="sources-op-card">
+              <div className="sources-op-card-copy">
+                <div className="sources-op-card-icon sources-op-card-icon-policy" aria-hidden>
+                  <Icon name="clock" />
+                </div>
+                <div className="sources-op-card-text">
+                  <h3 className="sources-op-card-title">탐문 후보 삭제 기한</h3>
+                  <p className="sources-op-card-desc np-copy-single">
+                    검토 대기 {retentionDays}일 경과 시 05:30(KST) 자동 삭제
+                  </p>
+                </div>
+              </div>
+              <div className="sources-op-card-controls">
+                <label className="sources-retention-inline" htmlFor="discovery-retention-days">
+                  <span className="sources-retention-label">기한</span>
+                  <input
+                    id="discovery-retention-days"
+                    className="input"
+                    type="number"
+                    min={0}
+                    max={365}
+                    step={1}
+                    inputMode="numeric"
+                    value={retentionDays}
+                    onChange={(e) => setRetentionDays(e.target.value)}
+                    aria-label="탐문 후보 삭제 기한(일)"
                   />
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    <Btn variant="ghost" size="sm" title="설정" onClick={() => openEdit(s)}>
-                      <Icon name="filter" />
-                    </Btn>
-                    <Btn
-                      variant="soft"
-                      size="sm"
-                      onClick={() => crawl(s)}
-                      disabled={busy || crawling === s.id || !s.is_active}
-                      title={busy ? crawlBlockedTitle : '수동 크롤링'}
-                    >
-                      <Icon name="refresh" className={crawling === s.id ? 'spin' : ''} />
-                    </Btn>
-                    <Btn
-                      variant="soft"
-                      size="sm"
-                      onClick={() => crawlDiscoveryPipeline(s)}
-                      disabled={busy || crawling === s.id || !s.is_active}
-                      title={busy ? crawlBlockedTitle : 'AI 발견으로 수동 크롤링'}
-                    >
-                      <Icon name="sparkles" className={crawling === s.id ? 'spin' : ''} />
-                    </Btn>
-                    <Btn variant="outline" size="sm" icon="trash" onClick={() => remove.mutate(s.id)} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <span className="sources-retention-unit">일</span>
+                </label>
+                <Btn
+                  variant="primary"
+                  size="sm"
+                  onClick={() => saveRetention.mutate()}
+                  disabled={!retentionDirty || !retentionValid || saveRetention.isPending}
+                >
+                  {saveRetention.isPending ? '…' : '저장'}
+                </Btn>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="sources-block sources-block-list" aria-labelledby="sources-list-heading">
+          <header className="sources-list-head">
+            <div className="sources-list-head-main">
+              <h2 id="sources-list-heading" className="sources-block-title">
+                등록 소스
+              </h2>
+              <p className="sources-list-meta">
+                전체 <strong>{rows.length}</strong>개 · 활성 <strong>{activeCount}</strong>개
+              </p>
+            </div>
+            <div className="sources-list-toolbar">
+              <div className="sources-list-search">
+                <Icon name="search" />
+                <input
+                  placeholder="소스명·URL 검색"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  aria-label="소스 검색"
+                />
+              </div>
+            </div>
+          </header>
+
+          <div className="sources-table-wrap tbl-wrap">
+            <table className="tbl sources-table">
+              <thead>
+                <tr>
+                  <th>소스</th>
+                  <th style={{ width: 100 }}>유형</th>
+                  <th style={{ width: 90 }}>카테고리</th>
+                  <th style={{ width: 130 }}>신뢰도</th>
+                  <th style={{ width: 90 }}>자동 게시</th>
+                  <th style={{ width: 130 }}>마지막 크롤링</th>
+                  <th style={{ width: 76 }}>활성</th>
+                  <th style={{ width: 140 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="sources-empty-cell">
+                      {qLower ? '검색 결과가 없습니다.' : '등록된 소스가 없습니다. 소스를 추가해 주세요.'}
+                    </td>
+                  </tr>
+                )}
+                {rows.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <div className="nm">{s.name}</div>
+                      <div className="url" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
+                        {s.url}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="type-tag">{s.source_type}</span>
+                    </td>
+                    <td>
+                      <span className="ctag">{s.category}</span>
+                    </td>
+                    <td>
+                      <TrustBadge level={s.trust_level} score={s.reliability_score} />
+                    </td>
+                    <td>
+                      {s.auto_publish ? (
+                        <span className="badge badge-mint">
+                          <span className="dot" />
+                          자동
+                        </span>
+                      ) : (
+                        <span className="badge badge-unknown">검토</span>
+                      )}
+                    </td>
+                    <td className="mono" style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                      {relativeCrawl(s.last_crawled_at)}
+                    </td>
+                    <td>
+                      <div
+                        className={`switch ${s.is_active ? 'on' : ''}`}
+                        onClick={() => toggleActive.mutate(s)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === 'Enter' && toggleActive.mutate(s)}
+                      />
+                    </td>
+                    <td>
+                      <div className="sources-row-actions">
+                        <Btn variant="ghost" size="sm" title="설정" onClick={() => openEdit(s)}>
+                          <Icon name="filter" />
+                        </Btn>
+                        <Btn
+                          variant="soft"
+                          size="sm"
+                          onClick={() => crawl(s)}
+                          disabled={busy || crawling === s.id || !s.is_active}
+                          title={busy ? crawlBlockedTitle : '중요 게시판 크롤링'}
+                        >
+                          <Icon name="refresh" className={crawling === s.id ? 'spin' : ''} />
+                        </Btn>
+                        <Btn
+                          variant="soft"
+                          size="sm"
+                          onClick={() => crawlDiscoveryPipeline(s)}
+                          disabled={busy || crawling === s.id || !s.is_active}
+                          title={busy ? crawlBlockedTitle : `${DISCOVERY_BOARD_LABEL} 크롤링`}
+                        >
+                          <Icon name="sparkles" className={crawling === s.id ? 'spin' : ''} />
+                        </Btn>
+                        <Btn variant="outline" size="sm" icon="trash" onClick={() => remove.mutate(s.id)} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <footer className="sources-table-legend">
+            <span>
+              <Icon name="refresh" /> 중요 게시판 수집
+            </span>
+            <span>
+              <Icon name="sparkles" /> {DISCOVERY_BOARD_LABEL} 수집
+            </span>
+          </footer>
+        </section>
       </div>
 
       {showAdd && (

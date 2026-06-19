@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { fetchOriginalPreview } from '../../api/postApi'
 import { Icon } from '../common/Icon'
 
 const FRAME_BASE_W = 1280
@@ -11,12 +12,13 @@ interface FrameLayout {
 }
 
 interface PostOriginalPaneProps {
+  postId: string
   url: string | null | undefined
   rawContent?: string
   title: string
 }
 
-export function PostOriginalPane({ url, rawContent, title }: PostOriginalPaneProps) {
+export function PostOriginalPane({ postId, url, rawContent, title }: PostOriginalPaneProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [layout, setLayout] = useState<FrameLayout>({
     scale: 0.55,
@@ -24,12 +26,58 @@ export function PostOriginalPane({ url, rawContent, title }: PostOriginalPanePro
     w: 400,
     h: 500,
   })
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const hasUrl = Boolean(url)
   const hasRaw = Boolean(rawContent?.trim())
 
   useEffect(() => {
+    if (!hasUrl) {
+      setPreviewState('idle')
+      setPreviewError(null)
+      return
+    }
+
+    let cancelled = false
+    setPreviewState('loading')
+    setPreviewError(null)
+
+    fetchOriginalPreview(postId)
+      .then((html) => {
+        if (cancelled) return
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev)
+          return URL.createObjectURL(blob)
+        })
+        setPreviewState('ready')
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        const detail = (err as { response?: { data?: string | { detail?: string } } })?.response?.data
+        const message =
+          typeof detail === 'string'
+            ? detail
+            : detail?.detail || '원문 미리보기를 불러오지 못했습니다.'
+        setPreviewError(message)
+        setPreviewState('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [hasUrl, postId, url])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
+
+  useEffect(() => {
     const el = viewportRef.current
-    if (!el || !hasUrl) return
+    if (!el || !hasUrl || previewState !== 'ready') return
 
     const updateLayout = () => {
       const w = el.clientWidth
@@ -46,7 +94,7 @@ export function PostOriginalPane({ url, rawContent, title }: PostOriginalPanePro
     const ro = new ResizeObserver(updateLayout)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [hasUrl, url])
+  }, [hasUrl, previewState, url])
 
   const openOriginal = () => {
     if (url) window.open(url, '_blank', 'noopener,noreferrer')
@@ -66,27 +114,42 @@ export function PostOriginalPane({ url, rawContent, title }: PostOriginalPanePro
       {hasUrl ? (
         <>
           <div className="post-split-frame-viewport" ref={viewportRef}>
-            <div
-              className="post-split-frame-scaler"
-              style={{ width: layout.w, height: layout.h }}
-            >
-              <iframe
-                className="post-split-frame"
-                src={url!}
-                title={`${title} 원문`}
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                referrerPolicy="no-referrer-when-downgrade"
-                loading="lazy"
-                style={{
-                  width: FRAME_BASE_W,
-                  height: layout.frameH,
-                  transform: `scale(${layout.scale})`,
-                }}
-              />
-            </div>
+            {previewState === 'loading' && (
+              <div className="post-split-frame-status">원문을 불러오는 중…</div>
+            )}
+            {previewState === 'error' && (
+              <div className="post-split-frame-status post-split-frame-status-error">
+                <p>{previewError}</p>
+                <p>
+                  많은 뉴스 사이트는 iframe 삽입을 막습니다.{' '}
+                  <button type="button" className="post-split-inline-link" onClick={openOriginal}>
+                    새 탭에서 원문 열기
+                  </button>
+                </p>
+              </div>
+            )}
+            {previewState === 'ready' && previewUrl && (
+              <div
+                className="post-split-frame-scaler"
+                style={{ width: layout.w, height: layout.h }}
+              >
+                <iframe
+                  className="post-split-frame"
+                  src={previewUrl}
+                  title={`${title} 원문`}
+                  sandbox="allow-same-origin allow-popups"
+                  loading="lazy"
+                  style={{
+                    width: FRAME_BASE_W,
+                    height: layout.frameH,
+                    transform: `scale(${layout.scale})`,
+                  }}
+                />
+              </div>
+            )}
           </div>
           <div className="post-split-frame-note">
-            패널 크기에 맞춘 미리보기입니다. 더 긴 본문은 iframe 안에서 스크롤하세요.{' '}
+            서버에서 원문 HTML을 받아 미리보기합니다.{' '}
             <button type="button" className="post-split-inline-link" onClick={openOriginal}>
               새 탭에서 원문 열기
             </button>

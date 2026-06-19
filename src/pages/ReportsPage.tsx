@@ -9,6 +9,7 @@ import { useToast } from '../components/common/Toast'
 import { useActiveJobs } from '../hooks/useJobsQuery'
 import { apiErrorDetail } from '../utils/apiError'
 import { formatDate } from '../utils/date'
+import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
 
 function todayInputValue(): string {
   const d = new Date()
@@ -57,7 +58,8 @@ export function ReportsPage() {
     <PageShell
       section="운영 · 브리핑"
       title="데일리 리포트"
-      lead="선택한 날짜에 수집된 중요 게시판과 AI 발견 게시판을 함께 분석해 하루 전체 인사이트 리포트를 생성합니다."
+      lead={`선택한 날짜에 수집된 중요 게시판과 ${DISCOVERY_BOARD_LABEL}를 함께 분석해 하루 전체 인사이트 리포트를 생성합니다.`}
+      leadSingleLine
       actions={
         <>
           <input

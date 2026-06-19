@@ -21,6 +21,13 @@ export async function getPost(id: string): Promise<PostDetail> {
   return data
 }
 
+export async function fetchOriginalPreview(id: string): Promise<string> {
+  const { data } = await apiClient.get<string>(`/api/v1/posts/${id}/original-preview`, {
+    responseType: 'text',
+  })
+  return data
+}
+
 export async function approvePost(id: string): Promise<Post> {
   const { data } = await apiClient.post<Post>(`/api/v1/posts/${id}/approve`)
   return data

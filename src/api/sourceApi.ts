@@ -41,3 +41,23 @@ export async function crawlAllToDiscovery(params?: {
   })
   return data
 }
+
+export interface CollectionSettings {
+  discovery_pending_retention_days: number
+  default_retention_days: number
+  is_custom: boolean
+}
+
+export async function getCollectionSettings(): Promise<CollectionSettings> {
+  const { data } = await apiClient.get<CollectionSettings>('/api/v1/sources/collection-settings')
+  return data
+}
+
+export async function updateCollectionSettings(
+  discovery_pending_retention_days: number,
+): Promise<CollectionSettings> {
+  const { data } = await apiClient.patch<CollectionSettings>('/api/v1/sources/collection-settings', {
+    discovery_pending_retention_days,
+  })
+  return data
+}

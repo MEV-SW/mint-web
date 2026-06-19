@@ -6,6 +6,7 @@ import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
 import { apiErrorDetail } from '../utils/apiError'
+import { mediaUrl } from '../utils/mediaUrl'
 import type { KeyChange } from '../types/report'
 
 export function ReportDetailPage() {
@@ -63,8 +64,18 @@ export function ReportDetailPage() {
 
       <article className="pg-briefing-block">
         <div className="np-section-label">AI 데일리 브리핑</div>
-        <h1 className="pg-title">{report.title}</h1>
-        {report.summary && <p className="pg-briefing-lead">{report.summary}</p>}
+        <div className="pg-briefing-hero">
+          <div className="pg-briefing-copy">
+            <h1 className="pg-title">{report.title}</h1>
+            {report.summary && <p className="pg-briefing-lead">{report.summary}</p>}
+          </div>
+          {mediaUrl(report.illustration_url) && (
+            <figure className="np-briefing-illustration np-briefing-illustration-lg">
+              <img src={mediaUrl(report.illustration_url)!} alt="" />
+              <figcaption>오늘의 스케치</figcaption>
+            </figure>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn
             variant="outline"

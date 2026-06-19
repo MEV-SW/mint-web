@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { askChat, type ChatCitation } from '../../api/chatApi'
@@ -36,16 +36,51 @@ function TypingDots() {
   )
 }
 
+function ChatCitations({
+  citations,
+  onNavigate,
+}: {
+  citations: ChatCitation[]
+  onNavigate: () => void
+}) {
+  if (citations.length === 0) return null
+
+  return (
+    <details className="chat-citations">
+      <summary className="chat-citations-summary">
+        <Icon name="chevD" />
+        <span>참고한 게시글 {citations.length}건</span>
+      </summary>
+      <ul className="chat-citations-list">
+        {citations.map((c) => (
+          <li key={c.post_id} className="chat-citation-item">
+            <Link to={`/posts/${c.post_id}`} onClick={onNavigate}>
+              {c.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+
 export function ChatWidget() {
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME])
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
+
+  const scrollBottom = () => {
+    requestAnimationFrame(() => {
+      const el = messagesRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    })
+  }
 
   const appendAssistant = (msg: Omit<ChatMessage, 'role'>) => {
     setMessages((prev) => [...prev, { role: 'assistant', ...msg }])
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    setTimeout(scrollBottom, 50)
   }
 
   const ask = useMutation({
@@ -71,10 +106,6 @@ export function ChatWidget() {
       toast(msg || '질문 처리에 실패했습니다.', 'err')
     },
   })
-
-  const scrollBottom = () => {
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-  }
 
   const submit = (text: string, allowGeneral = false) => {
     const q = text.trim()
@@ -109,6 +140,10 @@ export function ChatWidget() {
     submit(input)
   }
 
+  useEffect(() => {
+    if (open) scrollBottom()
+  }, [open])
+
   return (
     <div className={`chat-widget${open ? ' is-open' : ''}`} aria-live="polite">
       {open && (
@@ -138,7 +173,8 @@ export function ChatWidget() {
           </div>
 
           <div className="chat-widget-body">
-            <div className="chat-messages chat-widget-messages">
+            <div className="chat-widget-messages" ref={messagesRef}>
+              <div className="chat-messages">
               {messages.map((m, i) => (
                 <div key={i} className={`chat-bubble ${m.role}`}>
                   {m.role === 'assistant' && (
@@ -158,21 +194,7 @@ export function ChatWidget() {
                     </div>
                     <div className="chat-bubble-body">{m.content}</div>
                     {m.citations && m.citations.length > 0 && (
-                      <div className="chat-citations">
-                        <div className="chat-citations-label">참고 자료</div>
-                        {m.citations.map((c) => (
-                          <div key={c.post_id} className="chat-citation-item">
-                            <Link to={`/posts/${c.post_id}`} onClick={() => setOpen(false)}>
-                              {c.title}
-                            </Link>
-                            {c.url && (
-                              <a href={c.url} target="_blank" rel="noreferrer" className="chat-ext">
-                                <Icon name="ext" />
-                              </a>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      <ChatCitations citations={m.citations} onNavigate={() => setOpen(false)} />
                     )}
                     {m.generalConfirm && (
                       <div className="chat-confirm-actions">
@@ -210,7 +232,7 @@ export function ChatWidget() {
                   </div>
                 </div>
               )}
-              <div ref={bottomRef} />
+              </div>
             </div>
 
             {messages.length <= 1 && (
