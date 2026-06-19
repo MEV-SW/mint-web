@@ -56,35 +56,32 @@ export function PostDetailPage() {
   })
 
   if (isLoading || !post) {
-    return <div className="content-inner page-fade">로딩 중…</div>
+    return <div className="content-inner np-sheet">로딩 중…</div>
   }
 
   const ai = post.ai_outputs[0] || post.latest_ai
   const isDiscovery = post.board_type === 'discovery'
   return (
-    <div className="content-inner page-fade">
+    <div className="content-inner page-fade np-sheet">
       <Link to={post.board_type === 'discovery' ? '/discovery' : '/trusted'} className="back-link">
         <Icon name="chevL" /> 게시판으로
       </Link>
 
-      <div className="detail-hero card card-pad">
+      <article className="pg-article-hero">
+        <div className="np-section-label">{isDiscovery ? 'AI 발견' : '중요 뉴스'}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
           <StatusPill status={post.status} />
           <ImportanceBadge level={post.importance} />
           <TrustBadge level={post.trust_level} score={post.reliability_score} />
         </div>
-        <h2 style={{ margin: '0 0 12px', fontSize: 26, lineHeight: 1.35 }}>{post.title}</h2>
-        <div className="detail-meta">
-          <span>{post.source_name || '출처 없음'}</span>
-          <span>·</span>
+        <h1 className="pg-article-title">{post.title}</h1>
+        <div className="pg-article-meta">
+          <span className="source">{post.source_name || '출처 없음'}</span>
           <span>{formatDateTime(post.collected_at)}</span>
           {post.original_url && (
-            <>
-              <span>·</span>
-              <a href={post.original_url} target="_blank" rel="noreferrer" className="link">
-                원문 열기 <Icon name="ext" style={{ width: 14, height: 14 }} />
-              </a>
-            </>
+            <a href={post.original_url} target="_blank" rel="noreferrer" className="link">
+              원문 열기 <Icon name="ext" style={{ width: 14, height: 14 }} />
+            </a>
           )}
         </div>
         <div className="detail-actions" style={{ marginTop: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -119,14 +116,13 @@ export function PostDetailPage() {
             삭제
           </Btn>
         </div>
-      </div>
+      </article>
 
-      <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20, marginTop: 20 }}>
-        <div className="card card-pad">
-          <div className="section-head">
-            <h3 style={{ margin: 0 }}>AI 요약</h3>
-            {ai && <AiBadge />}
-          </div>
+      <section className="pg-section-block">
+        <div className="section-head">
+          <h3 style={{ margin: 0, fontFamily: 'var(--serif)' }}>AI 요약</h3>
+          {ai && <AiBadge />}
+        </div>
           {ai ? (
             <>
               <p style={{ fontSize: 15, lineHeight: 1.65 }}>{ai.summary}</p>
@@ -153,8 +149,7 @@ export function PostDetailPage() {
           ) : (
             <p style={{ color: 'var(--text-muted)' }}>AI 요약이 없습니다. 상단 버튼으로 생성하세요.</p>
           )}
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

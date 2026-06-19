@@ -14,6 +14,7 @@ import { TrustBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { Modal } from '../components/common/Modal'
+import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { SourceFormFields } from '../components/sources/SourceFormFields'
 import type { Source, SourceCreate } from '../types/source'
@@ -181,13 +182,12 @@ export function SourcesPage() {
   const canSave = Boolean(form.name.trim() && form.url.trim())
 
   return (
-    <div className="content-inner page-fade">
-      <div className="page-intro" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <div>
-          <h2>소스 관리</h2>
-          <p>크롤링 대상 소스를 등록·관리합니다. 신뢰도와 자동 게시 여부에 따라 수집 글 처리 방식이 달라집니다.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+    <PageShell
+      section="운영 · 수집"
+      title="소스 관리"
+      lead="크롤링 대상 소스를 등록·관리합니다. 신뢰도와 자동 게시 여부에 따라 수집 글 처리 방식이 달라집니다."
+      actions={
+        <>
           <Btn
             variant="soft"
             icon="sparkles"
@@ -204,9 +204,9 @@ export function SourcesPage() {
           <Btn variant="primary" icon="plus" onClick={openAdd}>
             소스 추가
           </Btn>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {busy && (
         <div className="busy-banner" role="status">
           <Icon name="clock" />
@@ -357,6 +357,6 @@ export function SourcesPage() {
           <SourceFormFields form={form} onChange={setForm} />
         </Modal>
       )}
-    </div>
+    </PageShell>
   )
 }

@@ -12,6 +12,7 @@ import {
 import { ImportanceBadge, StatusPill, TrustBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
+import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import type { BoardType, Importance, PostStatus } from '../types/post'
 import { formatDateTime } from '../utils/date'
@@ -79,16 +80,15 @@ export function BoardPage({ boardType }: BoardPageProps) {
   })
 
   return (
-    <div className="content-inner page-fade">
-      <div className="page-intro">
-        <h2>{isDiscovery ? 'AI 발견 게시판' : '중요 게시판'}</h2>
-        <p>
-          {isDiscovery
-            ? 'AI가 EV·충전 관련 기사를 발굴한 후보입니다. 원문 링크와 AI 요약만 표시됩니다.'
-            : '검증된 신뢰 소스에서 수집된 중요 게시글입니다. 원문 링크와 AI 요약만 표시됩니다.'}
-        </p>
-      </div>
-
+    <PageShell
+      section={isDiscovery ? '게시판 · AI 발견' : '게시판 · 중요'}
+      title={isDiscovery ? 'AI 발견 게시판' : '중요 게시판'}
+      lead={
+        isDiscovery
+          ? 'AI가 EV·충전 관련 기사를 발굴한 후보입니다. 원문 링크와 AI 요약만 표시됩니다.'
+          : '검증된 신뢰 소스에서 수집된 중요 게시글입니다. 원문 링크와 AI 요약만 표시됩니다.'
+      }
+    >
       <div className="toolbar">
         <div className="search">
           <Icon name="search" />
@@ -251,6 +251,6 @@ export function BoardPage({ boardType }: BoardPageProps) {
           </Btn>
         </div>
       )}
-    </div>
+    </PageShell>
   )
 }

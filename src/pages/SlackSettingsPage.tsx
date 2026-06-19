@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createWebhook, deleteWebhook, listWebhooks, testSlack } from '../api/slackApi'
 import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
+import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 
 export function SlackSettingsPage() {
@@ -39,22 +40,21 @@ export function SlackSettingsPage() {
   })
 
   return (
-    <div className="content-inner page-fade">
-      <div className="page-intro" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <h2>Slack 설정</h2>
-          <p>Incoming Webhook URL을 등록하고 테스트 메시지를 보냅니다. URL은 암호화되어 저장됩니다.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+    <PageShell
+      section="운영 · 알림"
+      title="Slack 설정"
+      lead="Incoming Webhook URL을 등록하고 테스트 메시지를 보냅니다. URL은 암호화되어 저장됩니다."
+      actions={
+        <>
           <Btn variant="outline" onClick={() => test.mutate()} disabled={test.isPending || !webhooks.length}>
             테스트 발송
           </Btn>
           <Btn variant="primary" icon="plus" onClick={() => setShowAdd(true)}>
             Webhook 추가
           </Btn>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <div className="card card-pad">
         {webhooks.map((w) => (
           <div
@@ -104,6 +104,6 @@ export function SlackSettingsPage() {
           </div>
         </Modal>
       )}
-    </div>
+    </PageShell>
   )
 }

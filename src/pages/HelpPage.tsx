@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '../components/common/Icon'
+import { PageShell } from '../components/layout/PageShell'
 
 const FLOW = [
   { step: '1', title: '소스 등록', desc: '신뢰할 수 있는 EV·충전 뉴스/공지 URL을 등록합니다.', to: '/sources' },
@@ -72,12 +73,11 @@ const FAQ = [
 
 export function HelpPage() {
   return (
-    <div className="content-inner page-fade help-page">
-      <div className="page-intro">
-        <h2>도움말</h2>
-        <p>MINT(MotrexEV Intelligence &amp; News Tracker) 사용 방법을 안내합니다.</p>
-      </div>
-
+    <PageShell
+      section="안내"
+      title="도움말"
+      lead="MINT(MotrexEV Intelligence & News Tracker) 사용 방법을 안내합니다."
+    >
       <section className="help-hero card card-pad">
         <div className="help-hero-icon" aria-hidden>
           <Icon name="help" />
@@ -143,11 +143,11 @@ export function HelpPage() {
         <div>
           <strong>팁</strong>
           <p>
-            모바일에서는 왼쪽 상단 메뉴(☰)로 내비게이션을 열 수 있습니다. AI 챗봇은 우하단
+            모바일에서는 상단 메뉴(☰)로 내비게이션을 열 수 있습니다. AI 챗봇은 우하단
             버튼을 눌러 언제든 질문하세요.
           </p>
         </div>
       </section>
-    </div>
+    </PageShell>
   )
 }

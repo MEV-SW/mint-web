@@ -51,133 +51,88 @@ export function ReportDetailPage() {
     remove.mutate()
   }
 
-  if (isLoading || !report) return <div className="content-inner">로딩 중…</div>
+  if (isLoading || !report) return <div className="content-inner np-sheet">로딩 중…</div>
 
   const keyChanges = (report.key_changes as KeyChange[] | null) || []
 
   return (
-    <div className="content-inner page-fade">
+    <div className="content-inner page-fade np-sheet">
       <Link to="/reports" className="back-link">
         <Icon name="chevL" /> 리포트 목록
       </Link>
 
-      <div
-        className="card card-pad"
-        style={{
-          background: 'linear-gradient(135deg, oklch(0.55 0.11 168), oklch(0.48 0.1 175))',
-          color: '#fff',
-          marginBottom: 20,
-        }}
-      >
-        <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 6 }}>한눈에</div>
-        <h2 style={{ margin: '0 0 8px' }}>{report.title}</h2>
-        <p style={{ opacity: 0.9, margin: 0, lineHeight: 1.6 }}>{report.summary}</p>
-        <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <article className="pg-briefing-block">
+        <div className="np-section-label">AI 데일리 브리핑</div>
+        <h1 className="pg-title">{report.title}</h1>
+        {report.summary && <p className="pg-briefing-lead">{report.summary}</p>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn
             variant="outline"
             size="sm"
             icon="slack"
             onClick={() => sendSlack.mutate()}
             disabled={sendSlack.isPending}
-            style={{ background: 'oklch(1 0 0 / 0.15)', borderColor: 'oklch(1 0 0 / 0.3)', color: '#fff' }}
           >
             {sendSlack.isPending ? '발송 중…' : report.slack_sent ? 'Slack 재발송' : 'Slack 발송'}
           </Btn>
-          <Btn
-            variant="outline"
-            size="sm"
-            icon="trash"
-            onClick={confirmDelete}
-            disabled={remove.isPending}
-            style={{ background: 'oklch(1 0 0 / 0.1)', borderColor: 'oklch(1 0 0 / 0.25)', color: '#fff' }}
-          >
+          <Btn variant="outline" size="sm" icon="trash" onClick={confirmDelete} disabled={remove.isPending}>
             {remove.isPending ? '삭제 중…' : '삭제'}
           </Btn>
         </div>
-      </div>
+      </article>
 
       {keyChanges.length > 0 && (
-        <div className="card card-pad" style={{ marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0 }}>오늘 보면 좋은 소식</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <section className="pg-section-block">
+          <h3>오늘 보면 좋은 소식</h3>
+          <ol className="np-briefing-picks">
             {keyChanges.map((k, i) => {
               const relatedItem = report.items.find((item) =>
                 k.related_post_ids?.includes(item.post_id),
               )
               return (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    gap: 12,
-                    padding: '12px 14px',
-                    borderRadius: 10,
-                    background: 'var(--surface-2, oklch(0.97 0 0))',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      background: 'var(--accent-muted, oklch(0.55 0.11 168 / 0.15))',
-                      color: 'var(--accent)',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 15 }}>{k.title}</strong>
-                      {k.importance && <ImportanceBadge level={k.importance} />}
-                    </div>
-                    {k.description && (
-                      <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '6px 0 0' }}>
-                        {k.description}
-                      </p>
-                    )}
-                    {relatedItem?.post && (
-                      <Link
-                        to={`/posts/${relatedItem.post_id}`}
-                        className="link"
-                        style={{ fontSize: 13, display: 'inline-block', marginTop: 8 }}
-                      >
-                        게시글 보기 →
-                      </Link>
+                <li key={i}>
+                  <div className="np-pick-row" style={{ cursor: 'default' }}>
+                    <span className="np-pick-num">{i + 1}</span>
+                    <span className="np-pick-body">
+                      <strong>{k.title}</strong>
+                      {k.description && <span>{k.description}</span>}
+                      {relatedItem?.post && (
+                        <Link to={`/posts/${relatedItem.post_id}`} className="link" style={{ fontSize: 13 }}>
+                          게시글 보기 →
+                        </Link>
+                      )}
+                    </span>
+                    {k.importance && (
+                      <span className="np-pick-badge">
+                        <ImportanceBadge level={k.importance} />
+                      </span>
                     )}
                   </div>
-                </div>
+                </li>
               )
             })}
-          </div>
-        </div>
+          </ol>
+        </section>
       )}
 
       {report.items.length > 0 && (
-        <div className="card card-pad">
-          <h3 style={{ marginTop: 0 }}>관련 게시글 ({report.items.length})</h3>
+        <section className="pg-section-block">
+          <h3>관련 게시글 ({report.items.length})</h3>
           {report.items.map((item) => (
-            <div key={item.id} style={{ marginBottom: 12 }}>
+            <div key={item.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
               {item.post ? (
-                <Link to={`/posts/${item.post_id}`} className="link">
+                <Link to={`/posts/${item.post_id}`} className="link" style={{ fontFamily: 'var(--serif)', fontWeight: 650 }}>
                   {item.post.title}
                 </Link>
               ) : (
                 <span className="mono">{item.post_id}</span>
               )}
               {item.reason && (
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{item.reason}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{item.reason}</div>
               )}
             </div>
           ))}
-        </div>
+        </section>
       )}
     </div>
   )

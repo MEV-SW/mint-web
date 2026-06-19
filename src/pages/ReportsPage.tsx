@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { deleteReport, generateReport, listReports } from '../api/reportApi'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
+import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useActiveJobs } from '../hooks/useJobsQuery'
 import { apiErrorDetail } from '../utils/apiError'
@@ -53,15 +54,12 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="content-inner page-fade">
-      <div className="page-intro" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <h2>데일리 리포트</h2>
-          <p>
-            선택한 날짜에 수집된 중요 게시판과 AI 발견 게시판을 함께 분석해 하루 전체 인사이트 리포트를 생성합니다.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+    <PageShell
+      section="운영 · 브리핑"
+      title="데일리 리포트"
+      lead="선택한 날짜에 수집된 중요 게시판과 AI 발견 게시판을 함께 분석해 하루 전체 인사이트 리포트를 생성합니다."
+      actions={
+        <>
           <input
             className="input"
             type="date"
@@ -78,9 +76,9 @@ export function ReportsPage() {
           >
             {busy ? '다른 작업 실행 중…' : gen.isPending ? '요청 중…' : '리포트 수동 생성'}
           </Btn>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {busy && (
         <div className="busy-banner" role="status">
           <Icon name="clock" />
@@ -145,6 +143,6 @@ export function ReportsPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageShell>
   )
 }
