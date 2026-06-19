@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useLayoutEffect } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   approvePost,
   deletePost,
@@ -9,12 +9,18 @@ import {
   promotePost,
   summarizePost,
 } from '../api/postApi'
-import { ImportanceBadge, StatusPill, TrustBadge } from '../components/common/Badges'
+import { ImportanceBadge, StatusPill } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import type { BoardType, Importance, PostStatus } from '../types/post'
+import {
+  boardListPath,
+  boardScrollKey,
+  patchBoardListParams,
+  readBoardListParams,
+} from '../utils/boardListState'
 import { formatDateTime } from '../utils/date'
 
 interface BoardPageProps {
@@ -23,19 +29,34 @@ interface BoardPageProps {
 
 export function BoardPage({ boardType }: BoardPageProps) {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
   const qc = useQueryClient()
-  const [keyword, setKeyword] = useState(() => searchParams.get('keyword') ?? '')
+  const { page, keyword, importance, status } = readBoardListParams(searchParams)
+  const listPath = boardListPath(location.pathname, searchParams)
+  const isDiscovery = boardType === 'discovery'
+
+  const patchParams = (patch: Parameters<typeof patchBoardListParams>[1]) => {
+    setSearchParams((prev) => patchBoardListParams(prev, patch), { replace: true })
+  }
+
+  const goPost = (id: string) => {
+    navigate(`/posts/${id}`, { state: { from: listPath } })
+  }
+
+  useLayoutEffect(() => {
+    const key = boardScrollKey(listPath)
+    const y = sessionStorage.getItem(key)
+    if (y) requestAnimationFrame(() => window.scrollTo(0, Number(y)))
+  }, [listPath])
 
   useEffect(() => {
-    const kw = searchParams.get('keyword')
-    if (kw != null) setKeyword(kw)
-  }, [searchParams])
-  const [importance, setImportance] = useState<string>('all')
-  const [status, setStatus] = useState<string>('all')
-  const [page, setPage] = useState(1)
-  const isDiscovery = boardType === 'discovery'
+    const key = boardScrollKey(listPath)
+    return () => {
+      sessionStorage.setItem(key, String(window.scrollY))
+    }
+  }, [listPath])
 
   const { data, isLoading } = useQuery({
     queryKey: ['posts', boardType, keyword, importance, status, page],
@@ -49,6 +70,12 @@ export function BoardPage({ boardType }: BoardPageProps) {
         size: 10,
       }),
   })
+
+  useEffect(() => {
+    if (data && data.pages > 0 && page > data.pages) {
+      patchParams({ page: data.pages })
+    }
+  }, [data, page])
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['posts'] })
@@ -95,17 +122,14 @@ export function BoardPage({ boardType }: BoardPageProps) {
           <input
             placeholder="제목·요약 검색"
             value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value)
-              setPage(1)
-            }}
+            onChange={(e) => patchParams({ keyword: e.target.value, page: 1 })}
           />
         </div>
         <select
           className="input"
           style={{ width: 120 }}
           value={importance}
-          onChange={(e) => setImportance(e.target.value)}
+          onChange={(e) => patchParams({ importance: e.target.value, page: 1 })}
         >
           <option value="all">중요도 전체</option>
           <option value="high">높음</option>
@@ -117,7 +141,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
             className="input"
             style={{ width: 120 }}
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => patchParams({ status: e.target.value, page: 1 })}
           >
             <option value="all">상태 전체</option>
             <option value="pending">검토 대기</option>
@@ -135,20 +159,19 @@ export function BoardPage({ boardType }: BoardPageProps) {
               <th>제목</th>
               <th style={{ width: 120 }}>출처</th>
               <th style={{ width: 100 }}>중요도</th>
-              <th style={{ width: 100 }}>신뢰도</th>
               <th style={{ width: 140 }}>수집일</th>
               {isDiscovery && <th style={{ width: 90 }}>상태</th>}
-              <th style={{ width: 160 }} />
+              <th style={{ width: isDiscovery ? 168 : 88 }} />
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={7}>로딩 중…</td>
+                <td colSpan={isDiscovery ? 6 : 5}>로딩 중…</td>
               </tr>
             )}
             {data?.items.map((p) => (
-              <tr key={p.id} onClick={() => navigate(`/posts/${p.id}`)} style={{ cursor: 'pointer' }}>
+              <tr key={p.id} onClick={() => goPost(p.id)} style={{ cursor: 'pointer' }}>
                 <td>
                   <div className="post-title-cell">{p.title}</div>
                   {p.latest_ai?.summary && (
@@ -172,9 +195,6 @@ export function BoardPage({ boardType }: BoardPageProps) {
                 <td>
                   <ImportanceBadge level={p.importance} />
                 </td>
-                <td>
-                  <TrustBadge level={p.trust_level} score={p.reliability_score} />
-                </td>
                 <td className="mono" style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
                   {formatDateTime(p.collected_at)}
                 </td>
@@ -184,24 +204,14 @@ export function BoardPage({ boardType }: BoardPageProps) {
                   </td>
                 )}
                 <td onClick={(e) => e.stopPropagation()}>
-                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    {p.original_url && (
-                      <Btn
-                        variant="outline"
-                        size="sm"
-                        title="원문 열기"
-                        onClick={() => window.open(p.original_url!, '_blank', 'noopener,noreferrer')}
-                      >
-                        <Icon name="ext" />
-                      </Btn>
-                    )}
+                  <div className="board-row-actions">
                     {isDiscovery && p.status === 'pending' && (
                       <Btn
                         variant="soft"
                         size="sm"
                         onClick={() => action.mutate({ id: p.id, type: 'approve' })}
                       >
-                        승인
+                        검토 완료
                       </Btn>
                     )}
                     {isDiscovery && (
@@ -235,7 +245,12 @@ export function BoardPage({ boardType }: BoardPageProps) {
 
       {data && data.pages > 1 && (
         <div className="pager">
-          <Btn variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <Btn
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => patchParams({ page: page - 1 })}
+          >
             이전
           </Btn>
           <span>
@@ -245,7 +260,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
             variant="outline"
             size="sm"
             disabled={page >= data.pages}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => patchParams({ page: page + 1 })}
           >
             다음
           </Btn>

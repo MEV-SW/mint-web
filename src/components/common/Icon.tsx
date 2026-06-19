@@ -9,6 +9,7 @@ const ICONS: Record<string, string> = {
   clock: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2',
   check: 'M20 6L9 17l-5-5',
   chevR: 'M9 18l6-6-6-6',
+  chevL: 'M15 18l-6-6 6-6',
   chevD: 'M6 9l6 6 6-6',
   arrowUp: 'M12 19V5M5 12l7-7 7 7',
   arrowRight: 'M5 12h14M12 5l7 7-7 7',

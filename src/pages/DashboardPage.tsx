@@ -4,6 +4,7 @@ import { fetchDashboardStats, type DashboardPostPreview } from '../api/statsApi'
 import type { Importance } from '../types/post'
 import { ImportanceBadge, StatusPill } from '../components/common/Badges'
 import { Icon } from '../components/common/Icon'
+import { DailyCorner } from '../components/dashboard/DailyCorner'
 import { formatDate } from '../utils/date'
 
 function ArticleByline({ post }: { post: DashboardPostPreview }) {
@@ -180,6 +181,7 @@ export function DashboardPage() {
               최신 브리핑 · {stats.latest_report.report_date}
             </p>
           )}
+          <DailyCorner />
         </aside>
       </div>
 

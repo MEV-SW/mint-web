@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import {
   approvePost,
   deletePost,
@@ -8,14 +8,17 @@ import {
   promotePost,
   summarizePost,
 } from '../api/postApi'
-import { AiBadge, ImportanceBadge, StatusPill, TrustBadge } from '../components/common/Badges'
+import { ImportanceBadge, StatusPill, TrustBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
+import { PostAiSummaryPanel } from '../components/posts/PostAiSummaryPanel'
+import { PostOriginalPane } from '../components/posts/PostOriginalPane'
 import { formatDateTime } from '../utils/date'
 
 export function PostDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
   const toast = useToast()
   const qc = useQueryClient()
 
@@ -61,10 +64,15 @@ export function PostDetailPage() {
 
   const ai = post.ai_outputs[0] || post.latest_ai
   const isDiscovery = post.board_type === 'discovery'
+  const showSplit = Boolean(post.original_url || post.raw_content?.trim())
+  const backTo =
+    (location.state as { from?: string } | null)?.from ??
+    (isDiscovery ? '/discovery' : '/trusted')
+
   return (
-    <div className="content-inner page-fade np-sheet">
-      <Link to={post.board_type === 'discovery' ? '/discovery' : '/trusted'} className="back-link">
-        <Icon name="chevL" /> 게시판으로
+    <div className="content-inner page-fade np-sheet post-detail-page">
+      <Link to={backTo} className="back-link">
+        <Icon name="chevL" style={{ width: 14, height: 14 }} /> 게시판으로
       </Link>
 
       <article className="pg-article-hero">
@@ -78,13 +86,8 @@ export function PostDetailPage() {
         <div className="pg-article-meta">
           <span className="source">{post.source_name || '출처 없음'}</span>
           <span>{formatDateTime(post.collected_at)}</span>
-          {post.original_url && (
-            <a href={post.original_url} target="_blank" rel="noreferrer" className="link">
-              원문 열기 <Icon name="ext" style={{ width: 14, height: 14 }} />
-            </a>
-          )}
         </div>
-        <div className="detail-actions" style={{ marginTop: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="detail-actions">
           {post.original_url && (
             <Btn
               variant="primary"
@@ -94,15 +97,15 @@ export function PostDetailPage() {
               원문 보기
             </Btn>
           )}
-          {!ai && (
+          {ai && (
             <Btn variant="soft" icon="sparkles" onClick={() => summarize.mutate()} disabled={summarize.isPending}>
-              {summarize.isPending ? '요약 생성 중…' : 'AI 요약 생성'}
+              {summarize.isPending ? '요약 갱신 중…' : '요약 다시 생성'}
             </Btn>
           )}
           {isDiscovery && (
             <>
               <Btn variant="soft" onClick={() => act.mutate('approve')}>
-                승인
+                검토 완료
               </Btn>
               <Btn variant="soft" icon="promote" onClick={() => act.mutate('promote')}>
                 중요 게시판 승격
@@ -118,38 +121,24 @@ export function PostDetailPage() {
         </div>
       </article>
 
-      <section className="pg-section-block">
-        <div className="section-head">
-          <h3 style={{ margin: 0, fontFamily: 'var(--serif)' }}>AI 요약</h3>
-          {ai && <AiBadge />}
+      {showSplit ? (
+        <div className="post-split-view">
+          <PostOriginalPane url={post.original_url} rawContent={post.raw_content} title={post.title} />
+          <PostAiSummaryPanel
+            ai={ai}
+            isDiscovery={isDiscovery}
+            summarizing={summarize.isPending}
+            onSummarize={() => summarize.mutate()}
+          />
         </div>
-          {ai ? (
-            <>
-              <p style={{ fontSize: 15, lineHeight: 1.65 }}>{ai.summary}</p>
-              {!isDiscovery && ai.impact && (
-                <>
-                  <h4>영향</h4>
-                  <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>{ai.impact}</p>
-                </>
-              )}
-              {!isDiscovery && ai.action_items && ai.action_items.length > 0 && (
-                <>
-                  <h4>액션 아이템</h4>
-                  <ul>
-                    {ai.action_items.map((item, i) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              <p style={{ fontSize: 12, color: 'var(--text-faint)', fontFamily: 'var(--mono)' }}>
-                {ai.model} · confidence {ai.confidence ?? '-'}
-              </p>
-            </>
-          ) : (
-            <p style={{ color: 'var(--text-muted)' }}>AI 요약이 없습니다. 상단 버튼으로 생성하세요.</p>
-          )}
-      </section>
+      ) : (
+        <PostAiSummaryPanel
+          ai={ai}
+          isDiscovery={isDiscovery}
+          summarizing={summarize.isPending}
+          onSummarize={() => summarize.mutate()}
+        />
+      )}
     </div>
   )
 }
