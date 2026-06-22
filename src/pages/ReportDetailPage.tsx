@@ -26,10 +26,10 @@ export function ReportDetailPage() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['report', id] })
       qc.invalidateQueries({ queryKey: ['reports'] })
-      toast(res.success ? 'Slack 발송 완료' : res.message, res.success ? 'ok' : 'err')
+      toast(res.success ? '웹훅 발송 완료' : res.message, res.success ? 'ok' : 'err')
     },
     onError: (e: unknown) => {
-      toast(apiErrorDetail(e) || 'Slack 발송 실패 — Webhook을 등록하세요.', 'err')
+      toast(apiErrorDetail(e) || '웹훅 발송 실패 — Webhook을 등록하세요.', 'err')
     },
   })
 
@@ -84,7 +84,7 @@ export function ReportDetailPage() {
             onClick={() => sendSlack.mutate()}
             disabled={sendSlack.isPending}
           >
-            {sendSlack.isPending ? '발송 중…' : report.slack_sent ? 'Slack 재발송' : 'Slack 발송'}
+            {sendSlack.isPending ? '발송 중…' : report.slack_sent ? '웹훅 재발송' : '웹훅 발송'}
           </Btn>
           <Btn variant="outline" size="sm" icon="trash" onClick={confirmDelete} disabled={remove.isPending}>
             {remove.isPending ? '삭제 중…' : '삭제'}

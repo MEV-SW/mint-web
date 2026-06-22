@@ -5,6 +5,7 @@ import type { Importance } from '../types/post'
 import { ImportanceBadge, StatusPill } from '../components/common/Badges'
 import { Icon } from '../components/common/Icon'
 import { DailyCorner } from '../components/dashboard/DailyCorner'
+import { CommunityVoicesStrip } from '../components/dashboard/CommunityVoicesStrip'
 import { formatDate } from '../utils/date'
 import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
 import { mediaUrl } from '../utils/mediaUrl'
@@ -78,6 +79,7 @@ export function DashboardPage() {
 
   const trusted = stats?.trusted_preview ?? []
   const discovery = stats?.discovery_preview ?? []
+  const communityVoices = stats?.community_voices_preview ?? []
   const [lead, ...restTrusted] = trusted
   const sideTrusted = restTrusted.slice(0, 2)
   const gridTrusted = restTrusted.slice(2)
@@ -100,7 +102,7 @@ export function DashboardPage() {
               <span>AI 데일리 브리핑</span>
               {stats?.latest_report?.slack_sent && (
                 <span className="np-briefing-sent">
-                  <Icon name="slack" /> Slack 발송
+                  <Icon name="slack" /> 웹훅 발송
                 </span>
               )}
             </div>
@@ -268,6 +270,8 @@ export function DashboardPage() {
           </div>
         )}
       </section>
+
+      <CommunityVoicesStrip voices={communityVoices} loading={isLoading} />
     </div>
   )
 }

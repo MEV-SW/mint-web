@@ -5,6 +5,7 @@ export interface DashboardPostPreview {
   id: string
   title: string
   source_name: string | null
+  source_type?: string | null
   board_type: BoardType
   status: PostStatus
   importance: Importance
@@ -36,6 +37,7 @@ export interface DashboardStats {
   } | null
   trusted_preview: DashboardPostPreview[]
   discovery_preview: DashboardPostPreview[]
+  community_voices_preview?: DashboardPostPreview[]
 }
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {

@@ -4,6 +4,7 @@ export type JobType =
   | 'crawl_all_discovery'
   | 'crawl_all'
   | 'discovery_pipeline'
+  | 'community_discovery_pipeline'
   | 'generate_report'
   | 'send_slack_report'
   | 'summarize_post'

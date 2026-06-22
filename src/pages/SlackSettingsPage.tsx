@@ -42,8 +42,8 @@ export function SlackSettingsPage() {
   return (
     <PageShell
       section="운영 · 알림"
-      title="Slack 설정"
-      lead="Incoming Webhook URL을 등록하고 테스트 메시지를 보냅니다. URL은 암호화되어 저장됩니다."
+      title="웹훅 설정"
+      lead="Slack·Teams 등 Incoming Webhook URL을 등록하고 테스트 메시지를 보냅니다. URL은 암호화되어 저장됩니다."
       leadSingleLine
       actions={
         <>
@@ -82,7 +82,7 @@ export function SlackSettingsPage() {
 
       {showAdd && (
         <Modal
-          title="Slack Webhook 등록"
+          title="Webhook 등록"
           onClose={() => setShowAdd(false)}
           footer={
             <>
@@ -97,7 +97,7 @@ export function SlackSettingsPage() {
         >
           <div className="field">
             <label>Webhook URL</label>
-            <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://hooks.slack.com/..." />
+            <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://hooks.example.com/..." />
           </div>
           <div className="field">
             <label>채널명</label>

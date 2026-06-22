@@ -7,7 +7,7 @@ const FLOW = [
   { step: '1', title: '소스 등록', desc: '신뢰할 수 있는 EV·충전 뉴스/공지 URL을 등록합니다.', to: '/sources' },
   { step: '2', title: '자동 수집', desc: '크롤링으로 게시글을 수집하고 AI가 요약·중요도를 판단합니다.', to: '/sources' },
   { step: '3', title: '게시판 검토', desc: `중요 게시판과 ${DISCOVERY_BOARD_LABEL}에서 내용을 확인합니다.`, to: '/trusted' },
-  { step: '4', title: '리포트·알림', desc: '데일리 리포트를 생성하고 Slack으로 공유합니다.', to: '/reports' },
+  { step: '4', title: '리포트·알림', desc: '데일리 리포트를 생성하고 Webhook으로 공유합니다.', to: '/reports' },
 ]
 
 const SECTIONS = [
@@ -43,9 +43,9 @@ const SECTIONS = [
   },
   {
     icon: 'slack',
-    title: 'Slack 설정',
-    body: 'Webhook을 등록하면 데일리 리포트를 사내 Slack 채널로 발송할 수 있습니다. 테스트 메시지로 연결을 확인하세요.',
-    link: { label: 'Slack 설정', to: '/slack' },
+    title: '웹훅 설정',
+    body: 'Webhook을 등록하면 데일리 리포트를 사내 메신저 채널로 발송할 수 있습니다. Slack·Teams 등 Incoming Webhook을 지원합니다.',
+    link: { label: '웹훅 설정', to: '/slack' },
   },
 ]
 
@@ -91,7 +91,7 @@ export function HelpPage() {
           <h3>MINT란?</h3>
           <p>
             EV·충전 인프라 관련 뉴스와 공지를 자동으로 수집하고, AI가 요약·중요도를 판단해
-            데일리 리포트와 Slack 알림까지 제공하는 사내 인텔리전스 도구입니다.
+            데일리 리포트와 Webhook 알림까지 제공하는 사내 인텔리전스 도구입니다.
           </p>
         </div>
       </section>

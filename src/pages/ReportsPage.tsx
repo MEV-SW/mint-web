@@ -98,7 +98,7 @@ export function ReportsPage() {
               <th style={{ width: 120 }}>날짜</th>
               <th>제목</th>
               <th style={{ width: 160 }}>생성일</th>
-              <th style={{ width: 120 }}>Slack</th>
+              <th style={{ width: 120 }}>웹훅</th>
               <th style={{ width: 56 }} />
             </tr>
           </thead>

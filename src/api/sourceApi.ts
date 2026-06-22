@@ -35,10 +35,34 @@ export async function crawlSourceToDiscovery(id: string): Promise<BackgroundJob>
 
 export async function crawlAllToDiscovery(params?: {
   trusted_only?: boolean
+  community_only?: boolean
 }): Promise<BackgroundJob> {
   const { data } = await apiClient.post<BackgroundJob>(`/api/v1/sources/crawl-all-to-discovery`, null, {
-    params: params?.trusted_only === undefined ? undefined : { trusted_only: params.trusted_only },
+    params:
+      params?.trusted_only === undefined && params?.community_only === undefined
+        ? undefined
+        : {
+            trusted_only: params?.trusted_only,
+            community_only: params?.community_only,
+          },
   })
+  return data
+}
+
+export interface CommunityUrlSubmitResult {
+  accepted: boolean
+  reason: string | null
+}
+
+export async function submitCommunityUrl(payload: {
+  url: string
+  title?: string
+  note?: string
+}): Promise<CommunityUrlSubmitResult> {
+  const { data } = await apiClient.post<CommunityUrlSubmitResult>(
+    '/api/v1/sources/submit-url',
+    payload,
+  )
   return data
 }
 

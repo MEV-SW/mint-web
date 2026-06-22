@@ -1,4 +1,11 @@
-export type SourceType = 'rss' | 'webpage' | 'news_page' | 'notice_page' | 'manual'
+export type SourceType =
+  | 'rss'
+  | 'webpage'
+  | 'news_page'
+  | 'notice_page'
+  | 'manual'
+  | 'reddit'
+  | 'community_forum'
 export type TrustLevel = 'high' | 'medium' | 'low'
 
 export interface Source {
@@ -33,7 +40,28 @@ export interface SourceCreate {
   is_active?: boolean
 }
 
-export const SOURCE_CATEGORIES = ['정책/규제', '시장', '기술', '경쟁사', 'general'] as const
+export const SOURCE_CATEGORIES = [
+  '정책/규제',
+  '시장',
+  '기술',
+  '경쟁사',
+  '커뮤니티/현장',
+  'general',
+] as const
+
+export const COMMUNITY_SOURCE_TYPES: SourceType[] = ['reddit', 'community_forum']
+
+export const COMMUNITY_SOURCE_PRESET: SourceCreate = {
+  name: '',
+  url: 'https://www.reddit.com/r/electricvehicles/',
+  source_type: 'reddit',
+  category: '커뮤니티/현장',
+  trust_level: 'low',
+  reliability_score: 45,
+  auto_publish: false,
+  crawl_frequency: 'daily',
+  is_active: true,
+}
 
 export const TRUST_SCORE_DEFAULTS: Record<TrustLevel, number> = {
   high: 85,

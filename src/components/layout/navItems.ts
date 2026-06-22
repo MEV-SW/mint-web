@@ -17,7 +17,7 @@ export const APP_NAV_MAIN: NavItem[] = [
 
 export const APP_NAV_SETTINGS: NavItem[] = [
   { path: '/sources', label: '소스', icon: 'feed' },
-  { path: '/slack', label: 'Slack', icon: 'slack' },
+  { path: '/slack', label: '웹훅', icon: 'slack' },
 ]
 
 export const SETTINGS_PATHS = APP_NAV_SETTINGS.map((item) => item.path)

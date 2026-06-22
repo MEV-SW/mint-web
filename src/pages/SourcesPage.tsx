@@ -20,6 +20,10 @@ import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { SourceFormFields } from '../components/sources/SourceFormFields'
 import type { Source, SourceCreate } from '../types/source'
+import {
+  COMMUNITY_SOURCE_PRESET,
+  COMMUNITY_SOURCE_TYPES,
+} from '../types/source'
 import { useActiveJobs } from '../hooks/useJobsQuery'
 import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
@@ -37,6 +41,19 @@ const emptyForm: SourceCreate = {
   is_active: true,
 }
 
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  rss: 'RSS',
+  webpage: '웹페이지',
+  news_page: '뉴스',
+  notice_page: '공지',
+  manual: '수동',
+  reddit: 'Reddit',
+  community_forum: '커뮤니티',
+}
+
+type SourceFilter = 'all' | 'official' | 'community'
+type AddMode = 'official' | 'community'
+
 function sourceToForm(s: Source): SourceCreate {
   return {
     name: s.name,
@@ -52,6 +69,17 @@ function sourceToForm(s: Source): SourceCreate {
   }
 }
 
+function normalizeFormForSave(form: SourceCreate, mode: AddMode): SourceCreate {
+  if (mode !== 'community') return form
+  return {
+    ...form,
+    trust_level: 'low',
+    reliability_score: 45,
+    auto_publish: false,
+    category: '커뮤니티/현장',
+  }
+}
+
 export function SourcesPage() {
   const toast = useToast()
   const qc = useQueryClient()
@@ -63,10 +91,13 @@ export function SourcesPage() {
     if (param != null) setQ(param)
   }, [searchParams])
   const [showAdd, setShowAdd] = useState(false)
+  const [addMode, setAddMode] = useState<AddMode>('official')
   const [editing, setEditing] = useState<Source | null>(null)
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
   const [runningPipeline, setRunningPipeline] = useState(false)
+  const [runningCommunityPipeline, setRunningCommunityPipeline] = useState(false)
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [retentionDays, setRetentionDays] = useState('14')
 
   const { busy, activeLabel } = useActiveJobs()
@@ -88,17 +119,27 @@ export function SourcesPage() {
   }, [collectionSettings])
 
   const qLower = q.trim().toLowerCase()
-  const rows = sources.filter(
-    (s) =>
-      !qLower ||
-      s.name.toLowerCase().includes(qLower) ||
-      s.url.toLowerCase().includes(qLower) ||
-      (s.category && s.category.toLowerCase().includes(qLower)),
-  )
+  const rows = sources.filter((s) => {
+    const isCommunity = COMMUNITY_SOURCE_TYPES.includes(s.source_type)
+    if (sourceFilter === 'community' && !isCommunity) return false
+    if (sourceFilter === 'official' && isCommunity) return false
+    if (
+      qLower &&
+      !s.name.toLowerCase().includes(qLower) &&
+      !s.url.toLowerCase().includes(qLower) &&
+      !(s.category && s.category.toLowerCase().includes(qLower))
+    ) {
+      return false
+    }
+    return true
+  })
   const activeCount = sources.filter((s) => s.is_active).length
+  const communityCount = sources.filter((s) => COMMUNITY_SOURCE_TYPES.includes(s.source_type)).length
+  const editingIsCommunity =
+    editing != null && COMMUNITY_SOURCE_TYPES.includes(editing.source_type)
 
   const save = useMutation({
-    mutationFn: () => createSource(form),
+    mutationFn: () => createSource(normalizeFormForSave(form, addMode)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sources'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
@@ -110,7 +151,11 @@ export function SourcesPage() {
   })
 
   const update = useMutation({
-    mutationFn: () => updateSource(editing!.id, form),
+    mutationFn: () =>
+      updateSource(
+        editing!.id,
+        normalizeFormForSave(form, editingIsCommunity ? 'community' : 'official'),
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sources'] })
       setEditing(null)
@@ -195,12 +240,32 @@ export function SourcesPage() {
     }
   }
 
+  async function runCommunityDiscoveryPipeline() {
+    setRunningCommunityPipeline(true)
+    try {
+      await crawlAllToDiscovery({ trusted_only: false, community_only: true })
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('커뮤니티 탐문 파이프라인을 백그라운드에서 시작했습니다.', 'info')
+    } catch (e) {
+      toast(apiErrorDetail(e) || '커뮤니티 파이프라인 요청 실패', 'err')
+    } finally {
+      setRunningCommunityPipeline(false)
+    }
+  }
+
   const crawlBlockedTitle = busy
     ? `진행 중인 작업: ${activeLabel ?? '백그라운드 작업'}`
     : undefined
 
   function openAdd() {
     setForm(emptyForm)
+    setAddMode('official')
+    setShowAdd(true)
+  }
+
+  function openAddCommunity() {
+    setForm({ ...COMMUNITY_SOURCE_PRESET })
+    setAddMode('community')
     setShowAdd(true)
   }
 
@@ -212,6 +277,7 @@ export function SourcesPage() {
   function closeModals() {
     setShowAdd(false)
     setEditing(null)
+    setAddMode('official')
     setForm(emptyForm)
   }
 
@@ -238,20 +304,20 @@ export function SourcesPage() {
         <section className="sources-block" aria-label="수집 운영">
           <div className="sources-ops-grid">
             <article className="sources-op-card">
-              <div className="sources-op-card-copy">
+              <div className="sources-op-card-top">
                 <div className="sources-op-card-icon sources-op-card-icon-pipeline" aria-hidden>
                   <Icon name="sparkles" />
                 </div>
                 <div className="sources-op-card-text">
                   <h3 className="sources-op-card-title">{DISCOVERY_PIPELINE_LABEL}</h3>
-                  <p className="sources-op-card-desc np-copy-single">
-                    신뢰 소스 전체 크롤링 · {DISCOVERY_BOARD_LABEL} 후보 수집
+                  <p className="sources-op-card-desc">
+                    신뢰 소스 전체 크롤링 · {DISCOVERY_BOARD_LABEL} 후보 수집 · 매일 06:00(KST)
                   </p>
                 </div>
               </div>
               <div className="sources-op-card-controls">
                 <Btn variant="primary" size="sm" icon="plus" onClick={openAdd}>
-                  추가
+                  소스 추가
                 </Btn>
                 <Btn
                   variant="soft"
@@ -267,13 +333,42 @@ export function SourcesPage() {
             </article>
 
             <article className="sources-op-card">
-              <div className="sources-op-card-copy">
+              <div className="sources-op-card-top">
+                <div className="sources-op-card-icon sources-op-card-icon-community" aria-hidden>
+                  <Icon name="feed" />
+                </div>
+                <div className="sources-op-card-text">
+                  <h3 className="sources-op-card-title">커뮤니티 탐문</h3>
+                  <p className="sources-op-card-desc">
+                    Reddit·포럼 등록 소스 {communityCount}개 · 탐문 데스크 전용 · 매일 06:30(KST)
+                  </p>
+                </div>
+              </div>
+              <div className="sources-op-card-controls">
+                <Btn variant="primary" size="sm" icon="plus" onClick={openAddCommunity}>
+                  소스 추가
+                </Btn>
+                <Btn
+                  variant="soft"
+                  size="sm"
+                  icon="sparkles"
+                  onClick={runCommunityDiscoveryPipeline}
+                  disabled={busy || runningCommunityPipeline}
+                  title={crawlBlockedTitle}
+                >
+                  {busy ? '…' : runningCommunityPipeline ? '…' : '실행'}
+                </Btn>
+              </div>
+            </article>
+
+            <article className="sources-op-card">
+              <div className="sources-op-card-top">
                 <div className="sources-op-card-icon sources-op-card-icon-policy" aria-hidden>
                   <Icon name="clock" />
                 </div>
                 <div className="sources-op-card-text">
                   <h3 className="sources-op-card-title">탐문 후보 삭제 기한</h3>
-                  <p className="sources-op-card-desc np-copy-single">
+                  <p className="sources-op-card-desc">
                     검토 대기 {retentionDays}일 경과 시 05:30(KST) 자동 삭제
                   </p>
                 </div>
@@ -316,10 +411,36 @@ export function SourcesPage() {
               </h2>
               <p className="sources-list-meta">
                 전체 <strong>{rows.length}</strong>개 · 활성 <strong>{activeCount}</strong>개
+                {communityCount > 0 && (
+                  <>
+                    {' '}
+                    · 커뮤니티 <strong>{communityCount}</strong>개
+                  </>
+                )}
               </p>
             </div>
             <div className="sources-list-toolbar">
-              <div className="sources-list-search">
+              <div className="sources-filter-tabs" role="tablist" aria-label="소스 필터">
+                {(
+                  [
+                    ['all', '전체'],
+                    ['official', '공식'],
+                    ['community', '커뮤니티'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={sourceFilter === value}
+                    className={`sources-filter-tab ${sourceFilter === value ? 'active' : ''}`}
+                    onClick={() => setSourceFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <label className="sources-list-search">
                 <Icon name="search" />
                 <input
                   placeholder="소스명·URL 검색"
@@ -327,7 +448,7 @@ export function SourcesPage() {
                   onChange={(e) => setQ(e.target.value)}
                   aria-label="소스 검색"
                 />
-              </div>
+              </label>
             </div>
           </header>
 
@@ -362,7 +483,9 @@ export function SourcesPage() {
                       </div>
                     </td>
                     <td>
-                      <span className="type-tag">{s.source_type}</span>
+                      <span className="type-tag">
+                        {SOURCE_TYPE_LABELS[s.source_type] ?? s.source_type}
+                      </span>
                     </td>
                     <td>
                       <span className="ctag">{s.category}</span>
@@ -437,7 +560,7 @@ export function SourcesPage() {
 
       {showAdd && (
         <Modal
-          title="소스 추가"
+          title={addMode === 'community' ? '커뮤니티 소스 추가' : '공식 소스 추가'}
           wide
           onClose={closeModals}
           footer={
@@ -451,13 +574,13 @@ export function SourcesPage() {
             </>
           }
         >
-          <SourceFormFields form={form} onChange={setForm} />
+          <SourceFormFields mode={addMode} form={form} onChange={setForm} />
         </Modal>
       )}
 
       {editing && (
         <Modal
-          title="소스 수정"
+          title={editingIsCommunity ? '커뮤니티 소스 수정' : '공식 소스 수정'}
           wide
           onClose={closeModals}
           footer={
@@ -475,7 +598,12 @@ export function SourcesPage() {
             </>
           }
         >
-          <SourceFormFields form={form} onChange={setForm} />
+          <SourceFormFields
+            mode={editingIsCommunity ? 'community' : 'official'}
+            form={form}
+            onChange={setForm}
+            lockSourceType
+          />
         </Modal>
       )}
     </PageShell>

@@ -21,7 +21,7 @@ const PATH_LABELS: Record<string, string> = {
   '/discovery': DISCOVERY_BOARD_LABEL,
   '/reports': '리포트',
   '/sources': '설정 · 소스',
-  '/slack': '설정 · Slack',
+  '/slack': '설정 · 웹훅',
   '/help': '도움말',
 }
 
