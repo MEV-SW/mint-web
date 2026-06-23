@@ -15,6 +15,7 @@ import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { usePermissions } from '../hooks/usePermissions'
 import type { BoardType, Importance, PostStatus } from '../types/post'
 import {
   boardListPath,
@@ -43,6 +44,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const toast = useToast()
   const qc = useQueryClient()
+  const { canWrite } = usePermissions()
   const { page, keyword, importance, status } = readBoardListParams(searchParams)
   const listPath = boardListPath(location.pathname, searchParams)
   const isDiscovery = boardType === 'discovery'
@@ -305,7 +307,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
               <th style={{ width: 120 }}>출처</th>
               <th style={{ width: 100 }}>중요도</th>
               <th style={{ width: 140 }}>수집일</th>
-              <th style={{ width: isDiscovery ? 168 : 88 }} />
+              {canWrite && <th style={{ width: isDiscovery ? 168 : 88 }} />}
             </tr>
           </thead>
           <tbody>
@@ -353,6 +355,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
                 <td className="mono" style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
                   {formatDateTime(p.collected_at)}
                 </td>
+                {canWrite && (
                 <td onClick={(e) => e.stopPropagation()}>
                   <div className="board-row-actions">
                     {isDiscovery && discoverySection === 'pending' && p.status === 'pending' && (
@@ -387,6 +390,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
                     />
                   </div>
                 </td>
+                )}
               </tr>
             ))}
           </tbody>

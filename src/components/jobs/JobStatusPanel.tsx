@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { cancelJob, clearFinishedJobs, deleteJob } from '../../api/jobApi'
 import { useJobsQuery } from '../../hooks/useJobsQuery'
+import { usePermissions } from '../../hooks/usePermissions'
 import type { BackgroundJob, JobStatus } from '../../types/job'
 import { JOB_STATUS_LABEL } from '../../types/job'
 import { apiErrorDetail } from '../../utils/apiError'
@@ -25,6 +26,7 @@ function progressPct(job: BackgroundJob) {
 export function JobStatusPanel() {
   const qc = useQueryClient()
   const toast = useToast()
+  const { canWrite } = usePermissions()
   const [open, setOpen] = useState(false)
   const prevActiveRef = useRef(0)
   const { data: jobs = [] } = useJobsQuery()
@@ -115,7 +117,7 @@ export function JobStatusPanel() {
           <div className="job-status-head">
             <strong>백그라운드 작업</strong>
             <div className="job-status-head-actions">
-              {finishedCount > 0 && (
+              {canWrite && finishedCount > 0 && (
                 <button
                   type="button"
                   className="job-status-clear"
@@ -131,7 +133,9 @@ export function JobStatusPanel() {
             </div>
           </div>
           <p className="job-status-hint">
-            잘못 시작한 작업은 취소할 수 있습니다. 완료된 내역은 개별 삭제 또는 「완료 정리」로 목록에서 제거하세요.
+            {canWrite
+              ? '잘못 시작한 작업은 취소할 수 있습니다. 완료된 내역은 개별 삭제 또는 「완료 정리」로 목록에서 제거하세요.'
+              : '진행 중인 백그라운드 작업 상태를 확인할 수 있습니다.'}
           </p>
           <ul className="job-status-list">
             {jobs.map((job) => {
@@ -144,7 +148,7 @@ export function JobStatusPanel() {
                       <span className={`job-status-badge badge-${job.status}`}>
                         {JOB_STATUS_LABEL[job.status]}
                       </span>
-                      {isActive(job.status) && (
+                      {canWrite && isActive(job.status) && (
                         <button
                           type="button"
                           className="job-status-action cancel"
@@ -155,7 +159,7 @@ export function JobStatusPanel() {
                           취소
                         </button>
                       )}
-                      {isFinished(job.status) && (
+                      {canWrite && isFinished(job.status) && (
                         <button
                           type="button"
                           className="job-status-action delete"

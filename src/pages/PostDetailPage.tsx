@@ -12,6 +12,7 @@ import { ImportanceBadge, StatusPill, TrustBadge } from '../components/common/Ba
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
+import { usePermissions } from '../hooks/usePermissions'
 import { PostAiSummaryPanel } from '../components/posts/PostAiSummaryPanel'
 import { PostOriginalPane } from '../components/posts/PostOriginalPane'
 import { formatDateTime } from '../utils/date'
@@ -22,6 +23,7 @@ export function PostDetailPage() {
   const location = useLocation()
   const toast = useToast()
   const qc = useQueryClient()
+  const { canWrite } = usePermissions()
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post', id],
@@ -98,12 +100,12 @@ export function PostDetailPage() {
               원문 보기
             </Btn>
           )}
-          {ai && (
+          {canWrite && ai && (
             <Btn variant="soft" icon="sparkles" onClick={() => summarize.mutate()} disabled={summarize.isPending}>
               {summarize.isPending ? '요약 갱신 중…' : '요약 다시 생성'}
             </Btn>
           )}
-          {isDiscovery && (
+          {canWrite && isDiscovery && (
             <>
               <Btn variant="soft" onClick={() => act.mutate('approve')}>
                 검토 완료
@@ -113,12 +115,16 @@ export function PostDetailPage() {
               </Btn>
             </>
           )}
-          <Btn variant="outline" onClick={() => act.mutate('hide')}>
-            숨김
-          </Btn>
-          <Btn variant="outline" icon="trash" onClick={() => act.mutate('delete')}>
-            삭제
-          </Btn>
+          {canWrite && (
+            <>
+              <Btn variant="outline" onClick={() => act.mutate('hide')}>
+                숨김
+              </Btn>
+              <Btn variant="outline" icon="trash" onClick={() => act.mutate('delete')}>
+                삭제
+              </Btn>
+            </>
+          )}
         </div>
       </article>
 
@@ -134,7 +140,7 @@ export function PostDetailPage() {
             ai={ai}
             isDiscovery={isDiscovery}
             summarizing={summarize.isPending}
-            onSummarize={() => summarize.mutate()}
+            onSummarize={canWrite ? () => summarize.mutate() : undefined}
           />
         </div>
       ) : (
@@ -142,7 +148,7 @@ export function PostDetailPage() {
           ai={ai}
           isDiscovery={isDiscovery}
           summarizing={summarize.isPending}
-          onSummarize={() => summarize.mutate()}
+          onSummarize={canWrite ? () => summarize.mutate() : undefined}
         />
       )}
     </div>

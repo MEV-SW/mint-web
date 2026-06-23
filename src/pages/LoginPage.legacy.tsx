@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { isAxiosError } from 'axios'
 import { Link, useNavigate } from 'react-router-dom'
-import { fetchMe, login } from '../api/authApi'
+import { fetchMe, login, loginErrorMessage } from '../api/authApi'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { MintLogo } from '../components/common/MintLogo'
@@ -30,8 +31,9 @@ export function LegacyLoginPage() {
         useAuthStore.setState({ token: prevToken })
         throw new Error('me failed')
       }
-    } catch {
-      setError('이메일 또는 비밀번호가 올바르지 않습니다.')
+    } catch (err) {
+      const detail = isAxiosError(err) ? err.response?.data?.detail : null
+      setError(loginErrorMessage(detail))
     } finally {
       setLoading(false)
     }

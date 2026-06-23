@@ -5,6 +5,7 @@ import { ImportanceBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
+import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import { mediaUrl } from '../utils/mediaUrl'
 import type { KeyChange } from '../types/report'
@@ -14,6 +15,7 @@ export function ReportDetailPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const qc = useQueryClient()
+  const { canWrite } = usePermissions()
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['report', id],
@@ -76,6 +78,7 @@ export function ReportDetailPage() {
             </figure>
           )}
         </div>
+        {canWrite && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn
             variant="outline"
@@ -90,6 +93,7 @@ export function ReportDetailPage() {
             {remove.isPending ? '삭제 중…' : '삭제'}
           </Btn>
         </div>
+        )}
       </article>
 
       {keyChanges.length > 0 && (

@@ -722,6 +722,18 @@ select.input { appearance: none; cursor: pointer;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.topnav-user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.topnav-user-role {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
 .topnav-menu-btn { display: none; }
 .topnav-section-bar {
   display: flex;
@@ -4030,4 +4042,100 @@ table.tbl { width: 100%; border-collapse: collapse; }
 @media (max-width: 1100px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .detail-grid { grid-template-columns: 1fr; }
+}
+
+.inquiry-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.inquiry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inquiry-list-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+.inquiry-list-item:hover,
+.inquiry-list-item.active {
+  border-color: var(--mint-deep);
+  background: var(--surface-2);
+}
+.inquiry-list-item strong {
+  font-size: 14px;
+  color: var(--text);
+}
+.inquiry-list-item span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.inquiry-detail-panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--surface);
+  min-height: 320px;
+}
+.inquiry-detail-head h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+.inquiry-detail-head p {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.inquiry-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.inquiry-message {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+}
+.inquiry-message.admin {
+  border-color: color-mix(in srgb, var(--mint-deep) 35%, var(--border));
+  background: color-mix(in srgb, var(--mint-deep) 6%, var(--surface));
+}
+.inquiry-message header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.inquiry-message p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+.inquiry-create-form,
+.inquiry-reply-form {
+  margin-bottom: 20px;
+}
+.inquiry-create-form .field,
+.inquiry-reply-form textarea {
+  margin-bottom: 12px;
+}
+
+@media (max-width: 900px) {
+  .inquiry-layout { grid-template-columns: 1fr; }
 }

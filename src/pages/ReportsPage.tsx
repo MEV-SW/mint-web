@@ -7,6 +7,7 @@ import { Icon } from '../components/common/Icon'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useActiveJobs } from '../hooks/useJobsQuery'
+import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import { formatDate } from '../utils/date'
 import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
@@ -23,6 +24,7 @@ export function ReportsPage() {
   const toast = useToast()
   const qc = useQueryClient()
   const { busy, activeLabel } = useActiveJobs()
+  const { canWrite } = usePermissions()
   const [reportDate, setReportDate] = useState(todayInputValue)
   const { data: reports = [] } = useQuery({ queryKey: ['reports'], queryFn: listReports })
 
@@ -61,24 +63,26 @@ export function ReportsPage() {
       lead={`선택한 날짜에 수집된 중요 게시판과 ${DISCOVERY_BOARD_LABEL}를 함께 분석해 하루 전체 인사이트 리포트를 생성합니다.`}
       leadSingleLine
       actions={
-        <>
-          <input
-            className="input"
-            type="date"
-            value={reportDate}
-            onChange={(e) => setReportDate(e.target.value)}
-            style={{ width: 160 }}
-          />
-          <Btn
-            variant="primary"
-            icon="doc"
-            onClick={() => gen.mutate()}
-            disabled={busy || gen.isPending}
-            title={busy ? `진행 중인 작업: ${activeLabel ?? '백그라운드 작업'}` : undefined}
-          >
-            {busy ? '다른 작업 실행 중…' : gen.isPending ? '요청 중…' : '리포트 수동 생성'}
-          </Btn>
-        </>
+        canWrite ? (
+          <>
+            <input
+              className="input"
+              type="date"
+              value={reportDate}
+              onChange={(e) => setReportDate(e.target.value)}
+              style={{ width: 160 }}
+            />
+            <Btn
+              variant="primary"
+              icon="doc"
+              onClick={() => gen.mutate()}
+              disabled={busy || gen.isPending}
+              title={busy ? `진행 중인 작업: ${activeLabel ?? '백그라운드 작업'}` : undefined}
+            >
+              {busy ? '다른 작업 실행 중…' : gen.isPending ? '요청 중…' : '리포트 수동 생성'}
+            </Btn>
+          </>
+        ) : undefined
       }
     >
       {busy && (
@@ -99,7 +103,7 @@ export function ReportsPage() {
               <th>제목</th>
               <th style={{ width: 160 }}>생성일</th>
               <th style={{ width: 120 }}>웹훅</th>
-              <th style={{ width: 56 }} />
+              {canWrite && <th style={{ width: 56 }} />}
             </tr>
           </thead>
           <tbody>
@@ -123,6 +127,7 @@ export function ReportsPage() {
                     <span className="badge badge-unknown">미발송</span>
                   )}
                 </td>
+                {canWrite && (
                 <td>
                   <Btn
                     variant="outline"
@@ -133,6 +138,7 @@ export function ReportsPage() {
                     onClick={() => confirmDelete(r.id, r.title)}
                   />
                 </td>
+                )}
               </tr>
             ))}
             {!reports.length && (
