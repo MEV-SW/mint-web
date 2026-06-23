@@ -1,3 +1,7 @@
+/**
+ * MINT app shell: public auth routes, member layout, admin-only section.
+ * See README.md for the full route map.
+ */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from './components/common/Toast'
