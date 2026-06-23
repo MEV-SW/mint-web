@@ -340,7 +340,7 @@ export function SourcesPage() {
                 <div className="sources-op-card-text">
                   <h3 className="sources-op-card-title">커뮤니티 탐문</h3>
                   <p className="sources-op-card-desc">
-                    Reddit·포럼 등록 소스 {communityCount}개 · 탐문 데스크 전용 · 매일 06:30(KST)
+                    국내 포럼·커뮤니티 소스 {communityCount}개 · 탐문 데스크 전용 · 매일 06:30(KST)
                   </p>
                 </div>
               </div>

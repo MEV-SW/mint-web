@@ -53,8 +53,8 @@ export const COMMUNITY_SOURCE_TYPES: SourceType[] = ['reddit', 'community_forum'
 
 export const COMMUNITY_SOURCE_PRESET: SourceCreate = {
   name: '',
-  url: 'https://www.reddit.com/r/electricvehicles/',
-  source_type: 'reddit',
+  url: 'https://www.clien.net/service/board/park',
+  source_type: 'community_forum',
   category: '커뮤니티/현장',
   trust_level: 'low',
   reliability_score: 45,
