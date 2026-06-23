@@ -23,7 +23,7 @@ const SUGGESTIONS = [
 const WELCOME: ChatMessage = {
   role: 'assistant',
   content:
-    '안녕하세요! MINT 수집 자료를 우선 참고해 답변합니다.\n관련 게시글이 없으면 일반 지식 답변 여부를 먼저 여쭤봅니다.',
+    '안녕하세요! EV·충전 관련 질문은 MINT에 수집된 기사를 먼저 찾아 답변합니다.\n그 외 질문은 일반 지식 답변을 안내해 드릴게요.',
 }
 
 function TypingDots() {
@@ -131,7 +131,7 @@ export function ChatWidget() {
       prev.map((m) => (m.generalConfirm ? { ...m, generalConfirm: undefined } : m)),
     )
     appendAssistant({
-      content: '알겠습니다. MINT에 수집된 자료와 관련된 질문을 해 주세요.',
+      content: '알겠습니다. EV·충전이나 MINT 수집 자료 관련 질문을 해 주세요.',
     })
   }
 
