@@ -35,7 +35,7 @@ export function MyFrontPage({
     <article className="np-newspaper-body">
       <NewspaperMasthead
         edition="MY EDITION"
-        headline="나의 1면"
+        headline="나만의 1면"
         dek="관심 키워드로 맞춘 오늘의 헤드라인"
         dateLabel={dateLabel}
         volume={year}
@@ -44,8 +44,8 @@ export function MyFrontPage({
       {needsKeywords && (
         <div className="np-onboarding-banner">
           <p>
-            <strong>관심 키워드 {missingKeywordCount}개 더 선택</strong>하면 나의 1면이
-            완성됩니다. 나의 1면은 드래그하여 넘겨보세요.
+            <strong>관심 키워드 {missingKeywordCount}개 더 선택</strong>하면 나만의 1면이
+            완성됩니다. 나만의 1면은 드래그하여 넘겨보세요.
           </p>
           <Link to="/settings" className="btn btn-outline btn-sm">
             키워드 설정
@@ -141,7 +141,7 @@ export function MyFrontPage({
         </main>
 
         <aside className="np-edition-panel np-edition-panel-personal">
-          {personalReport && (
+          {personalReport ? (
             <div className="np-sidebar-box">
               <div className="np-section-label">오늘의 개인 브리핑</div>
               <Link to={`/personal-reports/${personalReport.id}`} className="personal-report-brief">
@@ -152,12 +152,22 @@ export function MyFrontPage({
                 <Icon name="arrowRight" />
               </Link>
             </div>
-          )}
+          ) : !needsKeywords ? (
+            <div className="np-sidebar-box">
+              <div className="np-section-label">오늘의 개인 브리핑</div>
+              <p className="np-sidebar-copy">
+                아직 오늘 개인 리포트가 없습니다. 데일리 리포트에서 생성할 수 있습니다.
+              </p>
+              <Link to="/reports" className="np-read-more">
+                리포트 생성하기 →
+              </Link>
+            </div>
+          ) : null}
 
           <div className="np-sidebar-box">
             <div className="np-section-label">더 읽기</div>
             <p className="np-sidebar-copy">
-              키워드와 무관한 전체 수집 뉴스는 뉴스 탭에서, 조직 브리핑은 MINT의 1면에서
+              키워드와 무관한 전체 수집 뉴스는 뉴스 탭에서, 조직 브리핑은 MINT Daily에서
               확인할 수 있습니다.
             </p>
             <Link to="/news" className="np-read-more">

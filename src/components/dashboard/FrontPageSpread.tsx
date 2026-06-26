@@ -117,7 +117,7 @@ export function FrontPageSpread({ page, onPageChange, mine, mint }: FrontPageSpr
           className={`np-spread-edition-tab${page === 'mint' ? ' active' : ''}`}
           onClick={() => onPageChange('mint')}
         >
-          MINT의 1면
+          MINT Daily
         </button>
         <button
           type="button"
@@ -126,7 +126,7 @@ export function FrontPageSpread({ page, onPageChange, mine, mint }: FrontPageSpr
           className={`np-spread-edition-tab${page === 'mine' ? ' active' : ''}`}
           onClick={() => onPageChange('mine')}
         >
-          나의 1면
+          나만의 1면
         </button>
       </div>
 

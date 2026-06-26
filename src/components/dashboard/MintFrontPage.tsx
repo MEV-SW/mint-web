@@ -40,7 +40,7 @@ export function MintFrontPage({ dateLabel, year, stats, loading }: MintFrontPage
     <article className="np-newspaper-body">
       <NewspaperMasthead
         edition="DAILY EDITION"
-        headline="MINT의 1면"
+        headline="MINT Daily"
         dek="조직 전체 수집 · AI 브리핑 · 오늘의 판"
         dateLabel={dateLabel}
         volume={year}

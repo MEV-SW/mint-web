@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { listPersonalReports } from '../api/personalizationApi'
+import { listPersonalReports, generatePersonalReport, listKeywords } from '../api/personalizationApi'
 import { generateReport, listReports } from '../api/reportApi'
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
@@ -30,9 +30,29 @@ function ReportListRow({
 }
 
 function PersonalReportsColumn() {
+  const toast = useToast()
+  const qc = useQueryClient()
+  const { data: keywords = [] } = useQuery({
+    queryKey: ['keywords'],
+    queryFn: listKeywords,
+  })
+  const selectedCount = keywords.filter((k) => k.selected).length
+  const canGenerate = selectedCount >= 3
+
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['personal-reports'],
     queryFn: listPersonalReports,
+  })
+
+  const generate = useMutation({
+    mutationFn: () => generatePersonalReport(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['personal-reports'] })
+      qc.invalidateQueries({ queryKey: ['personal-reports', 'latest'] })
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('개인 데일리 리포트 생성을 시작했습니다.')
+    },
+    onError: (e: unknown) => toast(apiErrorDetail(e) || '리포트 생성 실패', 'err'),
   })
 
   return (
@@ -42,14 +62,34 @@ function PersonalReportsColumn() {
           <h2>내 리포트</h2>
           <p>관심 키워드에 맞춘 개인 데일리 브리핑</p>
         </div>
+        <Btn
+          variant="primary"
+          icon="sparkles"
+          size="sm"
+          onClick={() => generate.mutate()}
+          disabled={generate.isPending || !canGenerate}
+          title={
+            canGenerate
+              ? undefined
+              : '관심 키워드 3개 이상 선택 후 생성할 수 있습니다.'
+          }
+        >
+          {generate.isPending ? '생성 중…' : '오늘 리포트 생성'}
+        </Btn>
       </header>
+
+      {!canGenerate && (
+        <div className="personal-empty personal-empty-inline">
+          관심 키워드를 <Link to="/settings">3개 이상</Link> 선택하면 개인 리포트를 생성할 수
+          있습니다.
+        </div>
+      )}
 
       {isLoading && <div className="personal-empty">불러오는 중…</div>}
 
-      {!isLoading && reports.length === 0 && (
+      {!isLoading && reports.length === 0 && canGenerate && (
         <div className="personal-empty">
-          아직 생성된 개인 리포트가 없습니다.{' '}
-          <Link to="/settings">관심 키워드</Link>를 설정하면 매일 자동 생성됩니다.
+          아직 생성된 개인 리포트가 없습니다. 상단 버튼으로 오늘 리포트를 만들 수 있습니다.
         </div>
       )}
 

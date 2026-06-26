@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { BackgroundJob } from '../types/job'
 import type {
   Keyword,
   NewsCategory,
@@ -50,6 +51,13 @@ export async function getNews(params: {
   query.set('page', String(params.page ?? 1))
   query.set('size', String(params.size ?? 20))
   const { data } = await apiClient.get<NewsPage>(`/api/v1/news?${query}`)
+  return data
+}
+
+export async function generatePersonalReport(reportDate?: string): Promise<BackgroundJob> {
+  const { data } = await apiClient.post<BackgroundJob>('/api/v1/personal-reports/generate', {
+    report_date: reportDate || null,
+  })
   return data
 }
 
