@@ -71,6 +71,10 @@ export function JobStatusPanel() {
       qc.invalidateQueries({ queryKey: ['posts'] })
       qc.invalidateQueries({ queryKey: ['reports'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      qc.invalidateQueries({ queryKey: ['review-queue'] })
+      qc.invalidateQueries({ queryKey: ['keywords'] })
+      qc.invalidateQueries({ queryKey: ['news'] })
+      qc.invalidateQueries({ queryKey: ['personal-feed'] })
     }
     prevActiveRef.current = activeCount
   }, [activeCount, qc])

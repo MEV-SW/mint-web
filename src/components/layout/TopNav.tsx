@@ -11,25 +11,25 @@ import { Icon } from '../common/Icon'
 import { MintLogo } from '../common/MintLogo'
 import { GlobalSearch } from './GlobalSearch'
 import {
-  APP_NAV_ADMIN,
+  ADMIN_PATHS,
+  APP_NAV_ADMIN_HUB,
   APP_NAV_MAIN,
-  APP_NAV_SETTINGS,
-  SETTINGS_PATHS,
+  adminNavBadgeCount,
   type NavItem,
 } from './navItems'
 import { JobStatusPanel } from '../jobs/JobStatusPanel'
-import { DISCOVERY_BOARD_LABEL } from '../../constants/boardLabels'
 
 const PATH_LABELS: Record<string, string> = {
   '/': '1면',
-  '/trusted': '중요',
-  '/discovery': DISCOVERY_BOARD_LABEL,
+  '/news': '뉴스',
   '/reports': '리포트',
+  '/settings': '개인설정',
+  '/admin': '관리',
+  '/admin/review-queue': '검수함',
+  '/admin/accounts': '계정 관리',
+  '/admin/sources': '소스',
+  '/admin/webhooks': '웹훅',
   '/inquiries': '문의',
-  '/admin/users': '가입 승인',
-  '/admin/inquiries': '문의 관리',
-  '/sources': '설정 · 소스',
-  '/slack': '설정 · 웹훅',
   '/help': '도움말',
 }
 
@@ -45,6 +45,8 @@ function resolveSectionLabel(pathname: string, state: unknown): string {
 
   if (pathname.startsWith('/posts/')) return '기사'
   if (pathname.startsWith('/reports/')) return '리포트'
+  if (pathname.startsWith('/personal-reports/')) return '내 리포트'
+  if (pathname.startsWith('/admin/')) return '관리'
 
   return 'MINT'
 }
@@ -53,29 +55,11 @@ function NavSeparator() {
   return <span className="topnav-link-sep" aria-hidden />
 }
 
-function navBadgeCount(
-  item: NavItem,
-  counts: { pending: number; openInquiries: number; pendingUsers: number },
-): number {
-  if (item.countKey === 'pending') return counts.pending
-  if (item.countKey === 'openInquiries') return counts.openInquiries
-  if (item.countKey === 'pendingUsers') return counts.pendingUsers
-  return 0
-}
-
-function filterNavItems(items: NavItem[], isAdmin: boolean): NavItem[] {
-  return items.filter((item) => {
-    if (item.adminOnly && !isAdmin) return false
-    if (item.viewerOnly && isAdmin) return false
-    return true
-  })
-}
-
 export function TopNav() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const settingsRef = useRef<HTMLDivElement>(null)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const { isAdmin, roleLabel } = usePermissions()
@@ -91,27 +75,21 @@ export function TopNav() {
     enabled: isAdmin,
   })
 
-  const mainNav = filterNavItems(APP_NAV_MAIN, isAdmin)
-  const adminNav = filterNavItems(APP_NAV_ADMIN, isAdmin)
-  const settingsNav = filterNavItems(APP_NAV_SETTINGS, isAdmin)
-  const mobileNav = [...mainNav, ...adminNav]
-
   const counts = {
     pending: stats?.pending_discovery ?? 0,
     openInquiries,
     pendingUsers: pendingUsers.length,
   }
 
-  const settingsActive = SETTINGS_PATHS.includes(location.pathname)
-
-  useEffect(() => {
-    setSettingsOpen(false)
-  }, [location.pathname])
+  const adminBadgeTotal = counts.pending + counts.openInquiries + counts.pendingUsers
+  const adminActive =
+    location.pathname === APP_NAV_ADMIN_HUB.path ||
+    ADMIN_PATHS.some((path) => location.pathname.startsWith(path))
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false)
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
       }
     }
     document.addEventListener('mousedown', onDoc)
@@ -127,14 +105,16 @@ export function TopNav() {
   })
   const sectionLabel = resolveSectionLabel(location.pathname, location.state)
 
-  const renderNavLink = (item: NavItem) => {
-    const badge = navBadgeCount(item, counts)
+  const renderNavLink = (item: NavItem, badgeOverride?: number) => {
+    const badge = badgeOverride ?? adminNavBadgeCount(item, counts)
     return (
       <NavLink
         key={item.path}
         to={item.path}
-        end={item.end}
-        className={({ isActive }) => cx('topnav-link', isActive && 'active')}
+        end={item.end ?? item.path === '/admin'}
+        className={({ isActive }) =>
+          cx('topnav-link', (isActive || (item.path === '/admin' && adminActive)) && 'active')
+        }
         onClick={() => setMenuOpen(false)}
       >
         {item.label}
@@ -142,6 +122,11 @@ export function TopNav() {
       </NavLink>
     )
   }
+
+  const mobileNav: NavItem[] = [
+    ...APP_NAV_MAIN,
+    ...(isAdmin ? [APP_NAV_ADMIN_HUB] : []),
+  ]
 
   return (
     <header className="topnav">
@@ -163,59 +148,17 @@ export function TopNav() {
         </Link>
 
         <nav className="topnav-links" aria-label="주 메뉴">
-          {mainNav.map((item, index) => (
+          {APP_NAV_MAIN.map((item, index) => (
             <span key={item.path} className="topnav-link-wrap">
               {index > 0 && <NavSeparator />}
               {renderNavLink(item)}
             </span>
           ))}
 
-          {adminNav.map((item) => (
-            <span key={item.path} className="topnav-link-wrap">
-              <NavSeparator />
-              {renderNavLink(item)}
-            </span>
-          ))}
-
-          {settingsNav.length > 0 && (
+          {isAdmin && (
             <span className="topnav-link-wrap">
               <NavSeparator />
-              <div
-                className={cx('topnav-settings', settingsOpen && 'open')}
-                ref={settingsRef}
-              >
-                <button
-                  type="button"
-                  className={cx('topnav-link topnav-settings-trigger', settingsActive && 'active')}
-                  aria-expanded={settingsOpen}
-                  aria-haspopup="true"
-                  onClick={() => setSettingsOpen((v) => !v)}
-                >
-                  설정
-                  <Icon name="chevD" className="topnav-settings-chev" />
-                </button>
-                {settingsOpen && (
-                  <div className="topnav-settings-menu" role="menu">
-                    {settingsNav.map((item) => (
-                      <NavLink
-                        key={item.path}
-                        to={item.path}
-                        role="menuitem"
-                        className={({ isActive }) =>
-                          cx('topnav-settings-item', isActive && 'active')
-                        }
-                        onClick={() => {
-                          setSettingsOpen(false)
-                          setMenuOpen(false)
-                        }}
-                      >
-                        <Icon name={item.icon} />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {renderNavLink(APP_NAV_ADMIN_HUB, adminBadgeTotal)}
             </span>
           )}
         </nav>
@@ -223,18 +166,76 @@ export function TopNav() {
         <div className="topnav-actions">
           <JobStatusPanel />
           <GlobalSearch />
-          <Link to="/help" className="topnav-icon-btn" title="도움말" aria-label="도움말">
-            <Icon name="help" />
-          </Link>
-          <div className="topnav-user">
-            <div className="avatar">{(user?.name || '?')[0]}</div>
-            <div className="topnav-user-meta">
-              <span className="topnav-user-name">{user?.name}</span>
-              {roleLabel && <span className="topnav-user-role">{roleLabel}</span>}
-            </div>
-            <button type="button" className="topnav-icon-btn" title="로그아웃" onClick={logout}>
-              <Icon name="logout" />
+          <div
+            className={cx('topnav-settings topnav-user-menu', userMenuOpen && 'open')}
+            ref={userMenuRef}
+          >
+            <button
+              type="button"
+              className="topnav-user topnav-user-trigger"
+              aria-expanded={userMenuOpen}
+              aria-haspopup="true"
+              onClick={() => setUserMenuOpen((v) => !v)}
+            >
+              <div className="avatar">{(user?.name || '?')[0]}</div>
+              <div className="topnav-user-meta">
+                <span className="topnav-user-name">{user?.name}</span>
+                {roleLabel && <span className="topnav-user-role">{roleLabel}</span>}
+              </div>
+              <Icon name="chevD" className="topnav-settings-chev" />
             </button>
+            {userMenuOpen && (
+              <div className="topnav-settings-menu topnav-user-dropdown" role="menu">
+                <NavLink
+                  to="/settings"
+                  role="menuitem"
+                  className={({ isActive }) => cx('topnav-settings-item', isActive && 'active')}
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <Icon name="sparkles" />
+                  <span>개인설정</span>
+                </NavLink>
+                <NavLink
+                  to="/inquiries"
+                  role="menuitem"
+                  className={({ isActive }) => cx('topnav-settings-item', isActive && 'active')}
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <Icon name="help" />
+                  <span>문의</span>
+                </NavLink>
+                <NavLink
+                  to="/help"
+                  role="menuitem"
+                  className={({ isActive }) => cx('topnav-settings-item', isActive && 'active')}
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <Icon name="help" />
+                  <span>도움말</span>
+                </NavLink>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="topnav-settings-item topnav-settings-item-btn"
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    logout()
+                  }}
+                >
+                  <Icon name="logout" />
+                  <span>로그아웃</span>
+                </button>
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -258,13 +259,19 @@ export function TopNav() {
       {menuOpen && (
         <nav className="topnav-mobile" aria-label="모바일 메뉴">
           {mobileNav.map((item) => {
-            const badge = navBadgeCount(item, counts)
+            const badge =
+              item.path === '/admin' ? adminBadgeTotal : adminNavBadgeCount(item, counts)
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
-                end={item.end}
-                className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
+                end={item.end ?? item.path === '/admin'}
+                className={({ isActive }) =>
+                  cx(
+                    'topnav-mobile-link',
+                    (isActive || (item.path === '/admin' && adminActive)) && 'active',
+                  )
+                }
                 onClick={() => setMenuOpen(false)}
               >
                 <Icon name={item.icon} />
@@ -273,22 +280,44 @@ export function TopNav() {
               </NavLink>
             )
           })}
-          {settingsNav.length > 0 && (
-            <div className="topnav-mobile-group">
-              <div className="topnav-mobile-group-label">설정</div>
-              {settingsNav.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <Icon name={item.icon} />
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          )}
+          <div className="topnav-mobile-group">
+            <div className="topnav-mobile-group-label">내 계정</div>
+            <NavLink
+              to="/settings"
+              className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
+              onClick={() => setMenuOpen(false)}
+            >
+              <Icon name="sparkles" />
+              <span>개인설정</span>
+            </NavLink>
+            <NavLink
+              to="/inquiries"
+              className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
+              onClick={() => setMenuOpen(false)}
+            >
+              <Icon name="help" />
+              <span>문의</span>
+            </NavLink>
+            <NavLink
+              to="/help"
+              className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
+              onClick={() => setMenuOpen(false)}
+            >
+              <Icon name="help" />
+              <span>도움말</span>
+            </NavLink>
+            <button
+              type="button"
+              className="topnav-mobile-link topnav-mobile-link-btn"
+              onClick={() => {
+                setMenuOpen(false)
+                logout()
+              }}
+            >
+              <Icon name="logout" />
+              <span>로그아웃</span>
+            </button>
+          </div>
         </nav>
       )}
     </header>

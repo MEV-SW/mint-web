@@ -71,7 +71,7 @@ export function InquiriesPage() {
     setFollowUp('')
   }
 
-  if (isAdmin) return <Navigate to="/admin/inquiries" replace />
+  if (isAdmin) return <Navigate to="/admin/accounts" replace />
 
   return (
     <PageShell

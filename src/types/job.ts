@@ -9,6 +9,8 @@ export type JobType =
   | 'send_slack_report'
   | 'summarize_post'
   | 'purge_stale_discovery'
+  | 'classify_posts'
+  | 'generate_personal_reports'
 
 export type JobStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
 

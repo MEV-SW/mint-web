@@ -53,8 +53,8 @@ export function CommunityVoicesStrip({ voices, loading }: CommunityVoicesStripPr
             커뮤니티 탐문에서 수집한 현장 의견 · 공식 보도와 구분해 참고하세요
           </p>
         </div>
-        <Link to="/discovery" className="np-section-more">
-          탐문 데스크 →
+        <Link to="/news" className="np-section-more">
+          더 보기 →
         </Link>
       </div>
 
@@ -63,7 +63,7 @@ export function CommunityVoicesStrip({ voices, loading }: CommunityVoicesStripPr
       ) : voices.length === 0 ? (
         <div className="np-empty">
           <p>아직 수집된 커뮤니티 목소리가 없습니다.</p>
-          <Link to="/sources" className="np-empty-link">
+          <Link to="/admin/sources" className="np-empty-link">
             커뮤니티 소스 등록 →
           </Link>
         </div>

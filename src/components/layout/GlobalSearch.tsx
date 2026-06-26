@@ -60,7 +60,7 @@ export function GlobalSearch() {
 
   const goSource = (name: string) => {
     close()
-    navigate(`/sources?q=${encodeURIComponent(name)}`)
+    navigate(`/admin/sources?q=${encodeURIComponent(name)}`)
   }
 
   const goBoard = (board: 'trusted' | 'discovery') => {

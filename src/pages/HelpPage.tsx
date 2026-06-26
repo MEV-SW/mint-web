@@ -1,51 +1,51 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '../components/common/Icon'
 import { PageShell } from '../components/layout/PageShell'
-import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
+import { DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
 
 const FLOW = [
-  { step: '1', title: '소스 등록', desc: '신뢰할 수 있는 EV·충전 뉴스/공지 URL을 등록합니다.', to: '/sources' },
-  { step: '2', title: '자동 수집', desc: '크롤링으로 게시글을 수집하고 AI가 요약·중요도를 판단합니다.', to: '/sources' },
-  { step: '3', title: '게시판 검토', desc: `중요 게시판과 ${DISCOVERY_BOARD_LABEL}에서 내용을 확인합니다.`, to: '/trusted' },
-  { step: '4', title: '리포트·알림', desc: '데일리 리포트를 생성하고 Webhook으로 공유합니다.', to: '/reports' },
+  { step: '1', title: '관심 키워드 선택', desc: '개인설정에서 3개 이상의 키워드를 고릅니다.', to: '/settings' },
+  { step: '2', title: '1면·뉴스 확인', desc: '키워드 맞춤 1면과 전체 뉴스 탐색으로 소식을 확인합니다.', to: '/' },
+  { step: '3', title: '데일리 리포트', desc: '개인 리포트와 조직 브리핑을 읽습니다.', to: '/reports' },
+  { step: '4', title: '운영·알림', desc: '관리자는 검수·소스·웹훅으로 수집과 발송을 운영합니다.', to: '/admin' },
 ]
 
 const SECTIONS = [
   {
     icon: 'dashboard',
     title: '1면',
-    body: `오늘의 수집 현황, 최근 중요 게시글·${DISCOVERY_BOARD_LABEL} 미리보기, 최신 데일리 리포트를 한눈에 확인합니다.`,
+    body: '신문형 레이아웃으로 내 관심 헤드라인, 조직 데일리 브리핑, 오늘의 수집 현황을 한눈에 확인합니다.',
     link: { label: '1면 열기', to: '/' },
   },
   {
-    icon: 'shield',
-    title: '중요 게시판',
-    body: '신뢰 소스에서 수집된 게시글입니다. 원문 링크와 AI 요약만 표시되며, 승인·숨김·삭제 등 운영 작업을 할 수 있습니다.',
-    link: { label: '중요 게시판', to: '/trusted' },
-  },
-  {
-    icon: 'sparkles',
-    title: DISCOVERY_BOARD_LABEL,
-    body: 'AI가 EV·충전 관련 기사를 발굴한 탐문 후보입니다. 검토 후 검토 완료 처리하거나 중요 게시판으로 승격할 수 있습니다. 검토 대기 상태로 14일 넘게 남은 글은 자동 삭제됩니다.',
-    link: { label: DISCOVERY_BOARD_LABEL, to: '/discovery' },
-  },
-  {
     icon: 'feed',
-    title: '소스 관리',
-    body: `RSS·웹페이지 등 소스를 등록하고, 개별 크롤 또는「${DISCOVERY_PIPELINE_LABEL}」으로 신뢰 소스 전체를 한 번에 수집할 수 있습니다.`,
-    link: { label: '소스 관리', to: '/sources' },
+    title: '뉴스',
+    body: '수집된 전체 뉴스를 대분류·키워드·중요도·검색으로 탐색합니다.',
+    link: { label: '뉴스 탐색', to: '/news' },
   },
   {
     icon: 'doc',
     title: '데일리 리포트',
-    body: '선택한 날짜에 수집된 게시글을 바탕으로 AI가 일일 브리핑을 생성합니다. 수동 생성과 자동 스케줄(매일 08:00)을 지원합니다.',
-    link: { label: '데일리 리포트', to: '/reports' },
+    body: '「내 리포트」는 관심 키워드 기준, 「조직 리포트」는 전체 수집 기준 AI 브리핑입니다. 관리자는 조직 리포트를 수동 생성할 수 있습니다.',
+    link: { label: '리포트', to: '/reports' },
   },
   {
-    icon: 'slack',
-    title: '웹훅 설정',
-    body: 'Webhook을 등록하면 데일리 리포트를 사내 메신저 채널로 발송할 수 있습니다. Slack·Teams 등 Incoming Webhook을 지원합니다.',
-    link: { label: '웹훅 설정', to: '/slack' },
+    icon: 'sparkles',
+    title: '개인설정',
+    body: '관심 키워드 3개 이상을 선택하면 1면과 개인 리포트가 맞춤 구성됩니다. 직접 키워드 추가도 가능합니다.',
+    link: { label: '개인설정', to: '/settings' },
+  },
+  {
+    icon: 'shield',
+    title: '관리',
+    body: `검수함, 계정 관리, 소스, 웹훅을 한곳에서 운영합니다. 계정 관리에서 가입 승인과 문의 답변을 처리할 수 있습니다. ${DISCOVERY_PIPELINE_LABEL}과 크롤링도 소스 메뉴에서 실행합니다.`,
+    link: { label: '관리', to: '/admin' },
+  },
+  {
+    icon: 'help',
+    title: '문의',
+    body: '일반 사용자는 문의를 작성하고, 관리자는 관리 메뉴에서 답변합니다.',
+    link: { label: '문의', to: '/inquiries' },
   },
 ]
 
@@ -55,24 +55,24 @@ const FAQ = [
     a: 'MINT는 원문 링크 + AI 요약 중심으로 표시합니다. 상세 페이지에서「원문 보기」링크로 기사를 확인하세요.',
   },
   {
-    q: `${DISCOVERY_BOARD_LABEL}와 중요 게시판의 차이는?`,
-    a: `중요 게시판은 신뢰 소스에서 자동 수집된 글이고, ${DISCOVERY_BOARD_LABEL}는 AI가 관련성을 판단해 올린 검토 대기 후보입니다.`,
+    q: '개인 리포트와 조직 리포트의 차이는?',
+    a: '개인 리포트는 내가 구독한 키워드와 연결된 당일 뉴스 상위 10건으로 구성됩니다. 조직 리포트는 전체 수집 뉴스를 바탕으로 AI가 작성한 팀 공용 브리핑입니다.',
   },
   {
-    q: '탐문 후보는 언제 자동 삭제되나요?',
-    a: '검토 대기(pending) 상태로 14일 이상 남은 글은 매일 05:30(KST)에 자동 삭제됩니다. 검토 완료·승격·숨김 처리한 글은 해당되지 않습니다. 보관 기간은 서버 설정 DISCOVERY_PENDING_RETENTION_DAYS로 조정할 수 있습니다.',
+    q: '검수함은 어디에 있나요?',
+    a: '관리자는 상단「관리」→「검수함」에서 저신뢰 분류, 미분류, 키워드 없음, 신규 키워드 후보를 검토합니다.',
   },
   {
     q: '검색은 어디서 하나요?',
-    a: '화면 상단 검색창에서 게시글·소스를 통합 검색할 수 있습니다. 1글자 이상 입력하면 결과가 표시됩니다.',
+    a: '화면 상단 검색창에서 게시글·소스를 통합 검색할 수 있습니다. 뉴스 메뉴에서는 제목·요약 검색과 필터를 함께 쓸 수 있습니다.',
   },
   {
     q: 'AI 챗봇은 무엇을 도와주나요?',
     a: '우하단 MINT AI 버튼을 누르면 수집된 자료를 바탕으로 EV·충전 관련 질문에 답합니다. MINT에 없는 내용은 일반 지식 답변 여부를 먼저 물어봅니다.',
   },
   {
-    q: '자동 수집 스케줄은?',
-    a: `서버에 Celery worker·beat가 실행 중이면 매일 05:30 미승인 탐문 후보 정리, 06:00 ${DISCOVERY_PIPELINE_LABEL}, 08:00 데일리 리포트가 자동 실행됩니다. 수동 실행은 소스 관리·리포트 화면에서 가능합니다.`,
+    q: '자동 수집·리포트 스케줄은?',
+    a: `서버에 Celery worker·beat가 실행 중이면 매일 05:30 미승인 탐문 후보 정리, 06:00 ${DISCOVERY_PIPELINE_LABEL}, 08:00 조직 데일리 리포트·개인 리포트가 자동 실행됩니다.`,
   },
 ]
 
@@ -90,8 +90,8 @@ export function HelpPage() {
         <div>
           <h3>MINT란?</h3>
           <p>
-            EV·충전 인프라 관련 뉴스와 공지를 자동으로 수집하고, AI가 요약·중요도를 판단해
-            데일리 리포트와 Webhook 알림까지 제공하는 사내 인텔리전스 도구입니다.
+            EV·충전 인프라 관련 뉴스를 자동 수집하고, AI가 키워드·요약·중요도를 분석해
+            개인 1면·데일리 리포트·Webhook 알림까지 제공하는 사내 인텔리전스 도구입니다.
           </p>
         </div>
       </section>
@@ -117,7 +117,7 @@ export function HelpPage() {
           {SECTIONS.map((s) => (
             <div key={s.title} className="help-card card card-pad">
               <div className="help-card-head">
-                <span className={`help-card-icon ic-mint`}>
+                <span className="help-card-icon ic-mint">
                   <Icon name={s.icon} />
                 </span>
                 <h4>{s.title}</h4>
@@ -148,8 +148,8 @@ export function HelpPage() {
         <div>
           <strong>팁</strong>
           <p>
-            모바일에서는 상단 메뉴(☰)로 내비게이션을 열 수 있습니다. AI 챗봇은 우하단
-            버튼을 눌러 언제든 질문하세요.
+            메인 메뉴는 1면·뉴스·리포트 3개로 단순화되어 있습니다. 개인설정·문의·도움말은
+            우상단 프로필 메뉴에서, 운영 기능은 관리 메뉴에서 찾을 수 있습니다.
           </p>
         </div>
       </section>

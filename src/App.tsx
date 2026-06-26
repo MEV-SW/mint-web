@@ -5,8 +5,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from './components/common/Toast'
+import { AdminIndexRedirect, AdminLayout } from './components/layout/AdminLayout'
 import { AppLayout } from './components/layout/AppLayout'
-import { BoardPage } from './pages/BoardPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LegacyLoginPage as LoginPage } from './pages/LoginPage.legacy'
 import { RegisterPage } from './pages/RegisterPage'
@@ -17,10 +17,13 @@ import { SlackSettingsPage } from './pages/SlackSettingsPage'
 import { HelpPage } from './pages/HelpPage'
 import { SourcesPage } from './pages/SourcesPage'
 import { InquiriesPage } from './pages/InquiriesPage'
-import { AdminUsersPage } from './pages/AdminUsersPage'
-import { AdminInquiriesPage } from './pages/AdminInquiriesPage'
+import { AdminAccountsPage } from './pages/AdminAccountsPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { AdminRoute } from './routes/AdminRoute'
+import { NewsPage } from './pages/NewsPage'
+import { PersonalReportDetailPage } from './pages/PersonalReportDetailPage'
+import { ReviewQueuePage } from './pages/ReviewQueuePage'
+import { SettingsPage } from './pages/SettingsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -37,20 +40,33 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route path="/" element={<DashboardPage />} />
-                <Route path="/trusted" element={<BoardPage boardType="trusted" />} />
-                <Route path="/discovery" element={<BoardPage boardType="discovery" />} />
+                <Route path="/news" element={<NewsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/keywords" element={<Navigate to="/settings" replace />} />
+                <Route path="/trusted" element={<Navigate to="/news" replace />} />
+                <Route path="/discovery" element={<Navigate to="/news" replace />} />
                 <Route path="/posts/:id" element={<PostDetailPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/reports/:id" element={<ReportDetailPage />} />
+                <Route path="/personal-reports/:id" element={<PersonalReportDetailPage />} />
                 <Route path="/inquiries" element={<InquiriesPage />} />
                 <Route path="/help" element={<HelpPage />} />
               </Route>
               <Route element={<AdminRoute />}>
                 <Route element={<AppLayout />}>
-                  <Route path="/sources" element={<SourcesPage />} />
-                  <Route path="/slack" element={<SlackSettingsPage />} />
-                  <Route path="/admin/users" element={<AdminUsersPage />} />
-                  <Route path="/admin/inquiries" element={<AdminInquiriesPage />} />
+                  <Route path="/admin" element={<AdminLayout />}>
+                    <Route index element={<AdminIndexRedirect />} />
+                    <Route path="review-queue" element={<ReviewQueuePage />} />
+                    <Route path="accounts" element={<AdminAccountsPage />} />
+                    <Route path="accounts/users" element={<Navigate to="/admin/accounts" replace />} />
+                    <Route path="accounts/inquiries" element={<Navigate to="/admin/accounts" replace />} />
+                    <Route path="users" element={<Navigate to="/admin/accounts" replace />} />
+                    <Route path="inquiries" element={<Navigate to="/admin/accounts" replace />} />
+                    <Route path="sources" element={<SourcesPage />} />
+                    <Route path="webhooks" element={<SlackSettingsPage />} />
+                  </Route>
+                  <Route path="/sources" element={<Navigate to="/admin/sources" replace />} />
+                  <Route path="/slack" element={<Navigate to="/admin/webhooks" replace />} />
                 </Route>
               </Route>
             </Route>
