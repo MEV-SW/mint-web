@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { PersonalizedNews, PersonalReport } from '../../types/personalization'
 import { ImportanceBadge } from '../common/Badges'
-import { Icon } from '../common/Icon'
 import { formatDate } from '../../utils/date'
 import { NewspaperMasthead } from './NewspaperMasthead'
 
@@ -144,12 +143,17 @@ export function MyFrontPage({
           {personalReport ? (
             <div className="np-sidebar-box">
               <div className="np-section-label">오늘의 개인 브리핑</div>
-              <Link to={`/personal-reports/${personalReport.id}`} className="personal-report-brief">
-                <div>
-                  <strong>{personalReport.summary}</strong>
-                  <small>관심 기사 {personalReport.item_count}건</small>
+              <Link
+                to={`/personal-reports/${personalReport.id}`}
+                className="np-personal-brief-link"
+              >
+                <p className="np-sidebar-copy">{personalReport.summary}</p>
+                <div className="np-personal-brief-foot">
+                  <span className="np-personal-brief-count">
+                    관심 기사 {personalReport.item_count}건
+                  </span>
+                  <span className="np-read-more">리포트 읽기 →</span>
                 </div>
-                <Icon name="arrowRight" />
               </Link>
             </div>
           ) : !needsKeywords ? (

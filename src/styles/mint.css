@@ -4655,9 +4655,27 @@ table.tbl { width: 100%; border-collapse: collapse; }
   line-height: 1.6;
   color: var(--text-muted);
 }
-.np-edition-panel-personal .personal-report-brief {
-  padding: 16px;
-  border-radius: var(--r-sm);
+.np-personal-brief-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.np-personal-brief-link:hover .np-sidebar-copy {
+  color: var(--text);
+}
+.np-personal-brief-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.np-personal-brief-count {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 .np-subsection {
