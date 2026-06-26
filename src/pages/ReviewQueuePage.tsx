@@ -20,7 +20,12 @@ export function ReviewQueuePage() {
   const queue = useQuery({ queryKey: ['review-queue'], queryFn: () => listReviewQueue() })
   const resolve = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'resolved' | 'excluded' }) => resolveReviewQueue(id, status),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['review-queue'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['review-queue'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      qc.invalidateQueries({ queryKey: ['news'] })
+      qc.invalidateQueries({ queryKey: ['keywords'] })
+    },
   })
   const reclassifyAll = useMutation({
     mutationFn: () => triggerReclassifyAll(),

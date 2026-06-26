@@ -18,6 +18,7 @@ export interface DashboardStats {
   new_today: number
   trusted_count: number
   pending_discovery: number
+  review_queue_pending: number
   high_importance: number
   active_sources: number
   total_sources: number

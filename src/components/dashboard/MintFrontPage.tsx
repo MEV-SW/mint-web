@@ -143,7 +143,7 @@ export function MintFrontPage({ dateLabel, year, stats, loading }: MintFrontPage
               <dd>{stats?.trusted_count ?? '—'}</dd>
             </div>
             <div>
-              <dt>검수 대기</dt>
+              <dt>탐문 대기</dt>
               <dd className={stats?.pending_discovery ? 'np-stat-alert' : undefined}>
                 {stats?.pending_discovery ?? '—'}
               </dd>

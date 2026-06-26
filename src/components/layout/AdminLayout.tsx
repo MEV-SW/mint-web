@@ -19,7 +19,7 @@ export function AdminLayout() {
   })
 
   const counts = {
-    pending: stats?.pending_discovery ?? 0,
+    pending: stats?.review_queue_pending ?? 0,
     openInquiries,
     pendingUsers: pendingUsers.length,
   }
