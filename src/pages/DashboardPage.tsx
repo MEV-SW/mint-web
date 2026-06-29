@@ -12,10 +12,16 @@ import {
 } from '../components/dashboard/FrontPageSpread'
 import { MintFrontPage } from '../components/dashboard/MintFrontPage'
 import { MyFrontPage } from '../components/dashboard/MyFrontPage'
+import { useActiveJobs } from '../hooks/useJobsQuery'
 
 export function DashboardPage() {
   const [page, setPage] = useState<FrontSpreadPage>('mint')
-  const stats = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
+  const { busy: crawlBusy } = useActiveJobs()
+  const stats = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: fetchDashboardStats,
+    refetchInterval: crawlBusy ? 5000 : false,
+  })
   const keywords = useQuery({ queryKey: ['keywords'], queryFn: listKeywords })
   const feed = useQuery({ queryKey: ['personal-feed'], queryFn: () => getPersonalFeed(1, 8) })
   const personalReport = useQuery({
