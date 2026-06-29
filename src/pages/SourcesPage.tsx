@@ -100,7 +100,7 @@ export function SourcesPage() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [retentionDays, setRetentionDays] = useState('14')
 
-  const { busy, activeLabel } = useActiveJobs()
+  const { busy, activeLabel, activeProgress } = useActiveJobs()
 
   const { data: sources = [] } = useQuery({
     queryKey: ['sources'],
@@ -294,8 +294,9 @@ export function SourcesPage() {
         <div className="busy-banner" role="status">
           <Icon name="clock" />
           <span>
-            이미 진행 중인 작업이 있습니다
-            {activeLabel ? ` (${activeLabel})` : ''}. 완료 후 다시 시도해 주세요.
+            진행 중인 작업
+            {activeLabel ? ` (${activeLabel})` : ''}
+            {activeProgress ? ` — ${activeProgress}` : ''}. 완료 후 다시 시도해 주세요.
           </span>
         </div>
       )}

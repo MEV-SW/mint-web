@@ -911,6 +911,10 @@ select.input { appearance: none; cursor: pointer;
   background: var(--med-soft);
   color: var(--med-ink);
 }
+.job-status-trigger-progress {
+  font-weight: 500;
+  color: var(--text-muted);
+}
 .job-status-panel {
   position: absolute;
   top: calc(100% + 8px);

@@ -7,11 +7,12 @@ import type { BackgroundJob, JobStatus } from '../../types/job'
 import { JOB_STATUS_LABEL } from '../../types/job'
 import { apiErrorDetail } from '../../utils/apiError'
 import { formatDate } from '../../utils/date'
+import { isActiveJobStatus, jobProgressPercent, jobProgressSummary } from '../../utils/jobProgress'
 import { useToast } from '../common/Toast'
 import { Icon } from '../common/Icon'
 
 function isActive(status: JobStatus) {
-  return status === 'pending' || status === 'running'
+  return isActiveJobStatus(status)
 }
 
 function isFinished(status: JobStatus) {
@@ -19,8 +20,7 @@ function isFinished(status: JobStatus) {
 }
 
 function progressPct(job: BackgroundJob) {
-  if (job.progress_total <= 0) return null
-  return Math.min(100, Math.round((job.progress_current / job.progress_total) * 100))
+  return jobProgressPercent(job)
 }
 
 export function JobStatusPanel() {
@@ -32,6 +32,8 @@ export function JobStatusPanel() {
   const { data: jobs = [] } = useJobsQuery()
 
   const activeCount = jobs.filter((j) => isActive(j.status)).length
+  const primaryActiveJob = jobs.find((j) => isActive(j.status))
+  const primaryProgress = jobProgressSummary(primaryActiveJob)
   const finishedCount = jobs.filter((j) => isFinished(j.status)).length
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['jobs'] })
@@ -112,7 +114,12 @@ export function JobStatusPanel() {
       >
         <Icon name="refresh" className={activeCount ? 'spin' : ''} />
         {activeCount > 0 ? (
-          <span>작업 {activeCount}건 실행 중</span>
+          <span>
+            작업 {activeCount}건 실행 중
+            {primaryProgress && (
+              <span className="job-status-trigger-progress"> · {primaryProgress}</span>
+            )}
+          </span>
         ) : (
           <span>백그라운드 작업</span>
         )}
@@ -146,6 +153,7 @@ export function JobStatusPanel() {
           <ul className="job-status-list">
             {jobs.map((job) => {
               const pct = progressPct(job)
+              const summary = jobProgressSummary(job)
               return (
                 <li key={job.id} className={`job-status-item status-${job.status}`}>
                   <div className="job-status-item-top">
@@ -183,8 +191,8 @@ export function JobStatusPanel() {
                       {job.progress_current} / {job.progress_total}건
                     </div>
                   )}
-                  {(job.status === 'running' || job.status === 'pending') && job.progress_message && (
-                    <div className="job-status-msg">{job.progress_message}</div>
+                  {(job.status === 'running' || job.status === 'pending') && summary && (
+                    <div className="job-status-msg">{summary}</div>
                   )}
                   {pct !== null && isActive(job.status) && (
                     <div className="job-status-bar" aria-hidden>

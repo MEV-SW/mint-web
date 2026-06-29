@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { listJobs } from '../api/jobApi'
 import type { JobStatus } from '../types/job'
+import { isActiveJobStatus, jobProgressSummary } from '../utils/jobProgress'
 
 function isActive(status: JobStatus) {
-  return status === 'pending' || status === 'running'
+  return isActiveJobStatus(status)
 }
 
 export function useJobsQuery() {
@@ -12,7 +13,7 @@ export function useJobsQuery() {
     queryFn: () => listJobs({ limit: 15 }),
     refetchInterval: (query) => {
       const rows = query.state.data
-      if (rows?.some((j) => isActive(j.status))) return 1500
+      if (rows?.some((j) => isActive(j.status))) return 1000
       return false
     },
   })
@@ -21,10 +22,13 @@ export function useJobsQuery() {
 export function useActiveJobs() {
   const query = useJobsQuery()
   const activeJobs = (query.data ?? []).filter((j) => isActive(j.status))
+  const activeJob = activeJobs[0]
   return {
     ...query,
     activeJobs,
+    activeJob,
     busy: activeJobs.length > 0,
-    activeLabel: activeJobs[0]?.label ?? null,
+    activeLabel: activeJob?.label ?? null,
+    activeProgress: jobProgressSummary(activeJob),
   }
 }
