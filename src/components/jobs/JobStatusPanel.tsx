@@ -7,7 +7,7 @@ import type { BackgroundJob, JobStatus } from '../../types/job'
 import { JOB_STATUS_LABEL } from '../../types/job'
 import { apiErrorDetail } from '../../utils/apiError'
 import { formatDate } from '../../utils/date'
-import { isActiveJobStatus, jobProgressPercent, jobProgressSummary } from '../../utils/jobProgress'
+import { isActiveJobStatus, jobProgressPercent, jobProgressSummary, pickPrimaryActiveJob } from '../../utils/jobProgress'
 import { useToast } from '../common/Toast'
 import { Icon } from '../common/Icon'
 
@@ -32,7 +32,7 @@ export function JobStatusPanel() {
   const { data: jobs = [] } = useJobsQuery()
 
   const activeCount = jobs.filter((j) => isActive(j.status)).length
-  const primaryActiveJob = jobs.find((j) => isActive(j.status))
+  const primaryActiveJob = pickPrimaryActiveJob(jobs)
   const primaryProgress = jobProgressSummary(primaryActiveJob)
   const finishedCount = jobs.filter((j) => isFinished(j.status)).length
 

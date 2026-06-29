@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { listJobs } from '../api/jobApi'
 import type { JobStatus } from '../types/job'
-import { isActiveJobStatus, jobProgressSummary } from '../utils/jobProgress'
+import { isActiveJobStatus, jobProgressSummary, pickPrimaryActiveJob } from '../utils/jobProgress'
 
 function isActive(status: JobStatus) {
   return isActiveJobStatus(status)
@@ -22,7 +22,7 @@ export function useJobsQuery() {
 export function useActiveJobs() {
   const query = useJobsQuery()
   const activeJobs = (query.data ?? []).filter((j) => isActive(j.status))
-  const activeJob = activeJobs[0]
+  const activeJob = pickPrimaryActiveJob(query.data ?? [])
   return {
     ...query,
     activeJobs,
