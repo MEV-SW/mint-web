@@ -186,13 +186,10 @@ export function JobStatusPanel() {
                       )}
                     </div>
                   </div>
-                  {(job.status === 'running' || job.status === 'pending') && job.progress_total > 0 && (
-                    <div className="job-status-count" aria-live="polite">
-                      {job.progress_current} / {job.progress_total}건
-                    </div>
-                  )}
                   {(job.status === 'running' || job.status === 'pending') && summary && (
-                    <div className="job-status-msg">{summary}</div>
+                    <div className="job-status-msg" aria-live="polite">
+                      {summary}
+                    </div>
                   )}
                   {pct !== null && isActive(job.status) && (
                     <div className="job-status-bar" aria-hidden>
