@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { globalSearch } from '../../api/searchApi'
 import { Icon } from '../common/Icon'
 import { DISCOVERY_BOARD_LABEL, TRUSTED_BOARD_LABEL } from '../../constants/boardLabels'
+import { SearchHighlight } from '../common/SearchHighlight'
 
 function useDebounced(value: string, ms = 300): string {
   const [debounced, setDebounced] = useState(value)
@@ -120,12 +121,20 @@ export function GlobalSearch() {
                   className="global-search-item"
                   onClick={() => goPost(p.id)}
                 >
-                  <span className="global-search-item-title">{p.title}</span>
+                  <span className="global-search-item-title">
+                    <SearchHighlight html={p.title_highlight} fallback={p.title} />
+                  </span>
                   <span className="global-search-item-meta">
                     {p.board_type === 'trusted' ? TRUSTED_BOARD_LABEL : DISCOVERY_BOARD_LABEL}
                     {p.source_name ? ` · ${p.source_name}` : ''}
                   </span>
-                  {p.summary && <span className="global-search-item-snippet">{p.summary}</span>}
+                  {(p.summary_highlight || p.summary) && (
+                    <SearchHighlight
+                      html={p.summary_highlight}
+                      fallback={p.summary}
+                      className="global-search-item-snippet"
+                    />
+                  )}
                 </button>
               ))}
               <button type="button" className="global-search-more" onClick={() => goBoard('trusted')}>

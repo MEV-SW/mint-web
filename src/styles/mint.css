@@ -1122,6 +1122,11 @@ select.input { appearance: none; cursor: pointer;
   font-size: 12px; color: var(--text-faint); line-height: 1.4;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+.search-highlight em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--mint-deep);
+}
 .global-search-more {
   display: block; width: 100%; padding: 8px 16px; border: none; background: transparent;
   text-align: left; font-size: 12.5px; font-weight: 600; color: var(--mint-deep);

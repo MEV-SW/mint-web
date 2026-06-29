@@ -8,6 +8,8 @@ export interface SearchPostHit {
   source_name: string | null
   summary: string | null
   original_url: string | null
+  title_highlight?: string | null
+  summary_highlight?: string | null
 }
 
 export interface SearchSourceHit {

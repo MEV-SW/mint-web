@@ -34,6 +34,7 @@ export interface PersonalizedNews {
   original_url: string | null
   importance: Importance
   summary: string | null
+  summary_highlight?: string | null
   matched_keywords: MatchedKeyword[]
   personalization_score: number
 }

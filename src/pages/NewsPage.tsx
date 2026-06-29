@@ -7,6 +7,7 @@ import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
 import type { Importance } from '../types/post'
 import { formatDate } from '../utils/date'
+import { SearchHighlight } from '../components/common/SearchHighlight'
 
 const IMPORTANCE_FILTERS: { value: '' | Importance; label: string }[] = [
   { value: '', label: '전체' },
@@ -197,7 +198,11 @@ export function NewsPage() {
                 )}
               </div>
               <h3>{post.title}</h3>
-              {post.summary && <p>{post.summary}</p>}
+              {(post.summary_highlight || post.summary) && (
+                <p>
+                  <SearchHighlight html={post.summary_highlight} fallback={post.summary} />
+                </p>
+              )}
               <small>
                 {post.source_name ?? '출처 정보 없음'} · {formatDate(post.collected_at)}
               </small>
