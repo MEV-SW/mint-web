@@ -1,32 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { listReviewQueue, resolveReviewQueue, triggerReclassifyAll } from '../api/personalizationApi'
+import { useState } from 'react'
+import {
+  listKeywords,
+  listReviewQueue,
+  resolveReviewQueue,
+  triggerReclassifyAll,
+} from '../api/personalizationApi'
+import { ReviewQueueItemEditor } from '../components/review/ReviewQueueItemEditor'
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { apiErrorDetail } from '../utils/apiError'
 
-const reasonLabel = {
-  low_confidence: '낮은 분류 신뢰도',
-  uncategorized: '카테고리 미분류',
-  no_keywords: '키워드 없음',
-  new_keyword: '신규 키워드 후보',
-  extraction_failed: '본문 추출 실패',
-}
-
 export function ReviewQueuePage() {
   const qc = useQueryClient()
   const toast = useToast()
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const queue = useQuery({ queryKey: ['review-queue'], queryFn: () => listReviewQueue() })
-  const resolve = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'resolved' | 'excluded' }) => resolveReviewQueue(id, status),
+  const keywords = useQuery({ queryKey: ['keywords'], queryFn: listKeywords })
+
+  const exclude = useMutation({
+    mutationFn: (id: string) => resolveReviewQueue(id, 'excluded'),
     onSuccess: () => {
+      toast('뉴스를 제외했습니다.', 'info')
       qc.invalidateQueries({ queryKey: ['review-queue'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       qc.invalidateQueries({ queryKey: ['news'] })
-      qc.invalidateQueries({ queryKey: ['keywords'] })
     },
+    onError: (e) => toast(apiErrorDetail(e) || '처리 실패', 'err'),
   })
+
   const reclassifyAll = useMutation({
     mutationFn: () => triggerReclassifyAll(),
     onSuccess: () => {
@@ -40,7 +43,7 @@ export function ReviewQueuePage() {
     <PageShell
       section="관리"
       title="검수함"
-      lead="AI 분류가 애매한 뉴스와 신규 키워드 후보를 검수합니다. 기존 뉴스는 전체 재분류로 키워드·카테고리를 다시 추출할 수 있습니다."
+      lead="키워딩에 실패한 뉴스입니다. AI 추천을 고르거나 조직 키워드·신규 키워드를 지정한 뒤 저장하세요."
       actions={
         <Btn
           variant="outline"
@@ -53,18 +56,18 @@ export function ReviewQueuePage() {
     >
       <div className="review-list">
         {queue.data?.map((item) => (
-          <article key={item.id}>
-            <div>
-              <span>{reasonLabel[item.reason]}</span>
-              <Link to={`/posts/${item.post_id}`}>{item.post_title}</Link>
-            </div>
-            <div>
-              <Btn size="sm" variant="outline" onClick={() => resolve.mutate({ id: item.id, status: 'resolved' })}>확인 완료</Btn>
-              <Btn size="sm" variant="outline" onClick={() => resolve.mutate({ id: item.id, status: 'excluded' })}>뉴스 제외</Btn>
-            </div>
-          </article>
+          <ReviewQueueItemEditor
+            key={item.id}
+            item={item}
+            orgKeywords={keywords.data ?? []}
+            expanded={expandedId === item.id}
+            onToggle={() => setExpandedId((id) => (id === item.id ? null : item.id))}
+            onExcluded={(id) => exclude.mutate(id)}
+          />
         ))}
-        {!queue.isLoading && !queue.data?.length && <div className="personal-empty">검수가 필요한 뉴스가 없습니다.</div>}
+        {!queue.isLoading && !queue.data?.length && (
+          <div className="personal-empty">검수가 필요한 뉴스가 없습니다.</div>
+        )}
       </div>
     </PageShell>
   )

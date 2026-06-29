@@ -73,3 +73,21 @@ export interface ReviewQueueItem {
   detail: string | null
   created_at: string
 }
+
+export interface KeywordSuggestion {
+  name: string
+  confidence: number
+  keyword_id: string | null
+}
+
+export interface KeywordSuggestResponse {
+  post_id: string
+  category: string | null
+  suggestions: KeywordSuggestion[]
+}
+
+export interface ReviewQueueKeywordsApplyResponse {
+  post_id: string
+  linked_keywords: string[]
+  resolved_queue_item_ids: string[]
+}

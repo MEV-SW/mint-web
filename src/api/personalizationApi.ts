@@ -2,10 +2,12 @@ import { apiClient } from './client'
 import type { BackgroundJob } from '../types/job'
 import type {
   Keyword,
+  KeywordSuggestResponse,
   NewsCategory,
   NewsPage,
   PersonalReport,
   ReviewQueueItem,
+  ReviewQueueKeywordsApplyResponse,
 } from '../types/personalization'
 
 export async function listCategories(): Promise<NewsCategory[]> {
@@ -97,6 +99,30 @@ export async function resolveReviewQueue(
   const { data } = await apiClient.patch<ReviewQueueItem>(`/api/v1/review-queue/${id}`, {
     status,
   })
+  return data
+}
+
+export async function suggestReviewQueueKeywords(
+  itemId: string,
+): Promise<KeywordSuggestResponse> {
+  const { data } = await apiClient.post<KeywordSuggestResponse>(
+    `/api/v1/review-queue/${itemId}/suggest-keywords`,
+  )
+  return data
+}
+
+export async function applyReviewQueueKeywords(
+  itemId: string,
+  body: {
+    keyword_ids: string[]
+    new_keyword_names: string[]
+    category?: string | null
+  },
+): Promise<ReviewQueueKeywordsApplyResponse> {
+  const { data } = await apiClient.put<ReviewQueueKeywordsApplyResponse>(
+    `/api/v1/review-queue/${itemId}/keywords`,
+    body,
+  )
   return data
 }
 

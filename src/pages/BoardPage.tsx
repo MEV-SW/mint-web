@@ -197,7 +197,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
       leadSingleLine
       lead={
         isDiscovery
-          ? 'AI가 EV·충전 관련 기사를 발굴한 탐문 후보입니다. 검토 대기·검토됨 탭으로 구분해 확인하세요.'
+          ? '수집 파이프라인에서 등록된 탐문 후보입니다. 검토 대기·검토됨 탭으로 구분해 확인하세요.'
           : '검증된 신뢰 소스에서 수집된 중요 게시글입니다. 원문 링크와 AI 요약만 표시됩니다.'
       }
     >
