@@ -1639,6 +1639,16 @@ select.input { appearance: none; cursor: pointer;
   color: var(--text);
   white-space: pre-wrap;
 }
+.post-split-raw-stored {
+  max-height: min(70vh, 720px);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+}
+.post-split-frame-viewport-nested {
+  min-height: 280px;
+  margin-top: 12px;
+}
 .post-split-empty {
   flex: 1;
   display: flex;
