@@ -178,6 +178,11 @@ export function JobStatusPanel() {
                       )}
                     </div>
                   </div>
+                  {(job.status === 'running' || job.status === 'pending') && job.progress_total > 0 && (
+                    <div className="job-status-count" aria-live="polite">
+                      {job.progress_current} / {job.progress_total}건
+                    </div>
+                  )}
                   {(job.status === 'running' || job.status === 'pending') && job.progress_message && (
                     <div className="job-status-msg">{job.progress_message}</div>
                   )}

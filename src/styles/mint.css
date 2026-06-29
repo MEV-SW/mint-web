@@ -1041,6 +1041,13 @@ select.input { appearance: none; cursor: pointer;
 .badge-success { background: oklch(0.92 0.06 145); color: oklch(0.45 0.12 145); }
 .badge-failed { background: oklch(0.94 0.06 25); color: var(--high); }
 .badge-cancelled { background: oklch(0.93 0.03 250); color: oklch(0.45 0.08 250); }
+.job-status-count {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--mint-deep);
+}
 .job-status-msg, .job-status-result, .job-status-error {
   margin-top: 6px;
   font-size: 12px;

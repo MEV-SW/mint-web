@@ -12,7 +12,7 @@ export function useJobsQuery() {
     queryFn: () => listJobs({ limit: 15 }),
     refetchInterval: (query) => {
       const rows = query.state.data
-      if (rows?.some((j) => isActive(j.status))) return 2500
+      if (rows?.some((j) => isActive(j.status))) return 1500
       return false
     },
   })
