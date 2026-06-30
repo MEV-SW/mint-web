@@ -67,9 +67,6 @@ export function DashboardPage() {
             dateLabel={dateLabel}
             year={now.getFullYear()}
             needsKeywords={needsKeywords}
-            missingKeywordCount={
-              selectedCategories.length < 1 ? Math.max(0, 3 - selected.length) : 0
-            }
             selectedKeywords={
               selectedCategories.length > 0
                 ? selectedCategories.map((category) => ({

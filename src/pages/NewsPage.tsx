@@ -30,7 +30,7 @@ export function NewsPage() {
   const isComposingRef = useRef(false)
 
   const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
-  const keywords = useQuery({ queryKey: ['keywords'], queryFn: listKeywords })
+  const keywords = useQuery({ queryKey: ['keywords'], queryFn: () => listKeywords() })
   const news = useQuery({
     queryKey: ['news', query, category, keywordId, importance, page],
     queryFn: () =>

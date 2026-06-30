@@ -8,7 +8,6 @@ interface MyFrontPageProps {
   dateLabel: string
   year: number
   needsKeywords: boolean
-  missingKeywordCount: number
   selectedKeywords: { id: string; name: string }[]
   feedTotal: number
   hero: PersonalizedNews | undefined
@@ -20,7 +19,6 @@ export function MyFrontPage({
   dateLabel,
   year,
   needsKeywords,
-  missingKeywordCount,
   selectedKeywords,
   feedTotal,
   hero,

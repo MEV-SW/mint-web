@@ -17,7 +17,7 @@ export function ReviewQueuePage() {
   const toast = useToast()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const queue = useQuery({ queryKey: ['review-queue'], queryFn: () => listReviewQueue() })
-  const keywords = useQuery({ queryKey: ['keywords'], queryFn: listKeywords })
+  const keywords = useQuery({ queryKey: ['keywords'], queryFn: () => listKeywords() })
 
   const exclude = useMutation({
     mutationFn: (id: string) => resolveReviewQueue(id, 'excluded'),

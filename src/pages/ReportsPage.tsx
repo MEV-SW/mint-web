@@ -34,7 +34,7 @@ function PersonalReportsColumn() {
   const qc = useQueryClient()
   const { data: keywords = [] } = useQuery({
     queryKey: ['keywords'],
-    queryFn: listKeywords,
+    queryFn: () => listKeywords(),
   })
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
