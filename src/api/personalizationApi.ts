@@ -29,6 +29,13 @@ export async function updateMyCategories(categoryIds: string[]): Promise<NewsCat
   return data
 }
 
+export async function updateFeaturedCategories(categoryIds: string[]): Promise<NewsCategory[]> {
+  const { data } = await apiClient.put<NewsCategory[]>('/api/v1/categories/featured', {
+    category_ids: categoryIds,
+  })
+  return data
+}
+
 export async function updateMyKeywords(keywordIds: string[]): Promise<Keyword[]> {
   const { data } = await apiClient.put<Keyword[]>('/api/v1/users/me/keywords', {
     keyword_ids: keywordIds,

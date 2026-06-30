@@ -5,6 +5,11 @@ export interface NewsCategory {
   name: string
   sort_order: number
   selected?: boolean
+  is_featured?: boolean
+  is_discovered?: boolean
+  curated_keyword_count?: number
+  keyword_count?: number
+  post_count?: number
 }
 
 export interface Keyword {

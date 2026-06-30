@@ -4191,6 +4191,24 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .category-option.selected{border-color:var(--mint-deep);background:var(--mint-soft)}
 .category-option span{font-size:16px;font-weight:600}
 .category-option small{color:var(--text-muted);font-size:12px}
+.category-option.featured{border-color:var(--text);background:var(--surface-2,#f6f6f4)}
+.category-option-compact{padding:14px 16px}
+.category-grid-compact{margin-bottom:0}
+.settings-section{margin-top:28px}
+.settings-section:first-of-type{margin-top:0}
+.settings-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.settings-section-head h3{margin:0 0 4px;font-size:17px;font-weight:700}
+.settings-section-head p{margin:0;color:var(--text-muted);font-size:13px;line-height:1.5}
+.personal-category-list{display:flex;flex-direction:column;gap:12px}
+.personal-category-card{border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden}
+.personal-category-card.selected{border-color:var(--mint-deep);box-shadow:inset 0 0 0 1px var(--mint-deep)}
+.personal-category-card-head{display:flex;justify-content:space-between;align-items:center;width:100%;padding:16px 18px;border:0;background:transparent;color:var(--text);cursor:pointer;text-align:left}
+.personal-category-card-head strong{display:block;font-size:16px;margin-bottom:4px}
+.personal-category-card-head span{font-size:12px;color:var(--text-muted)}
+.personal-category-check{font-size:12px;font-weight:700;color:var(--mint-deep)}
+.personal-category-keywords{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 16px}
+.keyword-chip-option{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:13px;cursor:pointer}
+.keyword-chip-option.selected{border-color:var(--mint-deep);background:var(--mint-soft)}
 .keyword-settings-tools{display:flex;gap:16px;margin:20px 0 8px}
 .keyword-toggle-link{border:0;background:none;padding:0;color:var(--mint-deep);font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline}
 .keyword-section{margin-top:24px}
