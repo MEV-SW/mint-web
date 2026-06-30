@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchOriginalPreview } from '../../api/postApi'
+import { checkPostEmbeddable, fetchOriginalPreview } from '../../api/postApi'
 import { Icon } from '../common/Icon'
 
 const FRAME_BASE_W = 1280
@@ -13,7 +13,7 @@ interface FrameLayout {
   h: number
 }
 
-type ContentMode = 'direct' | 'stored-body' | 'fetched' | 'empty'
+type ContentMode = 'checking' | 'direct' | 'stored-body' | 'fetched' | 'empty'
 
 interface PostOriginalPaneProps {
   postId: string
@@ -31,7 +31,7 @@ function isIframeEmbedBlocked(iframe: HTMLIFrameElement): boolean {
     try {
       href = win.location.href
     } catch {
-      // Cross-origin: page loaded in frame.
+      // Cross-origin successful embed — cannot inspect document.
       return false
     }
 
@@ -76,7 +76,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   const hasStoredBody = storedBody.length > 0
 
   const [contentMode, setContentMode] = useState<ContentMode>(() => {
-    if (hasUrl) return 'direct'
+    if (hasUrl) return 'checking'
     if (hasStoredBody) return 'stored-body'
     return 'empty'
   })
@@ -120,6 +120,30 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
       })
     }, EMBED_CHECK_MS)
   }, [switchToFallback])
+
+  useEffect(() => {
+    if (!hasUrl) return
+
+    let cancelled = false
+    setContentMode('checking')
+
+    checkPostEmbeddable(postId)
+      .then((embeddable) => {
+        if (cancelled) return
+        if (embeddable) {
+          setContentMode('direct')
+        } else {
+          switchToFallback()
+        }
+      })
+      .catch(() => {
+        if (!cancelled) switchToFallback()
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [hasUrl, postId, switchToFallback])
 
   useEffect(() => {
     if (contentMode !== 'direct') {
@@ -196,7 +220,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   }, [contentMode, fetchPhase, url])
 
   const headLabel =
-    contentMode === 'direct'
+    contentMode === 'checking' || contentMode === 'direct'
       ? '원문 · 미리보기'
       : contentMode === 'stored-body'
         ? '수집 본문'
@@ -252,20 +276,24 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
         <div className="post-split-raw post-split-raw-stored">{storedBody}</div>
       )}
 
-      {contentMode === 'direct' && hasUrl && (
+      {(contentMode === 'checking' || contentMode === 'direct') && hasUrl && (
         <div className="post-split-frame-viewport post-split-frame-viewport-direct" ref={viewportRef}>
-          {directPhase === 'loading' && (
-            <div className="post-split-frame-status post-split-frame-status-overlay">원문을 불러오는 중…</div>
+          {(contentMode === 'checking' || directPhase === 'loading') && (
+            <div className="post-split-frame-status post-split-frame-status-overlay">
+              {contentMode === 'checking' ? '원문 표시 방식 확인 중…' : '원문을 불러오는 중…'}
+            </div>
           )}
-          <iframe
-            ref={directIframeRef}
-            className="post-split-frame post-split-frame-direct"
-            src={url!}
-            title={`${title} 원문`}
-            loading="lazy"
-            onLoad={scheduleEmbedCheck}
-            style={{ opacity: directPhase === 'loading' ? 0 : 1 }}
-          />
+          {contentMode === 'direct' && (
+            <iframe
+              ref={directIframeRef}
+              className="post-split-frame post-split-frame-direct"
+              src={url!}
+              title={`${title} 원문`}
+              loading="lazy"
+              onLoad={scheduleEmbedCheck}
+              style={{ opacity: directPhase === 'loading' ? 0 : 1 }}
+            />
+          )}
         </div>
       )}
 

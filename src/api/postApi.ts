@@ -28,6 +28,11 @@ export async function fetchOriginalPreview(id: string): Promise<string> {
   return data
 }
 
+export async function checkPostEmbeddable(id: string): Promise<boolean> {
+  const { data } = await apiClient.get<{ embeddable: boolean }>(`/api/v1/posts/${id}/embed-check`)
+  return data.embeddable
+}
+
 export async function approvePost(id: string): Promise<Post> {
   const { data } = await apiClient.post<Post>(`/api/v1/posts/${id}/approve`)
   return data
