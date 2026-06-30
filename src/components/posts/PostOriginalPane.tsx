@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchOriginalPreview } from '../../api/postApi'
 import { Icon } from '../common/Icon'
 
 const FRAME_BASE_W = 1280
+const EMBED_CHECK_MS = 800
+const EMBED_RECHECK_MS = 1500
 
 interface FrameLayout {
   scale: number
@@ -11,6 +13,8 @@ interface FrameLayout {
   h: number
 }
 
+type ContentMode = 'direct' | 'stored-body' | 'fetched' | 'empty'
+
 interface PostOriginalPaneProps {
   postId: string
   url: string | null | undefined
@@ -18,8 +22,44 @@ interface PostOriginalPaneProps {
   title: string
 }
 
+function isIframeEmbedBlocked(iframe: HTMLIFrameElement): boolean {
+  try {
+    const win = iframe.contentWindow
+    if (!win) return true
+
+    let href = ''
+    try {
+      href = win.location.href
+    } catch {
+      // Cross-origin: page loaded in frame.
+      return false
+    }
+
+    if (!href || href === 'about:blank') return true
+    if (/^(about:|chrome-error:|chrome:\/\/)/i.test(href)) return true
+
+    const doc = win.document
+    if (!doc?.body) return true
+
+    const text = (doc.body.innerText || '').trim()
+    if (
+      /refused to connect|x-frame-options|frame-ancestors|연결을 거부|표시할 수 없/i.test(text)
+    ) {
+      return true
+    }
+
+    return doc.body.childElementCount === 0 && text.length === 0
+  } catch {
+    return false
+  }
+}
+
 export function PostOriginalPane({ postId, url, rawContent, title }: PostOriginalPaneProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
+  const directIframeRef = useRef<HTMLIFrameElement>(null)
+  const embedCheckTimerRef = useRef<number | null>(null)
+  const contentModeRef = useRef<ContentMode>('empty')
+
   const [layout, setLayout] = useState<FrameLayout>({
     scale: 0.55,
     frameH: 900,
@@ -27,23 +67,80 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
     h: 500,
   })
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
-  const [previewError, setPreviewError] = useState<string | null>(null)
-  const [showIframePreview, setShowIframePreview] = useState(() => !rawContent?.trim() && Boolean(url))
+  const [fetchPhase, setFetchPhase] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [directPhase, setDirectPhase] = useState<'loading' | 'ready'>('loading')
+
   const hasUrl = Boolean(url)
   const storedBody = rawContent?.trim() ?? ''
   const hasStoredBody = storedBody.length > 0
 
+  const [contentMode, setContentMode] = useState<ContentMode>(() => {
+    if (hasUrl) return 'direct'
+    if (hasStoredBody) return 'stored-body'
+    return 'empty'
+  })
+
+  contentModeRef.current = contentMode
+
+  const openOriginal = () => {
+    if (url) window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const switchToFallback = useCallback(() => {
+    if (hasStoredBody) {
+      setContentMode('stored-body')
+      return
+    }
+    setContentMode('fetched')
+  }, [hasStoredBody])
+
+  const clearEmbedCheckTimer = () => {
+    if (embedCheckTimerRef.current !== null) {
+      window.clearTimeout(embedCheckTimerRef.current)
+      embedCheckTimerRef.current = null
+    }
+  }
+
+  const scheduleEmbedCheck = useCallback(() => {
+    clearEmbedCheckTimer()
+
+    const runCheck = (onBlocked: () => void) => {
+      const iframe = directIframeRef.current
+      if (!iframe || contentModeRef.current !== 'direct') return
+      if (isIframeEmbedBlocked(iframe)) onBlocked()
+      else setDirectPhase('ready')
+    }
+
+    embedCheckTimerRef.current = window.setTimeout(() => {
+      runCheck(() => {
+        embedCheckTimerRef.current = window.setTimeout(() => {
+          runCheck(() => switchToFallback())
+        }, EMBED_RECHECK_MS)
+      })
+    }, EMBED_CHECK_MS)
+  }, [switchToFallback])
+
   useEffect(() => {
-    if (!hasUrl || !showIframePreview) {
-      setPreviewState('idle')
-      setPreviewError(null)
+    if (contentMode !== 'direct') {
+      clearEmbedCheckTimer()
+      return
+    }
+
+    setDirectPhase('loading')
+    return clearEmbedCheckTimer
+  }, [contentMode, url])
+
+  useEffect(() => {
+    if (contentMode !== 'fetched') {
+      setFetchPhase('idle')
+      setFetchError(null)
       return
     }
 
     let cancelled = false
-    setPreviewState('loading')
-    setPreviewError(null)
+    setFetchPhase('loading')
+    setFetchError(null)
 
     fetchOriginalPreview(postId)
       .then((html) => {
@@ -53,7 +150,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
           if (prev) URL.revokeObjectURL(prev)
           return URL.createObjectURL(blob)
         })
-        setPreviewState('ready')
+        setFetchPhase('ready')
       })
       .catch((err: unknown) => {
         if (cancelled) return
@@ -61,15 +158,15 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
         const message =
           typeof detail === 'string'
             ? detail
-            : detail?.detail || '원문 미리보기를 불러오지 못했습니다.'
-        setPreviewError(message)
-        setPreviewState('error')
+            : detail?.detail || '원문 본문을 가져오지 못했습니다.'
+        setFetchError(message)
+        setFetchPhase('error')
       })
 
     return () => {
       cancelled = true
     }
-  }, [hasUrl, postId, showIframePreview, url])
+  }, [contentMode, postId])
 
   useEffect(() => {
     return () => {
@@ -79,7 +176,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
 
   useEffect(() => {
     const el = viewportRef.current
-    if (!el || !hasUrl || !showIframePreview || previewState !== 'ready') return
+    if (!el || contentMode !== 'fetched' || fetchPhase !== 'ready') return
 
     const updateLayout = () => {
       const w = el.clientWidth
@@ -96,85 +193,54 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
     const ro = new ResizeObserver(updateLayout)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [hasUrl, previewState, showIframePreview, url])
+  }, [contentMode, fetchPhase, url])
 
-  const openOriginal = () => {
-    if (url) window.open(url, '_blank', 'noopener,noreferrer')
-  }
+  const headLabel =
+    contentMode === 'direct'
+      ? '원문 · 미리보기'
+      : contentMode === 'stored-body'
+        ? '수집 본문'
+        : contentMode === 'fetched'
+          ? '원문 · 본문 가져오기'
+          : '원문'
 
-  if (hasStoredBody) {
-    return (
-      <div className="post-original-pane">
-        <div className="post-split-head">
-          <span>수집 본문</span>
-          {hasUrl && (
-            <button type="button" className="post-split-head-link" onClick={openOriginal}>
-              원문 사이트 열기 <Icon name="ext" />
-            </button>
-          )}
-        </div>
-        <div className="post-split-raw post-split-raw-stored">{storedBody}</div>
+  const frameNote =
+    contentMode === 'direct' && directPhase === 'ready' ? (
+      <>
+        원문 사이트를 iframe으로 표시합니다.{' '}
+        <button type="button" className="post-split-inline-link" onClick={openOriginal}>
+          새 탭에서 열기
+        </button>
+      </>
+    ) : contentMode === 'stored-body' ? (
+      <>
+        iframe 삽입이 차단되어 수집 본문을 표시합니다.{' '}
         {hasUrl && (
-          <div className="post-split-frame-note">
-            {!showIframePreview ? (
-              <button
-                type="button"
-                className="post-split-inline-link"
-                onClick={() => setShowIframePreview(true)}
-              >
-                원문 사이트 미리보기 시도
-              </button>
-            ) : (
-              <>
-                <div className="post-split-frame-viewport post-split-frame-viewport-nested" ref={viewportRef}>
-                  {previewState === 'loading' && (
-                    <div className="post-split-frame-status">원문을 불러오는 중…</div>
-                  )}
-                  {previewState === 'error' && (
-                    <div className="post-split-frame-status post-split-frame-status-error">
-                      <p>{previewError}</p>
-                      <p>많은 뉴스 사이트는 iframe 삽입을 막습니다. 수집 본문을 참고하세요.</p>
-                    </div>
-                  )}
-                  {previewState === 'ready' && previewUrl && (
-                    <div
-                      className="post-split-frame-scaler"
-                      style={{ width: layout.w, height: layout.h }}
-                    >
-                      <iframe
-                        className="post-split-frame"
-                        src={previewUrl}
-                        title={`${title} 원문`}
-                        sandbox="allow-same-origin allow-popups"
-                        loading="lazy"
-                        style={{
-                          width: FRAME_BASE_W,
-                          height: layout.frameH,
-                          transform: `scale(${layout.scale})`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className="post-split-inline-link"
-                  onClick={() => setShowIframePreview(false)}
-                >
-                  미리보기 닫기
-                </button>
-              </>
-            )}
-          </div>
+          <button type="button" className="post-split-inline-link" onClick={openOriginal}>
+            원문 사이트 열기
+          </button>
         )}
-      </div>
-    )
-  }
+      </>
+    ) : contentMode === 'fetched' && fetchPhase === 'ready' ? (
+      <>
+        서버에서 원문 HTML을 받아 표시합니다.{' '}
+        <button type="button" className="post-split-inline-link" onClick={openOriginal}>
+          새 탭에서 열기
+        </button>
+      </>
+    ) : contentMode === 'fetched' && fetchPhase === 'error' ? (
+      <>
+        iframe과 본문 가져오기가 모두 실패했습니다.{' '}
+        <button type="button" className="post-split-inline-link" onClick={openOriginal}>
+          새 탭에서 원문 열기
+        </button>
+      </>
+    ) : null
 
   return (
     <div className="post-original-pane">
       <div className="post-split-head">
-        <span>원문 · 미리보기</span>
+        <span>{headLabel}</span>
         {hasUrl && (
           <button type="button" className="post-split-head-link" onClick={openOriginal}>
             새 탭에서 열기 <Icon name="ext" />
@@ -182,82 +248,64 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
         )}
       </div>
 
-      {hasUrl ? (
-        <>
-          <div className="post-split-frame-viewport" ref={viewportRef}>
-            {previewState === 'idle' && (
-              <div className="post-split-frame-status">
-                <p>수집된 본문이 없습니다.</p>
-                <button
-                  type="button"
-                  className="post-split-inline-link"
-                  onClick={() => setShowIframePreview(true)}
-                >
-                  원문 미리보기 시도
-                </button>
-              </div>
-            )}
-            {showIframePreview && previewState === 'loading' && (
-              <div className="post-split-frame-status">원문을 불러오는 중…</div>
-            )}
-            {showIframePreview && previewState === 'error' && (
-              <div className="post-split-frame-status post-split-frame-status-error">
-                <p>{previewError}</p>
-                <p>
-                  많은 뉴스 사이트는 iframe 삽입을 막습니다.{' '}
-                  <button type="button" className="post-split-inline-link" onClick={openOriginal}>
-                    새 탭에서 원문 열기
-                  </button>
-                </p>
-              </div>
-            )}
-            {showIframePreview && previewState === 'ready' && previewUrl && (
-              <div
-                className="post-split-frame-scaler"
-                style={{ width: layout.w, height: layout.h }}
-              >
-                <iframe
-                  className="post-split-frame"
-                  src={previewUrl}
-                  title={`${title} 원문`}
-                  sandbox="allow-same-origin allow-popups"
-                  loading="lazy"
-                  style={{
-                    width: FRAME_BASE_W,
-                    height: layout.frameH,
-                    transform: `scale(${layout.scale})`,
-                  }}
-                />
-              </div>
-            )}
-          </div>
-          <div className="post-split-frame-note">
-            {showIframePreview ? (
-              <>
-                서버에서 원문 HTML을 받아 미리보기합니다.{' '}
-                <button type="button" className="post-split-inline-link" onClick={openOriginal}>
-                  새 탭에서 원문 열기
-                </button>
-              </>
-            ) : (
-              <>
-                본문이 수집되지 않은 글입니다.{' '}
-                <button
-                  type="button"
-                  className="post-split-inline-link"
-                  onClick={() => setShowIframePreview(true)}
-                >
-                  원문 미리보기 시도
-                </button>
-              </>
-            )}
-          </div>
-        </>
-      ) : (
-        <div className="post-split-empty">
-          <p>연결된 원문 URL이 없습니다.</p>
+      {contentMode === 'stored-body' && (
+        <div className="post-split-raw post-split-raw-stored">{storedBody}</div>
+      )}
+
+      {contentMode === 'direct' && hasUrl && (
+        <div className="post-split-frame-viewport post-split-frame-viewport-direct" ref={viewportRef}>
+          {directPhase === 'loading' && (
+            <div className="post-split-frame-status post-split-frame-status-overlay">원문을 불러오는 중…</div>
+          )}
+          <iframe
+            ref={directIframeRef}
+            className="post-split-frame post-split-frame-direct"
+            src={url!}
+            title={`${title} 원문`}
+            loading="lazy"
+            onLoad={scheduleEmbedCheck}
+            style={{ opacity: directPhase === 'loading' ? 0 : 1 }}
+          />
         </div>
       )}
+
+      {contentMode === 'fetched' && hasUrl && (
+        <div className="post-split-frame-viewport" ref={viewportRef}>
+          {fetchPhase === 'loading' && (
+            <div className="post-split-frame-status">본문을 가져오는 중…</div>
+          )}
+          {fetchPhase === 'error' && (
+            <div className="post-split-frame-status post-split-frame-status-error">
+              <p>{fetchError}</p>
+              <p>많은 뉴스 사이트는 iframe 삽입을 막습니다.</p>
+            </div>
+          )}
+          {fetchPhase === 'ready' && previewUrl && (
+            <div className="post-split-frame-scaler" style={{ width: layout.w, height: layout.h }}>
+              <iframe
+                className="post-split-frame"
+                src={previewUrl}
+                title={`${title} 원문`}
+                sandbox="allow-same-origin allow-popups"
+                loading="lazy"
+                style={{
+                  width: FRAME_BASE_W,
+                  height: layout.frameH,
+                  transform: `scale(${layout.scale})`,
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {contentMode === 'empty' && (
+        <div className="post-split-empty">
+          <p>연결된 원문 URL과 수집 본문이 없습니다.</p>
+        </div>
+      )}
+
+      {frameNote && <div className="post-split-frame-note">{frameNote}</div>}
     </div>
   )
 }

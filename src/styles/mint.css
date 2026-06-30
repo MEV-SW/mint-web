@@ -1660,6 +1660,23 @@ select.input { appearance: none; cursor: pointer;
   min-height: 280px;
   margin-top: 12px;
 }
+.post-split-frame-viewport-direct {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.post-split-frame-direct {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: #fff;
+}
+.post-split-frame-status-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: oklch(0.97 0.004 168);
+}
 .post-split-empty {
   flex: 1;
   display: flex;
