@@ -4,6 +4,7 @@ export interface NewsCategory {
   id: string
   name: string
   sort_order: number
+  selected?: boolean
 }
 
 export interface Keyword {
@@ -17,6 +18,7 @@ export interface Keyword {
   scope: 'organization' | 'personal'
   status: 'active' | 'candidate' | 'archived'
   usage_count: number
+  is_curated?: boolean
   selected: boolean
 }
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { listPersonalReports, generatePersonalReport, listKeywords } from '../api/personalizationApi'
+import { generatePersonalReport, listCategories, listKeywords, listPersonalReports } from '../api/personalizationApi'
 import { generateReport, listReports } from '../api/reportApi'
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
@@ -36,8 +36,13 @@ function PersonalReportsColumn() {
     queryKey: ['keywords'],
     queryFn: listKeywords,
   })
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: listCategories,
+  })
   const selectedCount = keywords.filter((k) => k.selected).length
-  const canGenerate = selectedCount >= 3
+  const selectedCategoryCount = categories.filter((c) => c.selected).length
+  const canGenerate = selectedCategoryCount >= 1 || selectedCount >= 3
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['personal-reports'],
@@ -71,7 +76,7 @@ function PersonalReportsColumn() {
           title={
             canGenerate
               ? undefined
-              : '관심 키워드 3개 이상 선택 후 생성할 수 있습니다.'
+              : '관심 분야 1개 이상 또는 키워드 3개 이상 선택 후 생성할 수 있습니다.'
           }
         >
           {generate.isPending ? '생성 중…' : '오늘 리포트 생성'}
@@ -80,7 +85,7 @@ function PersonalReportsColumn() {
 
       {!canGenerate && (
         <div className="personal-empty personal-empty-inline">
-          관심 키워드를 <Link to="/settings">3개 이상</Link> 선택하면 개인 리포트를 생성할 수
+          관심 분야를 <Link to="/settings">1개 이상</Link> 선택하면 개인 리포트를 생성할 수
           있습니다.
         </div>
       )}

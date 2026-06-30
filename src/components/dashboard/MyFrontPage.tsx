@@ -43,8 +43,7 @@ export function MyFrontPage({
       {needsKeywords && (
         <div className="np-onboarding-banner">
           <p>
-            <strong>관심 키워드 {missingKeywordCount}개 더 선택</strong>하면 나만의 1면이
-            완성됩니다. 나만의 1면은 드래그하여 넘겨보세요.
+            <strong>관심 분야를 1개 이상 선택</strong>하면 나만의 1면이 완성됩니다.
           </p>
           <Link to="/settings" className="btn btn-outline btn-sm">
             키워드 설정

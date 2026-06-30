@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   getLatestPersonalReport,
   getPersonalFeed,
+  listCategories,
   listKeywords,
 } from '../api/personalizationApi'
 import { fetchDashboardStats } from '../api/statsApi'
@@ -22,7 +23,8 @@ export function DashboardPage() {
     queryFn: fetchDashboardStats,
     refetchInterval: crawlBusy ? 5000 : false,
   })
-  const keywords = useQuery({ queryKey: ['keywords'], queryFn: listKeywords })
+  const keywords = useQuery({ queryKey: ['keywords'], queryFn: () => listKeywords() })
+  const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
   const feed = useQuery({ queryKey: ['personal-feed'], queryFn: () => getPersonalFeed(1, 8) })
   const personalReport = useQuery({
     queryKey: ['personal-reports', 'latest'],
@@ -30,7 +32,12 @@ export function DashboardPage() {
   })
 
   const selected = (keywords.data ?? []).filter((item) => item.selected)
-  const needsKeywords = !keywords.isLoading && selected.length < 3
+  const selectedCategories = (categories.data ?? []).filter((item) => item.selected)
+  const needsKeywords =
+    !keywords.isLoading &&
+    !categories.isLoading &&
+    selectedCategories.length < 1 &&
+    selected.length < 3
   const items = feed.data?.items ?? []
   const now = new Date()
   const dateLabel = now.toLocaleDateString('ko-KR', {
@@ -60,8 +67,17 @@ export function DashboardPage() {
             dateLabel={dateLabel}
             year={now.getFullYear()}
             needsKeywords={needsKeywords}
-            missingKeywordCount={Math.max(0, 3 - selected.length)}
-            selectedKeywords={selected}
+            missingKeywordCount={
+              selectedCategories.length < 1 ? Math.max(0, 3 - selected.length) : 0
+            }
+            selectedKeywords={
+              selectedCategories.length > 0
+                ? selectedCategories.map((category) => ({
+                    id: category.id,
+                    name: category.name,
+                  }))
+                : selected
+            }
             feedTotal={feed.data?.total ?? 0}
             hero={items[0]}
             picks={items.slice(1)}

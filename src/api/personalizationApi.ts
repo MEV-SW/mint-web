@@ -15,8 +15,17 @@ export async function listCategories(): Promise<NewsCategory[]> {
   return data
 }
 
-export async function listKeywords(): Promise<Keyword[]> {
-  const { data } = await apiClient.get<Keyword[]>('/api/v1/keywords')
+export async function listKeywords(includeDiscovered = false): Promise<Keyword[]> {
+  const { data } = await apiClient.get<Keyword[]>('/api/v1/keywords', {
+    params: includeDiscovered ? { include_discovered: true } : undefined,
+  })
+  return data
+}
+
+export async function updateMyCategories(categoryIds: string[]): Promise<NewsCategory[]> {
+  const { data } = await apiClient.put<NewsCategory[]>('/api/v1/users/me/categories', {
+    category_ids: categoryIds,
+  })
   return data
 }
 
