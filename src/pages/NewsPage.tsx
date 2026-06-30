@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type CompositionEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CompositionEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { getNews, listCategories, listKeywords } from '../api/personalizationApi'
 import { ImportanceBadge } from '../components/common/Badges'
@@ -8,6 +8,7 @@ import { PageShell } from '../components/layout/PageShell'
 import type { Importance } from '../types/post'
 import { formatDate } from '../utils/date'
 import { SearchHighlight } from '../components/common/SearchHighlight'
+import { groupKeywords } from '../utils/groupKeywords'
 
 const IMPORTANCE_FILTERS: { value: '' | Importance; label: string }[] = [
   { value: '', label: '전체' },
@@ -58,6 +59,11 @@ export function NewsPage() {
     : selectedKeywords.length > 0
       ? selectedKeywords
       : (keywords.data ?? [])
+  const keywordGroups = useMemo(
+    () => groupKeywords(visibleKeywords, categories.data ?? []),
+    [visibleKeywords, categories.data],
+  )
+  const showGroupedKeywords = showAllKeywords && (keywords.data?.length ?? 0) > 12
 
   const resetFilters = () => {
     setQueryDraft('')
@@ -108,42 +114,88 @@ export function NewsPage() {
         ))}
       </div>
 
-      <div className="news-filter-row">
-        <span className="news-filter-label">키워드</span>
-        <button
-          type="button"
-          className={`news-chip ${!keywordId ? 'active' : ''}`}
-          onClick={() => {
-            setKeywordId('')
-            setPage(1)
-          }}
-        >
-          전체
-        </button>
-        {visibleKeywords.map((keyword) => (
+      {showGroupedKeywords ? (
+        <>
+          <div className="news-filter-row">
+            <span className="news-filter-label">키워드</span>
+            <button
+              type="button"
+              className={`news-chip ${!keywordId ? 'active' : ''}`}
+              onClick={() => {
+                setKeywordId('')
+                setPage(1)
+              }}
+            >
+              전체
+            </button>
+            <button
+              type="button"
+              className="news-chip-toggle"
+              onClick={() => setShowAllKeywords(false)}
+            >
+              내 키워드만
+            </button>
+          </div>
+          {keywordGroups.map((group) => (
+            <div key={group.id} className="news-filter-row news-filter-row-grouped">
+              <span className="news-filter-label">{group.name}</span>
+              {group.keywords.map((keyword) => (
+                <button
+                  key={keyword.id}
+                  type="button"
+                  className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setKeywordId(keyword.id)
+                    setPage(1)
+                  }}
+                >
+                  {keyword.selected ? '★ ' : ''}
+                  {keyword.name}
+                  {keyword.status === 'candidate' ? ' · 신규' : ''}
+                </button>
+              ))}
+            </div>
+          ))}
+        </>
+      ) : (
+        <div className="news-filter-row">
+          <span className="news-filter-label">키워드</span>
           <button
-            key={keyword.id}
             type="button"
-            className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
+            className={`news-chip ${!keywordId ? 'active' : ''}`}
             onClick={() => {
-              setKeywordId(keyword.id)
+              setKeywordId('')
               setPage(1)
             }}
           >
-            {keyword.selected ? '★ ' : ''}
-            {keyword.name}
+            전체
           </button>
-        ))}
-        {(keywords.data?.length ?? 0) > selectedKeywords.length && (
-          <button
-            type="button"
-            className="news-chip-toggle"
-            onClick={() => setShowAllKeywords((v) => !v)}
-          >
-            {showAllKeywords ? '내 키워드만' : '전체 키워드'}
-          </button>
-        )}
-      </div>
+          {visibleKeywords.map((keyword) => (
+            <button
+              key={keyword.id}
+              type="button"
+              className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
+              onClick={() => {
+                setKeywordId(keyword.id)
+                setPage(1)
+              }}
+            >
+              {keyword.selected ? '★ ' : ''}
+              {keyword.name}
+              {keyword.status === 'candidate' ? ' · 신규' : ''}
+            </button>
+          ))}
+          {(keywords.data?.length ?? 0) > selectedKeywords.length && (
+            <button
+              type="button"
+              className="news-chip-toggle"
+              onClick={() => setShowAllKeywords((v) => !v)}
+            >
+              {showAllKeywords ? '내 키워드만' : '전체 키워드'}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="news-filter-row">
         <span className="news-filter-label">중요도</span>

@@ -9,6 +9,7 @@ export interface NewsCategory {
 export interface Keyword {
   id: string
   category_id: string | null
+  category_name?: string | null
   owner_user_id: string | null
   name: string
   normalized_name: string
