@@ -85,9 +85,10 @@ export function MintFrontPage({ dateLabel, year, stats, loading }: MintFrontPage
 
           {orgReport && orgReport.highlights?.length > 0 && (
             <ol className="np-briefing-picks">
-              {orgReport.highlights.slice(0, 4).map((item, index) => (
-                <li key={`${item.title}-${index}`}>
-                  <div className="np-pick-row np-pick-row-static">
+              {orgReport.highlights.slice(0, 4).map((item, index) => {
+                const postId = item.related_post_ids?.[0]
+                const body = (
+                  <>
                     <span className="np-pick-num">{index + 1}</span>
                     <span className="np-pick-body">
                       <strong>{item.title}</strong>
@@ -100,9 +101,20 @@ export function MintFrontPage({ dateLabel, year, stats, loading }: MintFrontPage
                         />
                       </span>
                     )}
-                  </div>
-                </li>
-              ))}
+                  </>
+                )
+                return (
+                  <li key={`${item.title}-${index}`}>
+                    {postId ? (
+                      <Link to={`/posts/${postId}`} className="np-pick-row">
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="np-pick-row np-pick-row-static">{body}</div>
+                    )}
+                  </li>
+                )
+              })}
             </ol>
           )}
 

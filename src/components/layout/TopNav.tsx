@@ -23,7 +23,7 @@ const PATH_LABELS: Record<string, string> = {
   '/': '1면',
   '/news': '뉴스',
   '/reports': '리포트',
-  '/settings': '개인설정',
+  '/settings': '설정',
   '/admin': '관리',
   '/admin/review-queue': '검수함',
   '/admin/accounts': '계정 관리',
@@ -196,7 +196,7 @@ export function TopNav() {
                   }}
                 >
                   <Icon name="sparkles" />
-                  <span>개인설정</span>
+                  <span>설정</span>
                 </NavLink>
                 <NavLink
                   to="/inquiries"
@@ -288,7 +288,7 @@ export function TopNav() {
               onClick={() => setMenuOpen(false)}
             >
               <Icon name="sparkles" />
-              <span>개인설정</span>
+              <span>설정</span>
             </NavLink>
             <NavLink
               to="/inquiries"

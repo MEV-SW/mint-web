@@ -34,6 +34,7 @@ export interface DashboardStats {
       title: string
       description: string | null
       importance: string | null
+      related_post_ids?: string[]
     }[]
   } | null
   trusted_preview: DashboardPostPreview[]

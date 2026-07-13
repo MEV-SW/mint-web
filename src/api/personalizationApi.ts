@@ -58,6 +58,7 @@ export async function getNews(params: {
   keyword_ids?: string[]
   importance?: string
   category?: string
+  content_kind?: 'news' | 'community' | 'discovery'
   page?: number
   size?: number
 }): Promise<NewsPage> {
@@ -66,6 +67,7 @@ export async function getNews(params: {
   params.keyword_ids?.forEach((id) => query.append('keyword_ids', id))
   if (params.importance) query.set('importance', params.importance)
   if (params.category) query.set('category', params.category)
+  if (params.content_kind) query.set('content_kind', params.content_kind)
   query.set('page', String(params.page ?? 1))
   query.set('size', String(params.size ?? 20))
   const { data } = await apiClient.get<NewsPage>(`/api/v1/news?${query}`)

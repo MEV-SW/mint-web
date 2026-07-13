@@ -37,6 +37,9 @@ export interface PersonalizedNews {
   id: string
   title: string
   source_name: string | null
+  source_type?: string | null
+  board_type?: string | null
+  is_community?: boolean
   category: string | null
   collected_at: string
   original_url: string | null
