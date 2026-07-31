@@ -19,14 +19,20 @@ export function LoginPage() {
     setError('')
     try {
       const tokenRes = await login(email, password)
-      const prevToken = useAuthStore.getState().token
-      useAuthStore.setState({ token: tokenRes.access_token })
+      const prev = useAuthStore.getState()
+      useAuthStore.setState({
+        token: tokenRes.access_token,
+        refreshToken: tokenRes.refresh_token,
+      })
       try {
         const user = await fetchMe()
-        setAuth(tokenRes.access_token, user)
+        setAuth(tokenRes.access_token, tokenRes.refresh_token, user)
         navigate('/')
       } catch {
-        useAuthStore.setState({ token: prevToken })
+        useAuthStore.setState({
+          token: prev.token,
+          refreshToken: prev.refreshToken,
+        })
         throw new Error('me failed')
       }
     } catch {

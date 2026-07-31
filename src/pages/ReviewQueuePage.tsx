@@ -41,7 +41,7 @@ export function ReviewQueuePage() {
 
   return (
     <PageShell
-      section="관리"
+      section="관리 · Review"
       title="검수함"
       lead="키워딩에 실패한 뉴스입니다. AI 추천을 고르거나 조직 키워드·신규 키워드를 지정한 뒤 저장하세요."
       actions={

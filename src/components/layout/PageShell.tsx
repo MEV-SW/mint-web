@@ -15,7 +15,7 @@ export function PageShell({ section, title, lead, leadSingleLine, actions, child
       <header className="pg-masthead">
         <div className="pg-masthead-row">
           <div className="pg-masthead-main">
-            <div className="np-section-label">{section}</div>
+            <div className="pg-kicker">{section}</div>
             <h1 className="pg-title">{title}</h1>
           </div>
           {actions && <div className="pg-actions">{actions}</div>}
@@ -23,6 +23,7 @@ export function PageShell({ section, title, lead, leadSingleLine, actions, child
         {lead && (
           <p className={`pg-lead${leadSingleLine ? ' pg-lead-single' : ''}`}>{lead}</p>
         )}
+        <div className="pg-rule" aria-hidden />
       </header>
       {children}
     </div>

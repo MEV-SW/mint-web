@@ -35,11 +35,12 @@ export function MintFrontPage({ dateLabel, year, stats, loading }: MintFrontPage
   const voices = stats?.community_voices_preview ?? []
   const heroTrusted = trusted[0]
   const gridTrusted = trusted.slice(1, 5)
+  const heroIllustration = mediaUrl(orgReport?.illustration_url)
 
   return (
     <article className="np-newspaper-body">
       <NewspaperMasthead
-        edition="DAILY EDITION"
+        edition="Daily Edition"
         headline="MINT Daily"
         dek="조직 전체 수집 · AI 브리핑 · 오늘의 판"
         dateLabel={dateLabel}
@@ -53,25 +54,14 @@ export function MintFrontPage({ dateLabel, year, stats, loading }: MintFrontPage
               <article className="np-lead-story">
                 <div className="np-byline">
                   <span className="np-byline-source">AI Daily Briefing</span>
-                  <span className="np-byline-date">{orgReport.report_date}</span>
-                  {orgReport.slack_sent && (
-                    <span className="np-briefing-sent">
-                      <Icon name="slack" /> Slack
-                    </span>
-                  )}
+                  <span className="np-byline-dot" aria-hidden />
+                  <span className="np-byline-date">
+                    {orgReport.report_date}
+                    {orgReport.slack_sent ? ' · Slack 전송됨' : ''}
+                  </span>
                 </div>
-                <div className="np-lead-layout">
-                  <div className="np-lead-copy">
-                    <h2 className="np-lead-headline">{orgReport.title}</h2>
-                    <p className="np-lead-dek">{orgReport.summary}</p>
-                  </div>
-                  {mediaUrl(orgReport.illustration_url) && (
-                    <figure className="np-briefing-illustration">
-                      <img src={mediaUrl(orgReport.illustration_url)!} alt="" />
-                      <figcaption>오늘의 스케치</figcaption>
-                    </figure>
-                  )}
-                </div>
+                <h2 className="np-lead-headline">{orgReport.title}</h2>
+                {orgReport.summary && <p className="np-lead-dek">{orgReport.summary}</p>}
               </article>
             </Link>
           ) : (
@@ -119,14 +109,28 @@ export function MintFrontPage({ dateLabel, year, stats, loading }: MintFrontPage
           )}
 
           {!loading && heroTrusted && (
-            <section className="np-subsection">
-              <div className="np-section-label">중요 뉴스</div>
-              <Link to={`/posts/${heroTrusted.id}`} className="np-briefing-link">
-                <article className="np-sub-lead">
-                  <h3>{heroTrusted.title}</h3>
-                  {heroTrusted.ai_summary && <p>{heroTrusted.ai_summary}</p>}
-                </article>
-              </Link>
+            <section className="np-feature-story">
+              <div className="np-feature-kicker">중요 뉴스 · 톱기사</div>
+              <div className="np-feature-story-grid">
+                <div>
+                  <Link to={`/posts/${heroTrusted.id}`} className="np-briefing-link">
+                    <h3 className="np-feature-headline">{heroTrusted.title}</h3>
+                    {heroTrusted.ai_summary && (
+                      <p className="np-feature-dek">{heroTrusted.ai_summary}</p>
+                    )}
+                  </Link>
+                  <div className="np-feature-meta">
+                    {heroTrusted.source_name ?? '신뢰 소스'} · {formatDate(heroTrusted.collected_at)}
+                  </div>
+                </div>
+                <div className="np-photo-slot" aria-hidden>
+                  {heroIllustration ? (
+                    <img src={heroIllustration} alt="" />
+                  ) : (
+                    <span>PHOTO</span>
+                  )}
+                </div>
+              </div>
               {gridTrusted.length > 0 && (
                 <div className="np-story-grid">
                   {gridTrusted.map((post) => (

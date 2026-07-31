@@ -1,4 +1,5 @@
-import { apiClient } from './client'
+import { apiClient, revokeRefreshToken } from './client'
+import { useAuthStore } from '../store/authStore'
 import type { RegisterResponse, TokenResponse, User } from '../types/auth'
 
 export interface RegisterPayload {
@@ -20,6 +21,11 @@ export async function login(email: string, password: string): Promise<TokenRespo
 export async function fetchMe(): Promise<User> {
   const { data } = await apiClient.get<User>('/api/v1/auth/me')
   return data
+}
+
+export async function logout(): Promise<void> {
+  await revokeRefreshToken()
+  useAuthStore.getState().logout()
 }
 
 export function loginErrorMessage(detail: unknown): string {

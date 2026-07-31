@@ -110,18 +110,19 @@ export function JobStatusPanel() {
         className={`job-status-trigger${activeCount ? ' active' : ''}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label="백그라운드 작업 상태"
+        aria-label="백그라운드 작업"
+        title="백그라운드 작업"
       >
         <Icon name="refresh" className={activeCount ? 'spin' : ''} />
         {activeCount > 0 ? (
           <span>
-            작업 {activeCount}건 실행 중
+            작업 {activeCount}
             {primaryProgress && (
               <span className="job-status-trigger-progress"> · {primaryProgress}</span>
             )}
           </span>
         ) : (
-          <span>백그라운드 작업</span>
+          <span>작업</span>
         )}
       </button>
 

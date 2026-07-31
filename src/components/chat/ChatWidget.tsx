@@ -151,7 +151,7 @@ export function ChatWidget() {
           <div className="chat-widget-hero">
             <div className="chat-widget-hero-inner">
               <div className="chat-ai-avatar chat-ai-avatar--hero" aria-hidden>
-                <Icon name="sparkles" />
+                ✦
               </div>
               <div className="chat-widget-hero-copy">
                 <strong>MINT AI</strong>
@@ -179,7 +179,7 @@ export function ChatWidget() {
                 <div key={i} className={`chat-bubble ${m.role}`}>
                   {m.role === 'assistant' && (
                     <div className="chat-bubble-avatar" aria-hidden>
-                      <Icon name="sparkles" />
+                      ✦
                     </div>
                   )}
                   <div className="chat-bubble-content">
@@ -222,7 +222,7 @@ export function ChatWidget() {
               {ask.isPending && (
                 <div className="chat-bubble assistant">
                   <div className="chat-bubble-avatar" aria-hidden>
-                    <Icon name="sparkles" />
+                    ✦
                   </div>
                   <div className="chat-bubble-content">
                     <div className="chat-bubble-label">MINT AI</div>
@@ -239,7 +239,9 @@ export function ChatWidget() {
               <div className="chat-suggestions chat-widget-suggestions">
                 {SUGGESTIONS.map((s) => (
                   <button key={s} type="button" className="chat-chip" onClick={() => submit(s)}>
-                    <Icon name="sparkles" />
+                    <span className="chat-chip-mark" aria-hidden>
+                      ✦
+                    </span>
                     {s}
                   </button>
                 ))}
@@ -276,23 +278,21 @@ export function ChatWidget() {
       {!open && (
         <button
           type="button"
-          className="chat-widget-launcher"
+          className="chat-widget-fab"
           title="MINT AI 열기"
           aria-label="MINT AI 챗봇 열기"
           aria-expanded={false}
           onClick={() => setOpen(true)}
         >
-          <span className="chat-widget-launcher-glow" aria-hidden />
-          <span className="chat-widget-launcher-ring" aria-hidden />
-          <span className="chat-ai-avatar chat-ai-avatar--launcher" aria-hidden>
-            <Icon name="sparkles" />
+          <span className="chat-widget-fab-icon" aria-hidden>
+            ✦
           </span>
-          <span className="chat-widget-launcher-copy">
+          <span className="chat-widget-fab-copy">
             <strong>MINT AI</strong>
-            <span>EV·충전 인텔리전스</span>
+            <span>무엇이든 물어보세요</span>
           </span>
-          <span className="chat-widget-launcher-cta" aria-hidden>
-            <Icon name="chevR" />
+          <span className="chat-widget-fab-arrow" aria-hidden>
+            →
           </span>
         </button>
       )}

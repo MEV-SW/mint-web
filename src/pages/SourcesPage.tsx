@@ -285,7 +285,7 @@ export function SourcesPage() {
 
   return (
     <PageShell
-      section="운영 · 수집"
+      section="관리 · Sources"
       title="소스 관리"
       lead="크롤링 대상 소스를 등록·관리합니다. 신뢰도와 자동 게시 여부에 따라 수집 글 처리 방식이 달라집니다."
       leadSingleLine

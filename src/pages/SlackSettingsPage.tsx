@@ -41,7 +41,7 @@ export function SlackSettingsPage() {
 
   return (
     <PageShell
-      section="운영 · 알림"
+      section="관리 · Webhooks"
       title="웹훅 설정"
       lead="Slack·Teams 등 Incoming Webhook URL을 등록하고 테스트 메시지를 보냅니다. URL은 암호화되어 저장됩니다."
       leadSingleLine

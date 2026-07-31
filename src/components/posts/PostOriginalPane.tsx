@@ -5,6 +5,7 @@ import { Icon } from '../common/Icon'
 const FRAME_BASE_W = 1280
 const EMBED_CHECK_MS = 800
 const EMBED_RECHECK_MS = 1500
+const EMBED_GIVE_UP_MS = 5000
 
 interface FrameLayout {
   scale: number
@@ -13,7 +14,7 @@ interface FrameLayout {
   h: number
 }
 
-type ContentMode = 'checking' | 'direct' | 'stored-body' | 'fetched' | 'empty'
+type ContentMode = 'checking' | 'direct' | 'stored-body' | 'fetched' | 'unavailable'
 
 interface PostOriginalPaneProps {
   postId: string
@@ -58,7 +59,8 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   const viewportRef = useRef<HTMLDivElement>(null)
   const directIframeRef = useRef<HTMLIFrameElement>(null)
   const embedCheckTimerRef = useRef<number | null>(null)
-  const contentModeRef = useRef<ContentMode>('empty')
+  const contentModeRef = useRef<ContentMode>('checking')
+  const directPhaseRef = useRef<'loading' | 'ready'>('loading')
 
   const [layout, setLayout] = useState<FrameLayout>({
     scale: 0.55,
@@ -68,7 +70,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   })
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [fetchPhase, setFetchPhase] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
-  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const [directPhase, setDirectPhase] = useState<'loading' | 'ready'>('loading')
 
   const hasUrl = Boolean(url)
@@ -78,22 +80,38 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   const [contentMode, setContentMode] = useState<ContentMode>(() => {
     if (hasUrl) return 'checking'
     if (hasStoredBody) return 'stored-body'
-    return 'empty'
+    return 'unavailable'
   })
 
   contentModeRef.current = contentMode
+  directPhaseRef.current = directPhase
 
   const openOriginal = () => {
     if (url) window.open(url, '_blank', 'noopener,noreferrer')
   }
 
+  const showUnavailable = useCallback((reason?: string) => {
+    setUnavailableReason(
+      reason ||
+        (hasUrl
+          ? 'iframe 삽입이 차단되었고, 저장본·서버 미리보기도 없습니다.'
+          : '연결된 원문 URL과 수집 본문이 없습니다.'),
+    )
+    setContentMode('unavailable')
+  }, [hasUrl])
+
   const switchToFallback = useCallback(() => {
     if (hasStoredBody) {
+      setUnavailableReason(null)
       setContentMode('stored-body')
       return
     }
-    setContentMode('fetched')
-  }, [hasStoredBody])
+    if (hasUrl) {
+      setContentMode('fetched')
+      return
+    }
+    showUnavailable()
+  }, [hasStoredBody, hasUrl, showUnavailable])
 
   const clearEmbedCheckTimer = () => {
     if (embedCheckTimerRef.current !== null) {
@@ -109,7 +127,10 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
       const iframe = directIframeRef.current
       if (!iframe || contentModeRef.current !== 'direct') return
       if (isIframeEmbedBlocked(iframe)) onBlocked()
-      else setDirectPhase('ready')
+      else {
+        setDirectPhase('ready')
+        directPhaseRef.current = 'ready'
+      }
     }
 
     embedCheckTimerRef.current = window.setTimeout(() => {
@@ -122,7 +143,10 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   }, [switchToFallback])
 
   useEffect(() => {
-    if (!hasUrl) return
+    if (!hasUrl) {
+      setContentMode(hasStoredBody ? 'stored-body' : 'unavailable')
+      return
+    }
 
     let cancelled = false
     setContentMode('checking')
@@ -143,7 +167,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
     return () => {
       cancelled = true
     }
-  }, [hasUrl, postId, switchToFallback])
+  }, [hasUrl, hasStoredBody, postId, switchToFallback])
 
   useEffect(() => {
     if (contentMode !== 'direct') {
@@ -152,23 +176,44 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
     }
 
     setDirectPhase('loading')
-    return clearEmbedCheckTimer
-  }, [contentMode, url])
+    directPhaseRef.current = 'loading'
+
+    const giveUp = window.setTimeout(() => {
+      if (contentModeRef.current !== 'direct') return
+      if (directPhaseRef.current === 'ready') return
+      const iframe = directIframeRef.current
+      if (!iframe || isIframeEmbedBlocked(iframe) || directPhaseRef.current === 'loading') {
+        switchToFallback()
+      }
+    }, EMBED_GIVE_UP_MS)
+
+    return () => {
+      clearEmbedCheckTimer()
+      window.clearTimeout(giveUp)
+    }
+  }, [contentMode, url, switchToFallback])
 
   useEffect(() => {
     if (contentMode !== 'fetched') {
       setFetchPhase('idle')
-      setFetchError(null)
       return
     }
 
     let cancelled = false
     setFetchPhase('loading')
-    setFetchError(null)
 
     fetchOriginalPreview(postId)
       .then((html) => {
         if (cancelled) return
+        if (!html?.trim()) {
+          if (hasStoredBody) {
+            setContentMode('stored-body')
+            return
+          }
+          setFetchPhase('error')
+          showUnavailable('표시할 원문 본문이 없습니다.')
+          return
+        }
         const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
         setPreviewUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev)
@@ -178,19 +223,23 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
       })
       .catch((err: unknown) => {
         if (cancelled) return
+        if (hasStoredBody) {
+          setContentMode('stored-body')
+          return
+        }
         const detail = (err as { response?: { data?: string | { detail?: string } } })?.response?.data
         const message =
           typeof detail === 'string'
             ? detail
             : detail?.detail || '원문 본문을 가져오지 못했습니다.'
-        setFetchError(message)
         setFetchPhase('error')
+        showUnavailable(message)
       })
 
     return () => {
       cancelled = true
     }
-  }, [contentMode, postId])
+  }, [contentMode, postId, hasStoredBody, showUnavailable])
 
   useEffect(() => {
     return () => {
@@ -207,7 +256,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
       const h = el.clientHeight
       if (w <= 0 || h <= 0) return
 
-      const scale = Math.max(0.28, Math.min(w / FRAME_BASE_W, 1))
+      const scale = Math.max(0.35, Math.min(w / FRAME_BASE_W, 1))
       const frameH = h / scale
 
       setLayout({ scale, frameH, w, h })
@@ -238,7 +287,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
       </>
     ) : contentMode === 'stored-body' ? (
       <>
-        iframe 삽입이 차단되어 수집 본문을 표시합니다.{' '}
+        iframe 삽입이 막혀 저장해 둔 수집 본문을 표시합니다.{' '}
         {hasUrl && (
           <button type="button" className="post-split-inline-link" onClick={openOriginal}>
             원문 사이트 열기
@@ -252,12 +301,14 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
           새 탭에서 열기
         </button>
       </>
-    ) : contentMode === 'fetched' && fetchPhase === 'error' ? (
+    ) : contentMode === 'unavailable' ? (
       <>
-        iframe과 본문 가져오기가 모두 실패했습니다.{' '}
-        <button type="button" className="post-split-inline-link" onClick={openOriginal}>
-          새 탭에서 원문 열기
-        </button>
+        원문을 이 화면에서 표시할 수 없습니다.{' '}
+        {hasUrl && (
+          <button type="button" className="post-split-inline-link" onClick={openOriginal}>
+            새 탭에서 원문 열기
+          </button>
+        )}
       </>
     ) : null
 
@@ -302,12 +353,6 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
           {fetchPhase === 'loading' && (
             <div className="post-split-frame-status">본문을 가져오는 중…</div>
           )}
-          {fetchPhase === 'error' && (
-            <div className="post-split-frame-status post-split-frame-status-error">
-              <p>{fetchError}</p>
-              <p>많은 뉴스 사이트는 iframe 삽입을 막습니다.</p>
-            </div>
-          )}
           {fetchPhase === 'ready' && previewUrl && (
             <div className="post-split-frame-scaler" style={{ width: layout.w, height: layout.h }}>
               <iframe
@@ -327,9 +372,20 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
         </div>
       )}
 
-      {contentMode === 'empty' && (
-        <div className="post-split-empty">
-          <p>연결된 원문 URL과 수집 본문이 없습니다.</p>
+      {contentMode === 'unavailable' && (
+        <div className="post-split-empty post-split-unavailable">
+          <p className="post-split-unavailable-title">원문을 표시할 수 없습니다</p>
+          <p>
+            {unavailableReason ||
+              (hasUrl
+                ? 'iframe 삽입이 차단되었고, 저장본·서버 미리보기도 없습니다.'
+                : '연결된 원문 URL과 수집 본문이 없습니다.')}
+          </p>
+          {hasUrl && (
+            <button type="button" className="post-split-unavailable-btn" onClick={openOriginal}>
+              새 탭에서 원문 열기
+            </button>
+          )}
         </div>
       )}
 

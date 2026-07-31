@@ -79,8 +79,8 @@ export function PostDetailPage() {
       </Link>
 
       <article className="pg-article-hero">
-        <div className="np-section-label">{isDiscovery ? DISCOVERY_BOARD_LABEL : '중요 뉴스'}</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div className="pg-kicker">{isDiscovery ? DISCOVERY_BOARD_LABEL : '중요 뉴스'}</div>
+        <div className="pg-article-badges">
           <StatusPill status={post.status} />
           <ImportanceBadge level={post.importance} />
           <TrustBadge level={post.trust_level} score={post.reliability_score} />

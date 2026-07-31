@@ -54,8 +54,8 @@ export function DailyCorner() {
   const edition = getDailyEdition(new Date())
 
   return (
-    <section className="np-daily-corner" aria-label="MINT 휴식란">
-      <div className="np-daily-corner-title">MINT 휴식란</div>
+    <section className="np-daily-corner" aria-label="MINT 휴식판">
+      <div className="np-section-label">MINT 휴식판</div>
 
       <div className="np-daily-block np-daily-fact">
         <h4 className="np-daily-block-title">오늘의 상식</h4>
@@ -70,7 +70,7 @@ export function DailyCorner() {
 
       <DailyQuizBlock quiz={edition.quiz} />
 
-      <p className="np-daily-foot">매일 바뀌는 MINT 휴식란 · EV 업무 속 짧은 숨</p>
+      <p className="np-daily-foot">매일 바뀌는 MINT 휴식판 · EV 업무 속 짧은 숨</p>
     </section>
   )
 }

@@ -6,9 +6,9 @@ import { fetchDashboardStats } from '../../api/statsApi'
 import { listUsers } from '../../api/usersApi'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useAuthStore } from '../../store/authStore'
+import { logout as logoutRequest } from '../../api/authApi'
 import { cx } from '../../utils/cx'
 import { Icon } from '../common/Icon'
-import { MintLogo } from '../common/MintLogo'
 import { GlobalSearch } from './GlobalSearch'
 import {
   ADMIN_PATHS,
@@ -61,7 +61,6 @@ export function TopNav() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const user = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
   const { isAdmin, roleLabel } = usePermissions()
   const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
   const { data: openInquiries = 0 } = useQuery({
@@ -74,6 +73,13 @@ export function TopNav() {
     queryFn: () => listUsers('pending'),
     enabled: isAdmin,
   })
+
+  async function handleLogout() {
+    setUserMenuOpen(false)
+    setMenuOpen(false)
+    await logoutRequest()
+    window.location.href = '/login'
+  }
 
   const counts = {
     pending: stats?.review_queue_pending ?? 0,
@@ -140,7 +146,9 @@ export function TopNav() {
 
       <div className="topnav-bar">
         <Link to="/" className="topnav-brand" onClick={() => setMenuOpen(false)}>
-          <MintLogo size={32} />
+          <div className="topnav-brand-mark" aria-hidden>
+            M
+          </div>
           <div className="topnav-brand-text">
             <span className="topnav-brand-name">MINT</span>
             <span className="topnav-brand-sub">MotrexEV News Tracker</span>
@@ -172,12 +180,12 @@ export function TopNav() {
           >
             <button
               type="button"
-              className="topnav-user topnav-user-trigger"
+              className="topnav-user topnav-user-trigger topnav-user-chip"
               aria-expanded={userMenuOpen}
               aria-haspopup="true"
               onClick={() => setUserMenuOpen((v) => !v)}
             >
-              <div className="avatar">{(user?.name || '?')[0]}</div>
+              <div className="topnav-user-avatar">{(user?.name || '?')[0]}</div>
               <div className="topnav-user-meta">
                 <span className="topnav-user-name">{user?.name}</span>
                 {roleLabel && <span className="topnav-user-role">{roleLabel}</span>}
@@ -195,7 +203,7 @@ export function TopNav() {
                     setMenuOpen(false)
                   }}
                 >
-                  <Icon name="sparkles" />
+                  <Icon name="settings" />
                   <span>설정</span>
                 </NavLink>
                 <NavLink
@@ -207,7 +215,7 @@ export function TopNav() {
                     setMenuOpen(false)
                   }}
                 >
-                  <Icon name="help" />
+                  <Icon name="message" />
                   <span>문의</span>
                 </NavLink>
                 <NavLink
@@ -219,7 +227,7 @@ export function TopNav() {
                     setMenuOpen(false)
                   }}
                 >
-                  <Icon name="help" />
+                  <Icon name="book" />
                   <span>도움말</span>
                 </NavLink>
                 <button
@@ -227,8 +235,7 @@ export function TopNav() {
                   role="menuitem"
                   className="topnav-settings-item topnav-settings-item-btn"
                   onClick={() => {
-                    setUserMenuOpen(false)
-                    logout()
+                    void handleLogout()
                   }}
                 >
                   <Icon name="logout" />
@@ -249,13 +256,11 @@ export function TopNav() {
         </div>
       </div>
 
-      <div className="topnav-section-bar">
-        <span className="topnav-section-label">현재 섹션</span>
-        <span className="topnav-section-name">{sectionLabel}</span>
+      <div className={cx('topnav-section-bar', location.pathname === '/' && 'is-home')}>
+        <span>현재 섹션</span>
+        <span aria-hidden style={{ width: 1, height: 11, background: 'var(--line)' }} />
+        <strong>{sectionLabel}</strong>
       </div>
-
-      <div className="topnav-rule topnav-rule-thin" aria-hidden />
-
       {menuOpen && (
         <nav className="topnav-mobile" aria-label="모바일 메뉴">
           {mobileNav.map((item) => {
@@ -287,7 +292,7 @@ export function TopNav() {
               className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
               onClick={() => setMenuOpen(false)}
             >
-              <Icon name="sparkles" />
+              <Icon name="settings" />
               <span>설정</span>
             </NavLink>
             <NavLink
@@ -295,7 +300,7 @@ export function TopNav() {
               className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
               onClick={() => setMenuOpen(false)}
             >
-              <Icon name="help" />
+              <Icon name="message" />
               <span>문의</span>
             </NavLink>
             <NavLink
@@ -303,15 +308,14 @@ export function TopNav() {
               className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
               onClick={() => setMenuOpen(false)}
             >
-              <Icon name="help" />
+              <Icon name="book" />
               <span>도움말</span>
             </NavLink>
             <button
               type="button"
               className="topnav-mobile-link topnav-mobile-link-btn"
               onClick={() => {
-                setMenuOpen(false)
-                logout()
+                void handleLogout()
               }}
             >
               <Icon name="logout" />

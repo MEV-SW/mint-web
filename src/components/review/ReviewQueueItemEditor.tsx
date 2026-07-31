@@ -161,7 +161,7 @@ export function ReviewQueueItemEditor({
           </Link>
         </div>
         <div className="review-queue-item-actions">
-          <Btn size="sm" variant={expanded ? 'soft' : 'outline'} onClick={onToggle}>
+          <Btn size="sm" variant={expanded ? 'outline' : 'primary'} onClick={onToggle}>
             {expanded ? '접기' : '키워딩'}
           </Btn>
           <Btn size="sm" variant="outline" onClick={() => onExcluded(item.id)}>

@@ -1,66 +1,80 @@
 /* ============================================================
    MINT — MotrexEV Intelligence & News Tracker
-   Design system: soft mint, generous whitespace, rounded
+   Design system: editorial newspaper (warm paper + pine)
+   Tokens aligned with design_sample/MINT Daily.dc.html
    ============================================================ */
 
 :root {
-  /* Surfaces & neutrals (warm mint-tinted) */
-  --bg:            oklch(0.984 0.007 168);
-  --surface:       #ffffff;
-  --surface-2:     oklch(0.975 0.009 168);
-  --surface-3:     oklch(0.965 0.012 168);
-  --border:        oklch(0.928 0.009 168);
-  --border-strong: oklch(0.88 0.012 168);
+  /* Editorial palette */
+  --paper:  #f4f1e8;
+  --panel:  #fffdf6;
+  --ink:    #1a1712;
+  --ink2:   #5b564d;
+  --ink3:   #928c80;
+  --line:   rgba(26, 23, 18, 0.16);
+  --line2:  rgba(26, 23, 18, 0.07);
+  --pine:   #1b5540;
+  --pined:  #123b2c;
+  --mint:   #3f9c7a;
+  --tint:   #e7efe9;
+  --red:    #a1392a;
+  --amber:  #9c7418;
 
-  /* Text */
-  --text:        oklch(0.30 0.022 168);
-  --text-muted:  oklch(0.52 0.018 168);
-  --text-faint:  oklch(0.64 0.014 168);
+  /* Legacy aliases → editorial (keep existing classnames working) */
+  --bg:            var(--paper);
+  --surface:       var(--panel);
+  --surface-2:     #faf7ef;
+  --surface-3:     var(--tint);
+  --border:        var(--line2);
+  --border-strong: var(--line);
 
-  /* Mint primary */
-  --mint:        oklch(0.70 0.118 168);
-  --mint-strong: oklch(0.60 0.125 168);
-  --mint-deep:   oklch(0.48 0.10 168);
-  --mint-soft:   oklch(0.955 0.038 168);
-  --mint-soft-2: oklch(0.93 0.05 168);
-  --mint-ink:    oklch(0.43 0.085 168);
+  --text:        var(--ink);
+  --text-muted:  var(--ink2);
+  --text-faint:  var(--ink3);
 
-  /* Semantic accents — shared chroma/lightness, varied hue */
-  --high:        oklch(0.62 0.155 25);
-  --high-soft:   oklch(0.955 0.035 30);
-  --high-ink:    oklch(0.48 0.13 27);
+  --mint-strong: var(--pine);
+  --mint-deep:   var(--pined);
+  --mint-soft:   var(--tint);
+  --mint-soft-2: #d8e8df;
+  --mint-ink:    var(--pine);
 
-  --med:         oklch(0.72 0.13 70);
-  --med-soft:    oklch(0.96 0.045 80);
-  --med-ink:     oklch(0.52 0.10 65);
+  --high:        var(--red);
+  --high-soft:   #f5e8e5;
+  --high-ink:    #7a2a20;
 
-  --info:        oklch(0.62 0.12 245);
-  --info-soft:   oklch(0.955 0.03 245);
-  --info-ink:    oklch(0.47 0.10 245);
+  --med:         var(--amber);
+  --med-soft:    #f5eed9;
+  --med-ink:     #7a5a12;
 
-  --low:         oklch(0.62 0.012 168);
-  --low-soft:    oklch(0.955 0.006 168);
-  --low-ink:     oklch(0.48 0.012 168);
+  --info:        #3a6b8a;
+  --info-soft:   #e8eef3;
+  --info-ink:    #2a4f66;
 
-  /* Radii */
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --r-xl: 22px;
+  --low:         var(--ink3);
+  --low-soft:    #efece4;
+  --low-ink:     var(--ink2);
+
+  /* Radii — sharp editorial */
+  --r-sm: 2px;
+  --r-md: 3px;
+  --r-lg: 4px;
+  --r-xl: 6px;
   --r-pill: 999px;
 
   /* Shadows */
-  --sh-sm: 0 1px 2px oklch(0.5 0.05 168 / 0.06), 0 1px 3px oklch(0.5 0.05 168 / 0.05);
-  --sh-md: 0 2px 4px oklch(0.5 0.05 168 / 0.05), 0 8px 24px oklch(0.5 0.05 168 / 0.06);
-  --sh-lg: 0 8px 16px oklch(0.5 0.05 168 / 0.07), 0 24px 48px oklch(0.5 0.05 168 / 0.10);
+  --sh-sm: 0 1px 2px rgba(26, 23, 18, 0.06);
+  --sh-md: 0 8px 24px -12px rgba(26, 23, 18, 0.18);
+  --sh-lg: 0 24px 60px -20px rgba(26, 23, 18, 0.35);
 
-  --font: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --serif: var(--font);
-  --mono: var(--font);
+  --font: "Pretendard", "Pretendard Variable", system-ui, -apple-system, sans-serif;
+  --serif: "Noto Serif KR", "Noto Serif", Georgia, serif;
+  --display: "Libre Caslon Display", "Noto Serif KR", Georgia, serif;
+  --mono: ui-monospace, Menlo, Consolas, monospace;
 
   --sidebar-w: 248px;
-  --topnav-bar-h: 60px;
+  --topnav-bar-h: auto;
   --header-h: 68px;
+  --app-max: 1440px;
 }
 
 * { box-sizing: border-box; }
@@ -81,20 +95,26 @@ html, body {
 #root { height: 100%; }
 
 button { font-family: inherit; cursor: pointer; }
-a { color: inherit; text-decoration: none; }
+a { color: var(--pine); text-decoration: none; }
+a:hover { color: var(--pined); }
 
-::selection { background: var(--mint-soft-2); }
+::selection { background: #c9ddd0; color: var(--pined); }
 
 /* scrollbar */
 *::-webkit-scrollbar { width: 11px; height: 11px; }
 *::-webkit-scrollbar-thumb {
-  background: oklch(0.85 0.012 168);
-  border-radius: 999px;
+  background: rgba(26, 23, 18, 0.22);
+  border-radius: 10px;
   border: 3px solid transparent;
-  background-clip: padding-box;
+  background-clip: content-box;
 }
-*::-webkit-scrollbar-thumb:hover { background: oklch(0.78 0.015 168); background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(26, 23, 18, 0.35); background-clip: content-box; }
 *::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes mintUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* ============================================================ LOGIN */
 .login-wrap {
@@ -1541,9 +1561,9 @@ select.input { appearance: none; cursor: pointer;
 }
 .post-split-view {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
   align-items: stretch;
-  min-height: min(72vh, 880px);
+  min-height: min(78vh, 920px);
   border: 1px solid var(--border-strong);
   background: var(--surface);
 }
@@ -1651,10 +1671,7 @@ select.input { appearance: none; cursor: pointer;
   white-space: pre-wrap;
 }
 .post-split-raw-stored {
-  max-height: min(70vh, 720px);
   background: var(--surface-2);
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
 }
 .post-split-frame-viewport-nested {
   min-height: 280px;
@@ -3958,8 +3975,13 @@ table.tbl { width: 100%; border-collapse: collapse; }
   .post-ai-panel {
     border-left: none;
     border-top: 1px solid var(--border-strong);
+    max-height: none;
+    position: static;
   }
-  .post-split-frame-viewport { min-height: 280px; }
+  .post-original-pane {
+    min-height: 56vh;
+  }
+  .post-split-frame-viewport { min-height: 360px; }
   .board-row-actions .btn span:not(:empty) { display: none; }
   .board-row-actions .btn:not(.btn-icon) { padding-inline: 8px; }
   .np-front { grid-template-columns: 1fr; gap: 28px; }

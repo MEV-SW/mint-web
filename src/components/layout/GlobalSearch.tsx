@@ -81,7 +81,7 @@ export function GlobalSearch() {
       <Icon name="search" />
       <input
         ref={inputRef}
-        placeholder="게시글·소스 검색"
+        placeholder="검색"
         value={query}
         onChange={(e) => {
           setQuery(e.target.value)

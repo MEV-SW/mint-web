@@ -104,9 +104,9 @@ export function AdminAccountsPage() {
 
   return (
     <PageShell
-      section="관리"
+      section="관리 · Accounts"
       title="계정 관리"
-      lead="회원가입 승인과 사용자 문의를 한곳에서 처리합니다."
+      lead="가입 신청·구성원 권한과 문의를 한곳에서 처리합니다."
       leadSingleLine
     >
       <section className="admin-accounts-section">

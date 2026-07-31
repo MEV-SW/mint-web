@@ -4,7 +4,6 @@ import { getOpenInquiryCount } from '../../api/inquiryApi'
 import { fetchDashboardStats } from '../../api/statsApi'
 import { listUsers } from '../../api/usersApi'
 import { cx } from '../../utils/cx'
-import { Icon } from '../common/Icon'
 import { APP_NAV_ADMIN_SUB, adminNavBadgeCount } from './navItems'
 
 export function AdminLayout() {
@@ -36,9 +35,8 @@ export function AdminLayout() {
               end={item.path === '/admin'}
               className={({ isActive }) => cx('admin-subnav-link', isActive && 'active')}
             >
-              <Icon name={item.icon} />
               <span>{item.label}</span>
-              {badge > 0 && <span className="topnav-badge">{badge}</span>}
+              {badge > 0 && <span className="admin-subnav-badge">{badge}</span>}
             </NavLink>
           )
         })}

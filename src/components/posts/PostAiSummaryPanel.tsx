@@ -21,7 +21,7 @@ export function PostAiSummaryPanel({
     <div className={`post-ai-panel${compact ? ' compact' : ''}`}>
       <div className="post-split-head">
         <span>AI 요약</span>
-        {ai && <AiBadge />}
+        {ai && <AiBadge label="✦ Generated" />}
       </div>
       <div className="post-split-summary">
         {ai ? (
