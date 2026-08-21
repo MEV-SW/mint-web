@@ -46,3 +46,46 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const { data } = await apiClient.get<DashboardStats>('/api/v1/stats/dashboard')
   return data
 }
+
+/** Share one in-flight request so React StrictMode / remounts don't double-bill Gemini. */
+let frontPhotoInflight: Promise<string> | null = null
+
+export async function ensureFrontPhoto(payload: {
+  report_id?: string
+  title?: string
+  summary?: string
+  seed?: string
+  force?: boolean
+}): Promise<string> {
+  if (frontPhotoInflight) return frontPhotoInflight
+
+  frontPhotoInflight = apiClient
+    .post<{ illustration_url: string }>(
+      '/api/v1/stats/front-photo',
+      payload,
+      { timeout: 180_000 },
+    )
+    .then(({ data }) => data.illustration_url)
+    .finally(() => {
+      frontPhotoInflight = null
+    })
+
+  return frontPhotoInflight
+}
+
+export interface WeatherInfo {
+  location: string
+  temperature_c: number
+  feels_like_c: number | null
+  humidity_pct: number | null
+  wind_kmh: number | null
+  condition: string
+  high_c: number | null
+  low_c: number | null
+  weather_code: number
+}
+
+export async function fetchTodayWeather(): Promise<WeatherInfo> {
+  const { data } = await apiClient.get<WeatherInfo>('/api/v1/stats/weather')
+  return data
+}

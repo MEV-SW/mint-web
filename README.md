@@ -6,11 +6,12 @@ React + TypeScript + Vite UI for MINT (design based on `design_sample`).
 
 | Route | Description |
 |-------|-------------|
-| `/`, `/trusted`, `/discovery` | Dashboard & news boards |
-| `/posts/:id`, `/reports` | Post detail & daily reports |
+| `/` | MINT Daily + 나만의 1면 (personalization on) |
+| `/news`, `/topics/:keywordId` | News filters & keyword topic hubs |
+| `/settings` | Interest categories/keywords + org featured topics |
+| `/posts/:id`, `/reports`, `/personal-reports/:id` | Post & report detail (TTS listen) |
 | `/inquiries` | User sign-up / approval inquiries |
-| `/sources`, `/slack` | Admin: feed sources & Slack (admin only) |
-| `/admin/users`, `/admin/inquiries` | Admin: user & inquiry management |
+| `/admin/*` | Review queue, accounts, sources, webhooks |
 
 Auth: JWT via backend `/api/v1/auth`. Admin routes gated by `AdminRoute`.
 

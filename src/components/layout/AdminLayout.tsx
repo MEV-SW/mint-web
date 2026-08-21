@@ -2,31 +2,30 @@ import { useQuery } from '@tanstack/react-query'
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { getOpenInquiryCount } from '../../api/inquiryApi'
 import { fetchDashboardStats } from '../../api/statsApi'
-import { listUsers } from '../../api/usersApi'
 import { cx } from '../../utils/cx'
 import { APP_NAV_ADMIN_SUB, adminNavBadgeCount } from './navItems'
+import { usePermissions } from '../../hooks/usePermissions'
 
 export function AdminLayout() {
+  const { isAdmin } = usePermissions()
   const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
   const { data: openInquiries = 0 } = useQuery({
     queryKey: ['inquiries-open-count'],
     queryFn: getOpenInquiryCount,
-  })
-  const { data: pendingUsers = [] } = useQuery({
-    queryKey: ['users', 'pending'],
-    queryFn: () => listUsers('pending'),
+    enabled: isAdmin,
   })
 
+  const items = APP_NAV_ADMIN_SUB.filter((item) => isAdmin || !item.superAdminOnly)
   const counts = {
     pending: stats?.review_queue_pending ?? 0,
     openInquiries,
-    pendingUsers: pendingUsers.length,
+    pendingUsers: 0,
   }
 
   return (
     <div className="admin-layout">
       <nav className="admin-subnav" aria-label="관리 메뉴">
-        {APP_NAV_ADMIN_SUB.map((item) => {
+        {items.map((item) => {
           const badge = adminNavBadgeCount(item, counts)
           return (
             <NavLink

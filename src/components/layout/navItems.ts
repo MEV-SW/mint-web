@@ -5,6 +5,7 @@ export interface NavItem {
   end?: boolean
   countKey?: 'pending' | 'openInquiries' | 'pendingUsers' | 'accounts'
   adminOnly?: boolean
+  superAdminOnly?: boolean
 }
 
 export const APP_NAV_MAIN: NavItem[] = [
@@ -28,9 +29,16 @@ export const APP_NAV_ADMIN_SUB: NavItem[] = [
     icon: 'shield',
     countKey: 'accounts',
     adminOnly: true,
+    superAdminOnly: true,
   },
   { path: '/admin/sources', label: '소스', icon: 'feed', adminOnly: true },
-  { path: '/admin/webhooks', label: '웹훅', icon: 'slack', adminOnly: true },
+  {
+    path: '/admin/webhooks',
+    label: '웹훅',
+    icon: 'slack',
+    adminOnly: true,
+    superAdminOnly: true,
+  },
 ]
 
 export const ADMIN_PATHS = APP_NAV_ADMIN_SUB.map((item) => item.path)

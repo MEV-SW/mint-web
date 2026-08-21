@@ -9,6 +9,7 @@ export type JobType =
   | 'send_slack_report'
   | 'summarize_post'
   | 'purge_stale_discovery'
+  | 'purge_stale_published'
   | 'classify_posts'
   | 'generate_personal_reports'
 

@@ -1,4 +1,5 @@
 import type { SourceCreate, TrustLevel } from '../../types/source'
+import type { Edition } from '../../types/edition'
 import {
   COMMUNITY_SOURCE_TYPES,
   CRAWL_FREQUENCIES,
@@ -33,6 +34,7 @@ interface SourceFormFieldsProps {
   onChange: (next: SourceCreate) => void
   /** 수정 시 유형 변경 잠금 (커뮤니티↔공식 전환 방지) */
   lockSourceType?: boolean
+  editions?: Edition[]
 }
 
 export function SourceFormFields({
@@ -40,6 +42,7 @@ export function SourceFormFields({
   form,
   onChange,
   lockSourceType = false,
+  editions = [],
 }: SourceFormFieldsProps) {
   const isCommunity = mode === 'community'
   const sourceTypes = isCommunity ? COMMUNITY_ONLY_TYPES : OFFICIAL_SOURCE_TYPES
@@ -230,6 +233,39 @@ export function SourceFormFields({
           </div>
         </div>
       </label>
+
+      {editions.length > 0 && (
+        <div className="field">
+          <label>관련 분야</label>
+          <p className="source-form-field-note">
+            비우면 전 분야 일반 소스입니다. 여러 분야를 고를 수 있으며, 수집 파이프라인은
+            하나입니다.
+          </p>
+          <div className="personal-category-keywords" style={{ padding: 0 }}>
+            {editions.map((edition) => {
+              const selected = (form.edition_ids ?? []).includes(edition.id)
+              return (
+                <button
+                  type="button"
+                  key={edition.id}
+                  className={`keyword-chip-option ${selected ? 'selected' : ''}`}
+                  onClick={() => {
+                    const current = form.edition_ids ?? []
+                    onChange({
+                      ...form,
+                      edition_ids: selected
+                        ? current.filter((id) => id !== edition.id)
+                        : [...current, edition.id],
+                    })
+                  }}
+                >
+                  {edition.name}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </>
   )
 }

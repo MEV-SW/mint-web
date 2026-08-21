@@ -1,5 +1,11 @@
 import { apiClient } from './client'
-import type { AccountApprovalStatus, UserRole } from '../types/auth'
+import type { UserRole } from '../types/auth'
+import type { UserEditionMembership } from '../types/auth'
+
+export interface UserEditionAssignment {
+  edition_id: string
+  is_editor: boolean
+}
 
 export interface UserAdmin {
   id: string
@@ -7,24 +13,28 @@ export interface UserAdmin {
   email: string
   name: string
   role: UserRole
-  approval_status: AccountApprovalStatus
+  approval_status: 'pending' | 'approved' | 'rejected'
   is_active: boolean
   created_at: string
+  editions: UserEditionMembership[]
 }
 
-export async function listUsers(approvalStatus?: AccountApprovalStatus): Promise<UserAdmin[]> {
-  const { data } = await apiClient.get<UserAdmin[]>('/api/v1/users', {
-    params: approvalStatus ? { approval_status: approvalStatus } : undefined,
+export async function listUsers(): Promise<UserAdmin[]> {
+  const { data } = await apiClient.get<UserAdmin[]>('/api/v1/users')
+  return data
+}
+
+export async function updateUserEditions(
+  userId: string,
+  editions: UserEditionAssignment[],
+): Promise<UserAdmin> {
+  const { data } = await apiClient.put<UserAdmin>(`/api/v1/users/${userId}/editions`, { editions })
+  return data
+}
+
+export async function setUserActive(userId: string, isActive: boolean): Promise<UserAdmin> {
+  const { data } = await apiClient.patch<UserAdmin>(`/api/v1/users/${userId}/active`, {
+    is_active: isActive,
   })
-  return data
-}
-
-export async function approveUser(userId: string): Promise<UserAdmin> {
-  const { data } = await apiClient.patch<UserAdmin>(`/api/v1/users/${userId}/approve`)
-  return data
-}
-
-export async function rejectUser(userId: string): Promise<UserAdmin> {
-  const { data } = await apiClient.patch<UserAdmin>(`/api/v1/users/${userId}/reject`)
   return data
 }

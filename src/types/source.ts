@@ -23,6 +23,7 @@ export interface Source {
   crawl_frequency: string
   last_crawled_at: string | null
   is_active: boolean
+  edition_ids?: string[]
   created_at: string
   updated_at: string
 }
@@ -38,6 +39,7 @@ export interface SourceCreate {
   auto_publish?: boolean
   crawl_frequency?: string
   is_active?: boolean
+  edition_ids?: string[]
 }
 
 export const SOURCE_CATEGORIES = [

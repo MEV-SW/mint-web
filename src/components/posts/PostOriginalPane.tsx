@@ -77,9 +77,11 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   const storedBody = rawContent?.trim() ?? ''
   const hasStoredBody = storedBody.length > 0
 
+  // Prefer collected body so readers always see original text when we have it.
+  // iframe / server preview remain fallbacks when body is empty.
   const [contentMode, setContentMode] = useState<ContentMode>(() => {
-    if (hasUrl) return 'checking'
     if (hasStoredBody) return 'stored-body'
+    if (hasUrl) return 'checking'
     return 'unavailable'
   })
 
@@ -143,8 +145,13 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
   }, [switchToFallback])
 
   useEffect(() => {
+    if (hasStoredBody) {
+      setContentMode('stored-body')
+      setUnavailableReason(null)
+      return
+    }
     if (!hasUrl) {
-      setContentMode(hasStoredBody ? 'stored-body' : 'unavailable')
+      setContentMode('unavailable')
       return
     }
 
@@ -272,7 +279,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
     contentMode === 'checking' || contentMode === 'direct'
       ? '원문 · 미리보기'
       : contentMode === 'stored-body'
-        ? '수집 본문'
+        ? '원문 · 수집 본문'
         : contentMode === 'fetched'
           ? '원문 · 본문 가져오기'
           : '원문'
@@ -287,7 +294,7 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
       </>
     ) : contentMode === 'stored-body' ? (
       <>
-        iframe 삽입이 막혀 저장해 둔 수집 본문을 표시합니다.{' '}
+        수집된 원문 본문을 표시합니다.{' '}
         {hasUrl && (
           <button type="button" className="post-split-inline-link" onClick={openOriginal}>
             원문 사이트 열기

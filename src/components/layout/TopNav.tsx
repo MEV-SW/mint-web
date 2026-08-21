@@ -61,7 +61,7 @@ export function TopNav() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const user = useAuthStore((s) => s.user)
-  const { isAdmin, roleLabel } = usePermissions()
+  const { isAdmin, canEditAny, roleLabel } = usePermissions()
   const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
   const { data: openInquiries = 0 } = useQuery({
     queryKey: ['inquiries-open-count'],
@@ -69,8 +69,8 @@ export function TopNav() {
     enabled: isAdmin,
   })
   const { data: pendingUsers = [] } = useQuery({
-    queryKey: ['users', 'pending'],
-    queryFn: () => listUsers('pending'),
+    queryKey: ['users'],
+    queryFn: listUsers,
     enabled: isAdmin,
   })
 
@@ -78,13 +78,12 @@ export function TopNav() {
     setUserMenuOpen(false)
     setMenuOpen(false)
     await logoutRequest()
-    window.location.href = '/login'
   }
 
   const counts = {
     pending: stats?.review_queue_pending ?? 0,
     openInquiries,
-    pendingUsers: pendingUsers.length,
+    pendingUsers: isAdmin ? pendingUsers.filter((u) => !u.is_active).length : 0,
   }
 
   const adminBadgeTotal = counts.pending + counts.openInquiries + counts.pendingUsers
@@ -131,7 +130,7 @@ export function TopNav() {
 
   const mobileNav: NavItem[] = [
     ...APP_NAV_MAIN,
-    ...(isAdmin ? [APP_NAV_ADMIN_HUB] : []),
+    ...(isAdmin || canEditAny ? [APP_NAV_ADMIN_HUB] : []),
   ]
 
   return (
@@ -150,8 +149,10 @@ export function TopNav() {
             M
           </div>
           <div className="topnav-brand-text">
-            <span className="topnav-brand-name">MINT</span>
-            <span className="topnav-brand-sub">MotrexEV News Tracker</span>
+            <span className="topnav-brand-name">MINT Daily</span>
+            <span className="topnav-brand-sub">
+              Vol. {now.getFullYear()} · MotrexEV Intelligence
+            </span>
           </div>
         </Link>
 
@@ -163,7 +164,7 @@ export function TopNav() {
             </span>
           ))}
 
-          {isAdmin && (
+          {(isAdmin || canEditAny) && (
             <span className="topnav-link-wrap">
               <NavSeparator />
               {renderNavLink(APP_NAV_ADMIN_HUB, adminBadgeTotal)}

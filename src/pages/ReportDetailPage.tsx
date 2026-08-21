@@ -4,6 +4,7 @@ import { deleteReport, getReport, sendReportSlack } from '../api/reportApi'
 import { ImportanceBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
+import { ListenButton, buildBriefingSpeech } from '../components/common/ListenButton'
 import { useToast } from '../components/common/Toast'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
@@ -66,6 +67,19 @@ export function ReportDetailPage() {
 
       <article className="pg-briefing-block">
         <div className="np-section-label">AI 데일리 브리핑</div>
+        <div style={{ marginBottom: 12 }}>
+          <ListenButton
+            label="데일리 듣기"
+            text={buildBriefingSpeech({
+              title: report.title,
+              summary: report.summary,
+              extras: [
+                ...keyChanges.slice(0, 4).map((k) => `${k.title}. ${k.description ?? ''}`),
+                ...(report.action_items?.slice(0, 3) ?? []),
+              ],
+            })}
+          />
+        </div>
         <div className="pg-briefing-hero">
           <div className="pg-briefing-copy">
             <h1 className="pg-title">{report.title}</h1>

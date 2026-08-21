@@ -7,6 +7,7 @@ export interface NewsCategory {
   selected?: boolean
   is_featured?: boolean
   is_discovered?: boolean
+  edition_id?: string | null
   curated_keyword_count?: number
   keyword_count?: number
   post_count?: number
@@ -24,6 +25,8 @@ export interface Keyword {
   status: 'active' | 'candidate' | 'archived'
   usage_count: number
   is_curated?: boolean
+  is_featured?: boolean
+  edition_id?: string | null
   selected: boolean
 }
 
@@ -72,7 +75,7 @@ export interface PersonalReport {
   summary: string
   item_count: number
   popup_seen: boolean
-  items: PersonalReportItem[]
+  items?: PersonalReportItem[]
 }
 
 export interface ReviewQueueItem {

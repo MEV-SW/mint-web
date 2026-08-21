@@ -3,6 +3,7 @@ import type { Importance, Post } from './post'
 export interface DailyReport {
   id: string
   organization_id: string
+  edition_id?: string | null
   report_date: string
   title: string
   summary: string

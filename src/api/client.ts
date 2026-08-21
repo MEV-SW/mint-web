@@ -24,6 +24,7 @@ function isAuthBootstrapPath(url: string | undefined): boolean {
   if (!url) return false
   return (
     url.includes('/api/v1/auth/login') ||
+    url.includes('/api/v1/auth/oidc') ||
     url.includes('/api/v1/auth/refresh') ||
     url.includes('/api/v1/auth/register')
   )
@@ -102,12 +103,28 @@ apiClient.interceptors.response.use(
   },
 )
 
-export async function revokeRefreshToken(): Promise<void> {
-  const refreshToken = useAuthStore.getState().refreshToken
-  if (!refreshToken) return
+export async function fetchPublicOidcConfig(): Promise<{
+  end_session_endpoint?: string | null
+  client_id?: string | null
+} | null> {
   try {
-    await refreshClient.post('/api/v1/auth/logout', { refresh_token: refreshToken })
+    const { data } = await refreshClient.get('/api/v1/auth/oidc/config')
+    return data
   } catch {
-    // Best-effort revoke; local logout still proceeds.
+    return null
+  }
+}
+
+export async function revokeRefreshToken(): Promise<{
+  end_session_endpoint?: string | null
+  client_id?: string | null
+} | null> {
+  const refreshToken = useAuthStore.getState().refreshToken
+  if (!refreshToken) return null
+  try {
+    const { data } = await refreshClient.post('/api/v1/auth/logout', { refresh_token: refreshToken })
+    return data
+  } catch {
+    return null
   }
 }

@@ -8,26 +8,33 @@ import {
   type ReactNode,
 } from 'react'
 
-export type FrontSpreadPage = 'mine' | 'mint'
+export interface SpreadSheet {
+  key: string
+  label: string
+  subtitle?: string
+  node: ReactNode
+}
 
 interface FrontPageSpreadProps {
-  page: FrontSpreadPage
-  onPageChange: (page: FrontSpreadPage) => void
-  mine: ReactNode
-  mint: ReactNode
+  page: string
+  onPageChange: (page: string) => void
+  sheets: SpreadSheet[]
 }
 
 const SWIPE_THRESHOLD_RATIO = 0.18
 const DRAG_START_PX = 10
 
-export function FrontPageSpread({ page, onPageChange, mine, mint }: FrontPageSpreadProps) {
+export function FrontPageSpread({ page, onPageChange, sheets }: FrontPageSpreadProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const pointerStart = useRef({ x: 0, y: 0, active: false, moved: false })
 
-  const index = page === 'mint' ? 0 : 1
+  const lastIndex = Math.max(sheets.length - 1, 0)
+  const index = Math.max(0, sheets.findIndex((sheet) => sheet.key === page))
+  const current = sheets[index]
+  const showTabs = sheets.length >= 4
 
   useLayoutEffect(() => {
     const el = viewportRef.current
@@ -44,10 +51,10 @@ export function FrontPageSpread({ page, onPageChange, mine, mint }: FrontPageSpr
   const rubberBand = useCallback(
     (dx: number) => {
       if (index === 0 && dx > 0) return dx * 0.25
-      if (index === 1 && dx < 0) return dx * 0.25
+      if (index === lastIndex && dx < 0) return dx * 0.25
       return dx
     },
-    [index],
+    [index, lastIndex],
   )
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -93,8 +100,8 @@ export function FrontPageSpread({ page, onPageChange, mine, mint }: FrontPageSpr
       const dx = e.clientX - startX
       const threshold = viewportWidth * SWIPE_THRESHOLD_RATIO
 
-      if (dx < -threshold && page === 'mint') onPageChange('mine')
-      else if (dx > threshold && page === 'mine') onPageChange('mint')
+      if (dx < -threshold && index < lastIndex) onPageChange(sheets[index + 1].key)
+      else if (dx > threshold && index > 0) onPageChange(sheets[index - 1].key)
     }
 
     setIsDragging(false)
@@ -107,32 +114,31 @@ export function FrontPageSpread({ page, onPageChange, mine, mint }: FrontPageSpr
       ? { flex: `0 0 ${viewportWidth}px`, width: viewportWidth, maxWidth: viewportWidth }
       : undefined
 
+  if (sheets.length === 0) return null
+
   return (
     <div className="np-spread" data-page={page}>
       <div className="np-spread-edition-bar" role="tablist" aria-label="1면 선택">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={page === 'mint'}
-          className={`np-spread-edition-tab${page === 'mint' ? ' active' : ''}`}
-          onClick={() => onPageChange('mint')}
-        >
-          MINT Daily
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={page === 'mine'}
-          className={`np-spread-edition-tab${page === 'mine' ? ' active' : ''}`}
-          onClick={() => onPageChange('mine')}
-        >
-          나만의 1면
-        </button>
+        {sheets.map((sheet) => (
+          <button
+            type="button"
+            role="tab"
+            key={sheet.key}
+            aria-selected={page === sheet.key}
+            className={`np-spread-edition-tab${page === sheet.key ? ' active' : ''}`}
+            onClick={() => onPageChange(sheet.key)}
+          >
+            {sheet.label}
+          </button>
+        ))}
+        <span className="np-spread-edition-label" aria-hidden>
+          {current?.subtitle ?? current?.label}
+        </span>
       </div>
 
       <div
         ref={viewportRef}
-        className={`np-spread-viewport${isDragging ? ' is-dragging' : ''}`}
+        className={`np-spread-viewport${isDragging ? ' is-dragging' : ''}${showTabs ? ' np-spread-many' : ''}`}
         style={
           viewportWidth > 0
             ? ({ ['--spread-viewport-width' as string]: `${viewportWidth}px` } as CSSProperties)
@@ -151,17 +157,21 @@ export function FrontPageSpread({ page, onPageChange, mine, mint }: FrontPageSpr
             transition: isDragging ? 'none' : 'transform 0.42s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
         >
-          <div className="np-spread-sheet" style={sheetStyle} aria-hidden={page !== 'mint' && !isDragging}>
-            <div className="np-newspaper-page">{mint}</div>
-          </div>
-          <div className="np-spread-sheet" style={sheetStyle} aria-hidden={page !== 'mine' && !isDragging}>
-            <div className="np-newspaper-page">{mine}</div>
-          </div>
+          {sheets.map((sheet) => (
+            <div
+              key={sheet.key}
+              className="np-spread-sheet"
+              style={sheetStyle}
+              aria-hidden={page !== sheet.key && !isDragging}
+            >
+              <div className="np-newspaper-page">{sheet.node}</div>
+            </div>
+          ))}
         </div>
       </div>
 
       <p className="np-spread-hint" aria-hidden>
-        ← 드래그하여 1면을 넘기세요 →
+        좌우로 밀어 지면을 넘기세요
       </p>
     </div>
   )

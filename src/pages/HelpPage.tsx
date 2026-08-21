@@ -4,36 +4,36 @@ import { PageShell } from '../components/layout/PageShell'
 import { DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
 
 const FLOW = [
-  { step: '1', title: 'MINT Daily 확인', desc: '조직 1면에서 오늘의 EV·충전 브리핑을 봅니다.', to: '/' },
-  { step: '2', title: '뉴스 탐색', desc: 'EV·충전 관련 뉴스·커뮤니티를 분류·검색으로 확인합니다.', to: '/news' },
-  { step: '3', title: '조직 리포트', desc: '팀 공용 데일리 브리핑을 읽습니다.', to: '/reports' },
-  { step: '4', title: '운영·알림', desc: '관리자는 검수·소스·웹훅으로 수집과 발송을 운영합니다.', to: '/admin' },
+  { step: '1', title: '1면 확인', desc: '배정된 사업 분야 지면에서 오늘 헤드라인을 봅니다.', to: '/' },
+  { step: '2', title: '브리핑 듣기', desc: '분야 브리핑을 음성으로 들으며 다른 일을 할 수 있습니다.', to: '/' },
+  { step: '3', title: '뉴스 탐색', desc: '뉴스 탭과 키워드 토픽 허브로 주제를 깊게 봅니다.', to: '/news' },
+  { step: '4', title: '문의', desc: '권한·분야 배정은 총관에게 문의하세요.', to: '/inquiries' },
 ]
 
 const SECTIONS = [
   {
     icon: 'dashboard',
     title: '1면',
-    body: '조직 MINT Daily로 오늘의 EV·충전 헤드라인과 브리핑을 확인합니다.',
+    body: '배정된 사업 분야마다 지면이 한 장씩 생깁니다. 브리핑 듣기로 요약을 음성 재생할 수 있습니다.',
     link: { label: '1면 열기', to: '/' },
   },
   {
     icon: 'feed',
-    title: '뉴스',
-    body: 'EV·충전 관련 뉴스·커뮤니티를 대분류·중요도·검색으로 탐색합니다.',
+    title: '뉴스·토픽',
+    body: '뉴스 칩을 누르면 키워드 토픽 허브로 이동합니다. 직접 매칭이 적으면 같은 분야 관련 소식을 함께 보여줍니다.',
     link: { label: '뉴스 탐색', to: '/news' },
   },
   {
     icon: 'doc',
     title: '조직 리포트',
-    body: '조직 전체 수집 기준 AI 일일 브리핑입니다. 관리자는 수동 생성할 수 있습니다.',
+    body: '조직 전체 수집 기준 AI 일일 브리핑입니다. 상세 페이지에서도 듣기를 지원합니다.',
     link: { label: '리포트', to: '/reports' },
   },
   {
     icon: 'sparkles',
     title: '설정',
-    body: '개인 맞춤 구독은 추후 제공 예정입니다. 관리자는 조직 메인 분야를 지정할 수 있습니다.',
-    link: { label: '설정', to: '/settings' },
+    body: '총관은 사업 분야를 만들고, 분야 편집장은 지면 메인 키워드를 지정합니다.',
+    link: { label: '설정', to: '/settings#editions' },
   },
   {
     icon: 'shield',
@@ -75,8 +75,12 @@ const FAQ = [
     a: `서버에 Celery worker·beat가 실행 중이면 매일 05:30 미승인 탐문 후보 정리, 06:00 ${DISCOVERY_PIPELINE_LABEL}, 08:00 조직 데일리 리포트가 자동 실행됩니다.`,
   },
   {
-    q: '나만의 1면·관심 키워드는?',
-    a: '개인 맞춤 1면과 키워드 구독은 추후 제공 예정입니다. 지금은 조직 MINT Daily와 뉴스 탭을 이용하세요.',
+    q: '홈에 지면이 안 보여요.',
+    a: '총관이 계정 관리에서 사업 분야를 배정해야 홈 지면이 열립니다. 여러 분야에 속하면 해당 면만 보입니다.',
+  },
+  {
+    q: '브리핑 듣기는 어떻게 쓰나요?',
+    a: '1면·리포트 상세의「듣기」버튼을 누르면 브라우저 음성(온디바이스 TTS)으로 요약을 읽어 줍니다. 서버에 오디오를 저장하지 않으며, 지원하지 않는 브라우저에서는 버튼이 숨겨질 수 있습니다.',
   },
 ]
 

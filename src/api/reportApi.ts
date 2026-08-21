@@ -12,6 +12,13 @@ export async function getReport(id: string): Promise<DailyReportDetail> {
   return data
 }
 
+export async function getLatestReport(editionId: string): Promise<DailyReport | null> {
+  const { data } = await apiClient.get<DailyReport | null>('/api/v1/reports/latest', {
+    params: { edition_id: editionId },
+  })
+  return data
+}
+
 export async function generateReport(reportDate?: string): Promise<BackgroundJob> {
   const { data } = await apiClient.post<BackgroundJob>('/api/v1/reports/generate', {
     report_date: reportDate || null,

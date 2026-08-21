@@ -19,6 +19,7 @@ import { Modal } from '../components/common/Modal'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { SourceFormFields } from '../components/sources/SourceFormFields'
+import { listEditions } from '../api/editionApi'
 import type { Source, SourceCreate } from '../types/source'
 import {
   COMMUNITY_SOURCE_PRESET,
@@ -39,6 +40,7 @@ const emptyForm: SourceCreate = {
   auto_publish: true,
   crawl_frequency: 'daily',
   is_active: true,
+  edition_ids: [],
 }
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
@@ -66,6 +68,7 @@ function sourceToForm(s: Source): SourceCreate {
     auto_publish: s.auto_publish,
     crawl_frequency: s.crawl_frequency,
     is_active: s.is_active,
+    edition_ids: s.edition_ids ?? [],
   }
 }
 
@@ -105,6 +108,10 @@ export function SourcesPage() {
   const { data: sources = [] } = useQuery({
     queryKey: ['sources'],
     queryFn: listSources,
+  })
+  const { data: editions = [] } = useQuery({
+    queryKey: ['editions', 'all'],
+    queryFn: () => listEditions(false),
   })
 
   const { data: collectionSettings } = useQuery({
@@ -460,6 +467,7 @@ export function SourcesPage() {
                   <th>소스</th>
                   <th style={{ width: 100 }}>유형</th>
                   <th style={{ width: 90 }}>카테고리</th>
+                  <th style={{ width: 130 }}>관련 분야</th>
                   <th style={{ width: 130 }}>신뢰도</th>
                   <th style={{ width: 90 }}>자동 게시</th>
                   <th style={{ width: 130 }}>마지막 크롤링</th>
@@ -470,7 +478,7 @@ export function SourcesPage() {
               <tbody>
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="sources-empty-cell">
+                    <td colSpan={9} className="sources-empty-cell">
                       {qLower ? '검색 결과가 없습니다.' : '등록된 소스가 없습니다. 소스를 추가해 주세요.'}
                     </td>
                   </tr>
@@ -490,6 +498,18 @@ export function SourcesPage() {
                     </td>
                     <td>
                       <span className="ctag">{s.category}</span>
+                    </td>
+                    <td>
+                      {(s.edition_ids ?? []).length === 0 ? (
+                        <span className="ctag">전 분야</span>
+                      ) : (
+                        <span className="ctag">
+                          {editions
+                            .filter((edition) => (s.edition_ids ?? []).includes(edition.id))
+                            .map((edition) => edition.name)
+                            .join(', ') || `${s.edition_ids?.length ?? 0}개`}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <TrustBadge level={s.trust_level} score={s.reliability_score} />
@@ -575,7 +595,7 @@ export function SourcesPage() {
             </>
           }
         >
-          <SourceFormFields mode={addMode} form={form} onChange={setForm} />
+          <SourceFormFields mode={addMode} form={form} onChange={setForm} editions={editions} />
         </Modal>
       )}
 
@@ -604,6 +624,7 @@ export function SourcesPage() {
             form={form}
             onChange={setForm}
             lockSourceType
+            editions={editions}
           />
         </Modal>
       )}

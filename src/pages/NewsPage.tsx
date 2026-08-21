@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type CompositionEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getNews, listCategories, listKeywords } from '../api/personalizationApi'
 import { ImportanceBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
@@ -67,6 +67,7 @@ function rankKeywordsForPreview(
 }
 
 export function NewsPage() {
+  const navigate = useNavigate()
   const [queryDraft, setQueryDraft] = useState('')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
@@ -77,6 +78,10 @@ export function NewsPage() {
   const [showAllKeywords, setShowAllKeywords] = useState(false)
   const [page, setPage] = useState(1)
   const isComposingRef = useRef(false)
+
+  const openTopicHub = (id: string) => {
+    navigate(`/topics/${id}`)
+  }
 
   const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
   const keywords = useQuery({ queryKey: ['keywords'], queryFn: () => listKeywords() })
@@ -252,10 +257,7 @@ export function NewsPage() {
                   key={keyword.id}
                   type="button"
                   className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
-                  onClick={() => {
-                    setKeywordId(keyword.id)
-                    setPage(1)
-                  }}
+                  onClick={() => openTopicHub(keyword.id)}
                 >
                   {keyword.name}
                   {keyword.status === 'candidate' ? ' · 신규' : ''}
@@ -282,10 +284,7 @@ export function NewsPage() {
               key={keyword.id}
               type="button"
               className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
-              onClick={() => {
-                setKeywordId(keyword.id)
-                setPage(1)
-              }}
+              onClick={() => openTopicHub(keyword.id)}
             >
               {keyword.name}
               {keyword.status === 'candidate' ? ' · 신규' : ''}

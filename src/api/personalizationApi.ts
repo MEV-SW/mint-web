@@ -6,6 +6,7 @@ import type {
   NewsCategory,
   NewsPage,
   PersonalReport,
+  PersonalizedNews,
   ReviewQueueItem,
   ReviewQueueKeywordsApplyResponse,
 } from '../types/personalization'
@@ -36,10 +37,39 @@ export async function updateFeaturedCategories(categoryIds: string[]): Promise<N
   return data
 }
 
+export async function getMyKeywords(): Promise<Keyword[]> {
+  const { data } = await apiClient.get<Keyword[]>('/api/v1/users/me/keywords')
+  return data
+}
+
 export async function updateMyKeywords(keywordIds: string[]): Promise<Keyword[]> {
   const { data } = await apiClient.put<Keyword[]>('/api/v1/users/me/keywords', {
     keyword_ids: keywordIds,
   })
+  return data
+}
+
+export interface TopicHub {
+  keyword: Keyword
+  category_name: string | null
+  exact_posts: PersonalizedNews[]
+  related_posts: PersonalizedNews[]
+  sibling_keywords: Keyword[]
+  exact_count: number
+  exact_is_sparse: boolean
+}
+
+export async function getTopicHub(keywordId: string): Promise<TopicHub> {
+  const { data } = await apiClient.get<TopicHub>(`/api/v1/topics/${keywordId}`)
+  return data
+}
+
+export async function createStandardKeyword(payload: {
+  name: string
+  category_id?: string | null
+  edition_id?: string | null
+}): Promise<Keyword> {
+  const { data } = await apiClient.post<Keyword>('/api/v1/keywords', payload)
   return data
 }
 
@@ -50,6 +80,17 @@ export async function createCustomKeyword(name: string): Promise<Keyword> {
 
 export async function getPersonalFeed(page = 1, size = 20): Promise<NewsPage> {
   const { data } = await apiClient.get<NewsPage>('/api/v1/feed', { params: { page, size } })
+  return data
+}
+
+export async function getEditorialFeed(
+  editionId: string,
+  page = 1,
+  size = 24,
+): Promise<NewsPage> {
+  const { data } = await apiClient.get<NewsPage>('/api/v1/feed/editorial', {
+    params: { edition_id: editionId, page, size },
+  })
   return data
 }
 
