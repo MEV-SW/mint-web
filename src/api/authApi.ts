@@ -1,7 +1,7 @@
-import { apiClient, fetchPublicOidcConfig, revokeRefreshToken } from './client'
+import { apiClient, revokeRefreshToken } from './client'
 import { useAuthStore } from '../store/authStore'
 import type { OidcConfig, TokenResponse, User } from '../types/auth'
-import { keycloakLogoutUrl, storeIdToken, takeIdToken } from '../utils/keycloakLogin'
+import { storeIdToken, takeIdToken } from '../utils/keycloakLogin'
 
 export type { OidcConfig }
 
@@ -41,24 +41,10 @@ export async function fetchMe(): Promise<User> {
 }
 
 export async function logout(): Promise<void> {
-  const revoked = await revokeRefreshToken()
-  const idToken = takeIdToken()
-  const config =
-    revoked?.end_session_endpoint && revoked.client_id
-      ? revoked
-      : ((await fetchPublicOidcConfig()) ?? revoked)
+  await revokeRefreshToken()
+  takeIdToken()
   useAuthStore.getState().logout()
-  const url = keycloakLogoutUrl(
-    {
-      configured: true,
-      issuer: null,
-      authorization_endpoint: null,
-      end_session_endpoint: config?.end_session_endpoint ?? null,
-      client_id: config?.client_id ?? null,
-    },
-    idToken,
-  )
-  window.location.assign(url ?? '/login')
+  window.location.assign('/login')
 }
 
 export function loginErrorMessage(detail: unknown): string {
