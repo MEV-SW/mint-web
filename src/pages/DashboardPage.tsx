@@ -161,7 +161,17 @@ export function DashboardPage() {
   const currentPage =
     sheets.some((sheet) => sheet.key === spreadPage) ? spreadPage : sheets[0]?.key ?? ''
 
-  if (!editionsQuery.isLoading && sheets.length === 0) {
+  if (editionsQuery.isLoading) {
+    return (
+      <div className="content-inner np-page page-fade">
+        <div className="np-spread" aria-busy="true">
+          <p className="np-spread-hint">지면을 불러오는 중</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (sheets.length === 0) {
     return (
       <div className="content-inner np-page page-fade">
         <div className="personal-empty" style={{ padding: '64px 24px', textAlign: 'center' }}>

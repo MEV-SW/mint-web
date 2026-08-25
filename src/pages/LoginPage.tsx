@@ -1,10 +1,8 @@
-import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { isAxiosError } from 'axios'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchOidcConfig, finishMintLogin, loginErrorMessage } from '../api/authApi'
+import { fetchOidcConfig } from '../api/authApi'
 import { LoginSsoLayout } from '../components/auth/LoginSsoLayout'
-import { oidcHost, oidcRealmName } from '../utils/keycloakLogin'
+import { oidcHost, oidcRealmName, startKeycloakLogin } from '../utils/keycloakLogin'
 
 function todayLong() {
   return new Intl.DateTimeFormat('ko-KR', {
@@ -16,10 +14,7 @@ function todayLong() {
 }
 
 export function LoginPage() {
-  const navigate = useNavigate()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
   const configQuery = useQuery({
     queryKey: ['oidc-config'],
@@ -31,24 +26,22 @@ export function LoginPage() {
   const clientId = configQuery.data?.client_id ?? '—'
   const host = oidcHost(configQuery.data?.issuer) ?? 'sso'
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    if (!configured) {
+  async function startLogin() {
+    if (!configQuery.data?.configured) {
       setError('Keycloak SSO가 설정되지 않았습니다. 관리자에게 KEYCLOAK_ISSUER를 확인해 주세요.')
       return
     }
-    setSubmitting(true)
+    setStarting(true)
     setError('')
     try {
-      await finishMintLogin({ username, password })
-      navigate('/', { replace: true })
-    } catch (err) {
-      const detail = isAxiosError(err) ? err.response?.data?.detail : null
-      setError(loginErrorMessage(detail))
-      setSubmitting(false)
+      await startKeycloakLogin(configQuery.data)
+    } catch {
+      setStarting(false)
+      setError('로그인 페이지로 이동하지 못했습니다.')
     }
   }
 
+  const busy = starting || configQuery.isLoading
   const configError =
     error ||
     (configQuery.isError
@@ -58,52 +51,32 @@ export function LoginPage() {
         : '')
 
   return (
-    <LoginSsoLayout host={host} online={configured} checking={configQuery.isLoading || submitting}>
+    <LoginSsoLayout host={host} online={configured} checking={configQuery.isLoading}>
       <div className="login-sso-kicker">
         <span className="login-sso-dot" aria-hidden />
         Keycloak SSO · 사내 전용
       </div>
 
       <h1>Login</h1>
-      <p className="login-sso-lead">사내 계정으로 로그인하세요.</p>
+      <p className="login-sso-lead">
+        별도 아이디·비밀번호는 없습니다.
+        <br />
+        사내 통합 인증으로 본인 확인만 하면 바로 들어옵니다.
+      </p>
 
       {configError ? <div className="login-sso-error">{configError}</div> : null}
 
-      <form className="login-sso-form" onSubmit={(event) => void onSubmit(event)}>
-        <label className="login-sso-field">
-          아이디
-          <input
-            name="username"
-            autoComplete="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            disabled={submitting || !configured}
-            required
-          />
-        </label>
-        <label className="login-sso-field">
-          비밀번호
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            disabled={submitting || !configured}
-            required
-          />
-        </label>
-        <button
-          type="submit"
-          className="login-sso-cta"
-          disabled={submitting || configQuery.isLoading || !configured}
-        >
-          <span className="login-sso-cta-mark" aria-hidden>
-            K
-          </span>
-          {submitting ? '로그인 중…' : '로그인'}
-        </button>
-      </form>
+      <button
+        type="button"
+        className="login-sso-cta"
+        disabled={busy || !configured}
+        onClick={() => void startLogin()}
+      >
+        <span className="login-sso-cta-mark" aria-hidden>
+          K
+        </span>
+        {busy ? '연결 중…' : 'MotrexEV 계정으로 계속하기'}
+      </button>
 
       <div className="login-sso-session">
         <span />
@@ -122,7 +95,7 @@ export function LoginPage() {
         </div>
         <div>
           <dt>Protocol</dt>
-          <dd>OIDC</dd>
+          <dd>OIDC · PKCE</dd>
         </div>
         <div>
           <dt>유효 시간</dt>

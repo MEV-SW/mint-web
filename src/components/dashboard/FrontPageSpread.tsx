@@ -46,7 +46,7 @@ export function FrontPageSpread({ page, onPageChange, sheets }: FrontPageSpreadP
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [sheets.length])
 
   const rubberBand = useCallback(
     (dx: number) => {

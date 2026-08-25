@@ -1,7 +1,7 @@
-import { apiClient, revokeRefreshToken } from './client'
+import { apiClient, fetchPublicOidcConfig, revokeRefreshToken } from './client'
 import { useAuthStore } from '../store/authStore'
 import type { OidcConfig, TokenResponse, User } from '../types/auth'
-import { storeIdToken, takeIdToken } from '../utils/keycloakLogin'
+import { keycloakLogoutUrl, storeIdToken, takeIdToken } from '../utils/keycloakLogin'
 
 export type { OidcConfig }
 
@@ -10,8 +10,6 @@ export interface OidcLoginPayload {
   code?: string
   redirect_uri?: string
   code_verifier?: string
-  username?: string
-  password?: string
 }
 
 export async function fetchOidcConfig(): Promise<OidcConfig> {
@@ -41,24 +39,31 @@ export async function fetchMe(): Promise<User> {
 }
 
 export async function logout(): Promise<void> {
-  await revokeRefreshToken()
-  takeIdToken()
+  const revoked = await revokeRefreshToken()
+  const idToken = takeIdToken()
+  const config =
+    revoked?.end_session_endpoint && revoked.client_id
+      ? revoked
+      : ((await fetchPublicOidcConfig()) ?? revoked)
   useAuthStore.getState().logout()
-  window.location.assign('/login')
+  const url = keycloakLogoutUrl(
+    {
+      configured: true,
+      issuer: null,
+      authorization_endpoint: null,
+      end_session_endpoint: config?.end_session_endpoint ?? null,
+      client_id: config?.client_id ?? null,
+    },
+    idToken,
+  )
+  window.location.assign(url ?? '/login')
 }
 
 export function loginErrorMessage(detail: unknown): string {
   const text = typeof detail === 'string' ? detail : ''
   if (text === 'Account is inactive') return '비활성화된 계정입니다. 총관에게 문의해 주세요.'
-  if (
-    text.includes('Keycloak') ||
-    text.includes('아이디') ||
-    text.includes('비밀번호') ||
-    text.includes('Direct access') ||
-    text.includes('이메일')
-  ) {
-    return text
-  }
+  if (text.includes('Keycloak')) return text
+  if (text.includes('이메일')) return text
   return '사내 계정 로그인에 실패했습니다.'
 }
 
