@@ -169,6 +169,7 @@ export function DashboardPage() {
             stats={stats.data}
             loading={stats.isLoading || editorialQueries[index]?.isLoading}
             editionName={edition.name}
+            editionSlug={edition.slug}
             missingSources={edition.missing_sources}
             featuredKeywords={featured.map((item) => ({ id: item.id, name: item.name }))}
             stories={(feed?.items ?? []).map(toPreview)}

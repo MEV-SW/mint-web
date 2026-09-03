@@ -15,6 +15,7 @@ interface MintFrontPageProps {
   stats: DashboardStats | undefined
   loading?: boolean
   editionName?: string
+  editionSlug?: string
   missingSources?: boolean
   featuredKeywords?: { id: string; name: string }[]
   stories?: DashboardPostPreview[]
@@ -51,6 +52,7 @@ export function MintFrontPage({
   stats,
   loading,
   editionName,
+  editionSlug,
   missingSources,
   featuredKeywords = [],
   stories,
@@ -368,7 +370,7 @@ export function MintFrontPage({
               </dd>
             </div>
           </dl>
-          <DailyCorner />
+          <DailyCorner editionSlug={editionSlug} />
         </aside>
       </div>
 

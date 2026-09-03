@@ -109,8 +109,8 @@ function DailyWeatherBlock() {
   )
 }
 
-export function DailyCorner() {
-  const edition = getDailyEdition(new Date())
+export function DailyCorner({ editionSlug }: { editionSlug?: string }) {
+  const edition = getDailyEdition(new Date(), editionSlug)
 
   return (
     <section className="np-daily-corner" aria-label="MINT 휴식판">
@@ -127,11 +127,11 @@ export function DailyCorner() {
         <p className="np-daily-term-body">{edition.term.body}</p>
       </div>
 
-      <DailyQuizBlock quiz={edition.quiz} />
+      <DailyQuizBlock key={edition.quiz.question} quiz={edition.quiz} />
 
       <DailyWeatherBlock />
 
-      <p className="np-daily-foot">매일 바뀌는 MINT 휴식판 · EV 업무 속 잠깐 숨</p>
+      <p className="np-daily-foot">{edition.foot}</p>
     </section>
   )
 }

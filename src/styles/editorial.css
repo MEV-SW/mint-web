@@ -1059,14 +1059,6 @@ a.login-sso-cta:hover {
   color: var(--ink);
   margin: 0 0 26px;
 }
-.np-lead-dek::first-letter {
-  float: left;
-  font-family: var(--display);
-  font-size: 66px;
-  line-height: 0.72;
-  padding: 8px 12px 0 0;
-  color: var(--pine);
-}
 .np-briefing-picks {
   border-top: 2px solid var(--ink);
   padding-top: 14px;
@@ -2959,14 +2951,6 @@ a.report-cal-entry:hover strong {
   line-height: 1.9;
   margin: 0;
   color: var(--ink);
-}
-.np-top-dek::first-letter {
-  float: left;
-  font-family: var(--display);
-  font-size: 60px;
-  line-height: 0.74;
-  padding: 8px 12px 0 0;
-  color: var(--pine);
 }
 .np-top-meta {
   font-size: 12.5px;
