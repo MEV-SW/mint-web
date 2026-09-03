@@ -22,11 +22,6 @@ const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
   closed: '종료',
 }
 
-function editorOf(users: UserAdmin[], editionId: string): string | null {
-  const match = users.find((user) => user.editions?.some((item) => item.id === editionId && item.is_editor))
-  return match?.id ?? null
-}
-
 export function AdminAccountsPage() {
   const toast = useToast()
   const qc = useQueryClient()
@@ -137,7 +132,7 @@ export function AdminAccountsPage() {
       <section className="admin-accounts-section">
         <header className="admin-accounts-section-head">
           <h2>분야 배정</h2>
-          <p>한 사람은 여러 분야에 속할 수 있고, 분야당 편집장은 1명입니다.</p>
+          <p>한 사람은 여러 분야에 속할 수 있고, 분야 편집장도 여러 명일 수 있습니다.</p>
         </header>
 
         <div className="tbl-wrap">
@@ -182,7 +177,6 @@ export function AdminAccountsPage() {
                         {editions.map((edition) => {
                           const on = assigned.has(edition.id)
                           const editor = assigned.get(edition.id) === true
-                          const otherEditor = editorOf(users, edition.id)
                           return (
                             <span key={edition.id} style={{ display: 'inline-flex', gap: 4 }}>
                               <button
@@ -198,11 +192,7 @@ export function AdminAccountsPage() {
                                   type="button"
                                   className={`keyword-chip-option ${editor ? 'selected' : ''}`}
                                   disabled={saveEditions.isPending}
-                                  title={
-                                    otherEditor && otherEditor !== user.id && !editor
-                                      ? '저장하면 기존 편집장이 해제됩니다'
-                                      : '이 분야 편집장'
-                                  }
+                                  title="이 분야 편집장"
                                   onClick={() => toggleEditor(user, edition.id)}
                                 >
                                   편집장
