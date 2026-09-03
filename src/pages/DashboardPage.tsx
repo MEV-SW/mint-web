@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { listEditions } from '../api/editionApi'
 import { getEditorialFeed, listKeywords } from '../api/personalizationApi'
@@ -8,9 +8,14 @@ import { FrontPageSpread, type SpreadSheet } from '../components/dashboard/Front
 import { MintFrontPage } from '../components/dashboard/MintFrontPage'
 import { useToast } from '../components/common/Toast'
 import { useDashboardStatsQuery } from '../hooks/useDashboardStatsQuery'
+import { useActiveJobs } from '../hooks/useJobsQuery'
 import { usePermissions } from '../hooks/usePermissions'
 import type { DailyReport } from '../types/report'
 import type { PersonalizedNews } from '../types/personalization'
+import { invalidateFrontPageQueries } from '../utils/frontPageQueries'
+
+const IDLE_POLL_MS = 60_000
+const BUSY_POLL_MS = 5_000
 
 function toPreview(item: PersonalizedNews): DashboardPostPreview {
   return {
@@ -56,10 +61,14 @@ function toOrgReport(row: DailyReport | null | undefined): DashboardStats['lates
 
 export function DashboardPage() {
   const toast = useToast()
+  const qc = useQueryClient()
   const { isAdmin } = usePermissions()
+  const { busy: crawlBusy } = useActiveJobs()
   const stats = useDashboardStatsQuery()
-  const seenReportId = useRef<string | null | undefined>(undefined)
+  const seenFrontSignature = useRef<string | undefined>(undefined)
   const [spreadPage, setSpreadPage] = useState<string>('')
+
+  const pollMs = crawlBusy ? BUSY_POLL_MS : IDLE_POLL_MS
 
   const editionsQuery = useQuery({
     queryKey: ['editions', 'active'],
@@ -75,12 +84,16 @@ export function DashboardPage() {
     queries: editions.map((edition) => ({
       queryKey: ['editorial-feed', edition.id],
       queryFn: () => getEditorialFeed(edition.id),
+      refetchInterval: pollMs,
+      refetchIntervalInBackground: false,
     })),
   })
   const reportQueries = useQueries({
     queries: editions.map((edition) => ({
       queryKey: ['edition-report', edition.id],
       queryFn: () => getLatestReport(edition.id),
+      refetchInterval: pollMs,
+      refetchIntervalInBackground: false,
     })),
   })
 
@@ -89,19 +102,39 @@ export function DashboardPage() {
     if (editions[0]) setSpreadPage(editions[0].id)
   }, [editions, spreadPage])
 
+  const keywords = keywordsQuery.data ?? []
+  const frontSignature = useMemo(() => {
+    const reportSignature = editions
+      .map((edition, index) => `${edition.id}:${reportQueries[index]?.data?.id ?? 'none'}`)
+      .join('|')
+    const feedSignature = editions
+      .map((edition, index) => {
+        const feed = editorialQueries[index]?.data
+        const head = feed?.items?.[0]?.id ?? 'none'
+        return `${edition.id}:${head}:${feed?.total ?? 0}`
+      })
+      .join('|')
+    return `${reportSignature}::${feedSignature}`
+  }, [editions, editorialQueries, reportQueries])
+
+  const frontReady =
+    !editionsQuery.isLoading &&
+    editions.length > 0 &&
+    reportQueries.every((query) => !query.isLoading) &&
+    editorialQueries.every((query) => !query.isLoading)
+
   useEffect(() => {
-    const reportId = stats.data?.latest_report?.id ?? null
-    if (seenReportId.current === undefined) {
-      seenReportId.current = reportId
+    if (!frontReady) return
+    if (seenFrontSignature.current === undefined) {
+      seenFrontSignature.current = frontSignature
       return
     }
-    if (reportId && reportId !== seenReportId.current) {
-      seenReportId.current = reportId
+    if (frontSignature !== seenFrontSignature.current) {
+      seenFrontSignature.current = frontSignature
+      invalidateFrontPageQueries(qc)
       toast('오늘의 MINT Daily가 갱신되었습니다.')
-    } else {
-      seenReportId.current = reportId
     }
-  }, [stats.data?.latest_report?.id, toast])
+  }, [frontReady, frontSignature, qc, toast])
 
   const now = new Date()
   const dateLabel = now.toLocaleDateString('ko-KR', {
@@ -118,7 +151,6 @@ export function DashboardPage() {
     }).format(now),
   )
 
-  const keywords = keywordsQuery.data ?? []
   const sheets = useMemo<SpreadSheet[]>(() => {
     const editionSheets: SpreadSheet[] = editions.map((edition, index) => {
       const feed = editorialQueries[index]?.data

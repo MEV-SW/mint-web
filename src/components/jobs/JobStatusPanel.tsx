@@ -7,6 +7,7 @@ import type { BackgroundJob, JobStatus } from '../../types/job'
 import { JOB_STATUS_LABEL } from '../../types/job'
 import { apiErrorDetail } from '../../utils/apiError'
 import { formatDate } from '../../utils/date'
+import { invalidateFrontPageQueries } from '../../utils/frontPageQueries'
 import { isActiveJobStatus, jobProgressPercent, jobProgressSummary, pickPrimaryActiveJob } from '../../utils/jobProgress'
 import { useToast } from '../common/Toast'
 import { Icon } from '../common/Icon'
@@ -69,10 +70,10 @@ export function JobStatusPanel() {
 
   useEffect(() => {
     if (prevActiveRef.current > 0 && activeCount === 0) {
+      invalidateFrontPageQueries(qc)
       qc.invalidateQueries({ queryKey: ['sources'] })
       qc.invalidateQueries({ queryKey: ['posts'] })
       qc.invalidateQueries({ queryKey: ['reports'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       qc.invalidateQueries({ queryKey: ['review-queue'] })
       qc.invalidateQueries({ queryKey: ['keywords'] })
       qc.invalidateQueries({ queryKey: ['news'] })
