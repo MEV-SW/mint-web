@@ -12,6 +12,7 @@ export interface DashboardPostPreview {
   collected_at: string
   original_url: string | null
   ai_summary: string | null
+  image_url?: string | null
 }
 
 export interface DashboardStats {

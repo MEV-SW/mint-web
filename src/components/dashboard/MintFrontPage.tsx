@@ -2,11 +2,10 @@ import { Link } from 'react-router-dom'
 import type { DashboardPostPreview, DashboardStats } from '../../api/statsApi'
 import { CommunityVoicesStrip } from './CommunityVoicesStrip'
 import { DailyCorner } from './DailyCorner'
-import { EditorialPhotoSlot } from './EditorialPhotoSlot'
+import { StoryPhoto } from '../posts/StoryPhoto'
 import { usePermissions } from '../../hooks/usePermissions'
 import { formatDate } from '../../utils/date'
 import { sliceFrontPageStories } from '../../utils/frontPageStories'
-import { mediaUrl } from '../../utils/mediaUrl'
 
 type OrgReport = NonNullable<DashboardStats['latest_report']>
 
@@ -88,7 +87,6 @@ export function MintFrontPage({
 
   const wireNews = discovery.filter((p) => !usedIds.has(p.id)).slice(0, WIRE_COUNT)
 
-  const heroIllustration = mediaUrl(orgReport?.illustration_url)
   const highlights = orgReport?.highlights?.slice(0, 4) ?? []
   const keywordLabel = featuredKeywords.slice(0, 4).map((item) => item.name).join(' · ')
 
@@ -218,21 +216,7 @@ export function MintFrontPage({
                 ) : (
                   <p className="np-top-dek">요약이 준비되면 이곳에 표시됩니다.</p>
                 )}
-                <EditorialPhotoSlot
-                  src={heroIllustration}
-                  seed={
-                    orgReport?.report_date ??
-                    heroTrusted.id ??
-                    heroTrusted.title
-                  }
-                  canRegenerate={isAdmin}
-                  request={{
-                    reportId: orgReport?.id,
-                    title: orgReport?.title ?? heroTrusted.title,
-                    summary: orgReport?.summary ?? heroTrusted.ai_summary,
-                    seed: orgReport?.report_date ?? heroTrusted.id,
-                  }}
-                />
+                <StoryPhoto postId={heroTrusted.id} src={heroTrusted.image_url} />
               </div>
               <div className="np-top-meta">
                 {heroTrusted.source_name ?? '신뢰 소스'} · {formatDate(heroTrusted.collected_at)}
@@ -250,6 +234,7 @@ export function MintFrontPage({
                         <div className="np-subpair-kicker">
                           {post.source_name ?? '뉴스'}
                         </div>
+                        <StoryPhoto postId={post.id} src={post.image_url} className="np-subpair-thumb" />
                         <Link to={`/posts/${post.id}`} className="np-subpair-title">
                           {post.title}
                         </Link>

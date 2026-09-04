@@ -17,7 +17,6 @@ import type { DailyReport } from '../types/report'
 import type { PersonalizedNews } from '../types/personalization'
 import { invalidateFrontPageQueries } from '../utils/frontPageQueries'
 import { sliceFrontPageStories } from '../utils/frontPageStories'
-import { mediaUrl } from '../utils/mediaUrl'
 
 const IDLE_POLL_MS = 60_000
 const BUSY_POLL_MS = 5_000
@@ -34,6 +33,7 @@ function toPreview(item: PersonalizedNews): DashboardPostPreview {
     collected_at: item.collected_at,
     original_url: item.original_url,
     ai_summary: item.summary,
+    image_url: item.image_url ?? null,
   }
 }
 
@@ -220,14 +220,11 @@ export function DashboardPage() {
   const kioskDeck = sliceFrontPageStories(
     (editorialQueries[currentEditionIndex]?.data?.items ?? []).map(toPreview),
   ).deck
-  const kioskReport = toOrgReport(reportQueries[currentEditionIndex]?.data)
 
   const kioskOverlay = kioskOn ? (
     <FrontKiosk
       editionName={currentEdition?.name ?? ''}
       stories={kioskDeck}
-      heroImageUrl={mediaUrl(kioskReport?.illustration_url)}
-      heroImageSeed={kioskReport?.report_date ?? kioskDeck[0]?.id}
       onClose={() => setKiosk(false)}
     />
   ) : null

@@ -1665,6 +1665,15 @@ select.input { appearance: none; cursor: pointer;
 }
 .post-split-raw-stored {
   background: var(--surface-2);
+  white-space: normal;
+}
+.post-split-raw-stored p {
+  margin: 0 0 1.15em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.post-split-raw-stored p:last-child {
+  margin-bottom: 0;
 }
 .post-split-frame-viewport-nested {
   min-height: 280px;

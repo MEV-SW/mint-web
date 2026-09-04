@@ -57,3 +57,23 @@ export async function summarizePost(id: string): Promise<AIOutput> {
   const { data } = await apiClient.post<AIOutput>(`/api/v1/posts/${id}/summarize`)
   return data
 }
+
+const storyPhotoInflight = new Map<string, Promise<string>>()
+
+export async function ensureStoryPhoto(id: string, force = false): Promise<string> {
+  const key = `${id}:${force ? '1' : '0'}`
+  const pending = storyPhotoInflight.get(key)
+  if (pending) return pending
+
+  const request = apiClient
+    .post<{ image_url: string }>(`/api/v1/posts/${id}/photo`, null, {
+      params: force ? { force: true } : undefined,
+      timeout: 180_000,
+    })
+    .then(({ data }) => data.image_url)
+    .finally(() => {
+      storyPhotoInflight.delete(key)
+    })
+  storyPhotoInflight.set(key, request)
+  return request
+}

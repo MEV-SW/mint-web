@@ -49,6 +49,7 @@ export interface PersonalizedNews {
   importance: Importance
   summary: string | null
   summary_highlight?: string | null
+  image_url?: string | null
   matched_keywords: MatchedKeyword[]
   personalization_score: number
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { formatStoredArticleBody } from '../../utils/articleBody'
 import { checkPostEmbeddable, fetchOriginalPreview } from '../../api/postApi'
 import { Icon } from '../common/Icon'
 
@@ -75,7 +76,8 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
 
   const hasUrl = Boolean(url)
   const storedBody = rawContent?.trim() ?? ''
-  const hasStoredBody = storedBody.length > 0
+  const storedParagraphs = formatStoredArticleBody(storedBody)
+  const hasStoredBody = storedParagraphs.length > 0
 
   // Prefer collected body so readers always see original text when we have it.
   // iframe / server preview remain fallbacks when body is empty.
@@ -331,7 +333,11 @@ export function PostOriginalPane({ postId, url, rawContent, title }: PostOrigina
       </div>
 
       {contentMode === 'stored-body' && (
-        <div className="post-split-raw post-split-raw-stored">{storedBody}</div>
+        <div className="post-split-raw post-split-raw-stored">
+          {storedParagraphs.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
       )}
 
       {(contentMode === 'checking' || contentMode === 'direct') && hasUrl && (

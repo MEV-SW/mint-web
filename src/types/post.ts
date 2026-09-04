@@ -26,6 +26,7 @@ export interface Post {
   published_at: string | null
   collected_at: string
   raw_content: string
+  image_url?: string | null
   category: string | null
   status: PostStatus
   trust_level: TrustLevel
