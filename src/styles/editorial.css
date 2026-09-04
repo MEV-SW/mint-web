@@ -4409,11 +4409,11 @@ a.report-cal-entry:hover strong {
   height: calc(100% / 6);
   flex: none;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 36px;
+  align-items: stretch;
   min-width: 0;
-  padding: 10px 8px 10px 0;
+  padding: 12px 8px 12px 0;
   border-bottom: 1px solid var(--line);
   overflow: hidden;
 }
@@ -4427,27 +4427,33 @@ a.report-cal-entry:hover strong {
   border-bottom: 0;
   padding: 28px 0;
 }
+.front-kiosk-stage.is-single .front-kiosk-copy {
+  justify-content: center;
+}
 .front-kiosk-stage.is-single .front-kiosk-title {
-  font-size: clamp(28px, 3.4vw, 48px);
+  font-size: clamp(32px, 3.8vw, 52px);
   -webkit-line-clamp: 4;
 }
 .front-kiosk-stage.is-single .front-kiosk-dek {
-  font-size: clamp(16px, 1.3vw, 20px);
+  font-size: clamp(18px, 1.45vw, 22px);
   -webkit-line-clamp: 4;
+}
+.front-kiosk-stage.is-single .front-kiosk-byline {
+  margin-top: 18px;
 }
 .front-kiosk-copy {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-width: 0;
   height: 100%;
 }
 .front-kiosk-kicker {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 6px;
-  font-size: 10px;
+  gap: 12px;
+  margin: 0 0 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -4456,7 +4462,7 @@ a.report-cal-entry:hover strong {
 .front-kiosk-kicker em {
   font-style: normal;
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 17px;
   letter-spacing: 0.06em;
   color: var(--ink);
 }
@@ -4467,12 +4473,12 @@ a.report-cal-entry:hover strong {
   flex: none;
 }
 .front-kiosk-title {
-  margin: 0 0 6px;
+  margin: 0 0 12px;
   font-family: var(--serif);
-  font-size: clamp(20px, 2.2vw, 32px);
+  font-size: clamp(22px, 2.5vw, 34px);
   font-weight: 700;
   letter-spacing: -0.03em;
-  line-height: 1.2;
+  line-height: 1.22;
   color: var(--ink);
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -4480,11 +4486,11 @@ a.report-cal-entry:hover strong {
   overflow: hidden;
 }
 .front-kiosk-dek {
-  margin: 0 0 6px;
+  margin: 0;
   font-family: var(--serif);
-  font-size: clamp(13px, 1.05vw, 16px);
+  font-size: clamp(15px, 1.25vw, 19px);
   font-weight: 400;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--ink2);
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -4495,11 +4501,11 @@ a.report-cal-entry:hover strong {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px 14px;
-  margin: 0;
-  padding-top: 0;
+  gap: 8px 16px;
+  margin: auto 0 0;
+  padding-top: 12px;
   border-top: 0;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink3);
@@ -4510,17 +4516,23 @@ a.report-cal-entry:hover strong {
 }
 .front-kiosk-plate {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-end;
   min-width: 0;
   height: 100%;
 }
+.front-kiosk-plate .np-photo-slot-wrap,
+.front-kiosk-plate .np-photo-slot {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
 .front-kiosk-plate .np-photo-slot,
 .front-kiosk-plate img {
-  width: min(200px, 20vw);
-  height: auto;
-  max-height: calc(100% - 8px);
-  aspect-ratio: 4 / 3;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
   object-fit: cover;
   border: 1px solid var(--line);
   background: var(--panel);
@@ -4586,7 +4598,7 @@ a.report-cal-entry:hover strong {
   .front-kiosk-card.has-plate {
     grid-template-columns: 1fr;
     gap: 0;
-    padding: 12px 0;
+    padding: 16px 0;
   }
   .front-kiosk-plate {
     display: none;
