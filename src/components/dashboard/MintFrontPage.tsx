@@ -5,6 +5,7 @@ import { DailyCorner } from './DailyCorner'
 import { EditorialPhotoSlot } from './EditorialPhotoSlot'
 import { usePermissions } from '../../hooks/usePermissions'
 import { formatDate } from '../../utils/date'
+import { sliceFrontPageStories } from '../../utils/frontPageStories'
 import { mediaUrl } from '../../utils/mediaUrl'
 
 type OrgReport = NonNullable<DashboardStats['latest_report']>
@@ -20,6 +21,7 @@ interface MintFrontPageProps {
   featuredKeywords?: { id: string; name: string }[]
   stories?: DashboardPostPreview[]
   report?: OrgReport | null
+  onOpenKiosk?: () => void
 }
 
 function levelLabel(level: string | null | undefined): string {
@@ -57,6 +59,7 @@ export function MintFrontPage({
   featuredKeywords = [],
   stories,
   report,
+  onOpenKiosk,
 }: MintFrontPageProps) {
   const { isAdmin } = usePermissions()
   const orgReport = report === undefined ? stats?.latest_report : report
@@ -64,15 +67,10 @@ export function MintFrontPage({
   const discovery = stats?.discovery_preview ?? []
   const voices = stats?.community_voices_preview ?? []
 
-  const MAJOR_NEWS_COUNT = 7
   const DEEPER_COUNT = 4
   const WIRE_COUNT = 4
 
-  const heroTrusted = trusted[0]
-  const secondary = trusted.slice(1, 3)
-  const listNews = heroTrusted
-    ? trusted.slice(3, 3 + MAJOR_NEWS_COUNT)
-    : trusted.slice(0, MAJOR_NEWS_COUNT)
+  const { hero: heroTrusted, secondary, list: listNews } = sliceFrontPageStories(trusted)
 
   const usedIds = new Set<string>([
     ...(heroTrusted ? [heroTrusted.id] : []),
@@ -96,7 +94,7 @@ export function MintFrontPage({
 
   return (
     <article className="np-newspaper-body np-edition-sample">
-      {(editionName || featuredKeywords.length > 0 || missingSources) && (
+      {(editionName || featuredKeywords.length > 0 || missingSources || onOpenKiosk) && (
         <div className="np-personal-strip">
           <div className="np-personal-strip-left">
             <span className="np-personal-strip-title">{editionName ?? '조직 지면'}</span>
@@ -109,13 +107,23 @@ export function MintFrontPage({
               </>
             )}
           </div>
-          {isAdmin && (
-            <div className="np-personal-strip-right">
+          <div className="np-personal-strip-right">
+            {onOpenKiosk && (
+              <button
+                type="button"
+                className="np-kiosk-toggle"
+                onClick={onOpenKiosk}
+                disabled={!heroTrusted && listNews.length === 0}
+              >
+                전시
+              </button>
+            )}
+            {isAdmin && (
               <Link to="/admin/settings#editions" className="np-personal-edit">
                 지면 설정
               </Link>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 

@@ -46,9 +46,12 @@ const REASON_COPY: Record<
   },
 }
 
+type EditionName = { id: string; name: string }
+
 type Props = {
   item: ReviewQueueItem
   orgKeywords: Keyword[]
+  editions: EditionName[]
   expanded: boolean
   onToggle: () => void
   onExcluded: (id: string) => void
@@ -57,6 +60,7 @@ type Props = {
 export function ReviewQueueItemEditor({
   item,
   orgKeywords,
+  editions,
   expanded,
   onToggle,
   onExcluded,
@@ -129,17 +133,53 @@ export function ReviewQueueItemEditor({
     onError: (e) => toast(apiErrorDetail(e) || '키워드 저장 실패', 'err'),
   })
 
+  const activeOrgKeywords = useMemo(
+    () => orgKeywords.filter((k) => k.scope === 'organization' && k.status === 'active'),
+    [orgKeywords],
+  )
+
   const filteredKeywords = useMemo(() => {
     const q = keywordFilter.trim().toLowerCase()
-    const org = orgKeywords.filter((k) => k.scope === 'organization' && k.status === 'active')
-    if (!q) return org
-    return org.filter(
+    if (!q) return activeOrgKeywords
+    return activeOrgKeywords.filter(
       (k) =>
         k.name.toLowerCase().includes(q) ||
         k.normalized_name.includes(q) ||
         (k.aliases ?? []).some((a) => a.toLowerCase().includes(q)),
     )
-  }, [orgKeywords, keywordFilter])
+  }, [activeOrgKeywords, keywordFilter])
+
+  const keywordGroups = useMemo(() => {
+    const byEdition = new Map<string, Keyword[]>()
+    const untagged: Keyword[] = []
+    for (const keyword of filteredKeywords) {
+      if (keyword.edition_id) {
+        const list = byEdition.get(keyword.edition_id) ?? []
+        list.push(keyword)
+        byEdition.set(keyword.edition_id, list)
+      } else {
+        untagged.push(keyword)
+      }
+    }
+    const named = editions
+      .map((edition) => ({
+        id: edition.id,
+        name: edition.name,
+        keywords: (byEdition.get(edition.id) ?? []).slice(0, 40),
+      }))
+      .filter((group) => group.keywords.length > 0)
+    const leftover = [...byEdition.entries()]
+      .filter(([id]) => !editions.some((edition) => edition.id === id))
+      .flatMap(([, list]) => list)
+    const extra = [...leftover, ...untagged].slice(0, 40)
+    if (extra.length > 0) named.push({ id: 'other', name: '기타', keywords: extra })
+    return named
+  }, [editions, filteredKeywords])
+
+  const selectedLabels = useMemo(() => {
+    const fromOrg = activeOrgKeywords.filter((k) => selectedIds.has(k.id)).map((k) => k.name)
+    return [...fromOrg, ...newNames]
+  }, [activeOrgKeywords, newNames, selectedIds])
 
   const selectedCount = selectedIds.size + newNames.length
   const canSave = selectedCount > 0 && selectedCount <= 5
@@ -188,16 +228,16 @@ export function ReviewQueueItemEditor({
   const copy = REASON_COPY[item.reason]
 
   return (
-    <article className={`review-queue-item${expanded ? ' expanded' : ''}`}>
-      <div className="review-queue-item-head">
-        <div className="review-queue-item-title">
-          <span className="review-queue-reason">{copy.label}</span>
+    <article className={`review-queue-item${expanded ? ' is-open' : ''}`}>
+      <div className="review-desk-row">
+        <span className="review-desk-reason">{copy.label}</span>
+        <div className="review-desk-story">
           <Link to={`/posts/${item.post_id}`} state={{ from: '/admin/review-queue' }}>
             {item.post_title}
           </Link>
-          {item.detail && <p className="review-queue-item-detail">{item.detail}</p>}
+          {item.detail && <p className="review-desk-detail">{item.detail}</p>}
         </div>
-        <div className="review-queue-item-actions">
+        <div className="review-desk-actions">
           <Btn size="sm" variant={expanded ? 'outline' : 'primary'} onClick={onToggle}>
             {expanded ? '접기' : copy.open}
           </Btn>
@@ -215,102 +255,127 @@ export function ReviewQueueItemEditor({
       </div>
 
       {expanded && (
-        <div className="review-queue-editor">
-          <div className="review-queue-editor-toolbar">
-            <Btn
-              size="sm"
-              variant="soft"
-              icon="sparkles"
-              onClick={() => suggest.mutate()}
-              disabled={suggest.isPending}
-            >
-              {suggest.isPending ? 'AI 분석 중…' : 'AI 추천 받기'}
-            </Btn>
-            <span className="review-queue-editor-hint">
-              {copy.hint} 선택 {selectedCount}/5 · 저장 시 검수함에서 자동 완료
-            </span>
+        <div className="review-desk-work">
+          <div className="review-desk-picked">
+            <span className="review-desk-picked-label">선택 {selectedCount}/5</span>
+            {selectedLabels.length > 0 ? (
+              <ul className="review-desk-picked-list">
+                {selectedLabels.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="review-desk-picked-empty">아직 고른 키워드가 없습니다.</p>
+            )}
           </div>
 
-          {suggestions.length > 0 && (
-            <section className="review-queue-section" aria-label="AI 추천 키워드">
-              <h4>AI 추천</h4>
-              <div className="review-queue-chips">
-                {suggestions.map((s) => (
-                  <button
-                    key={`${s.name}-${s.keyword_id ?? 'new'}`}
-                    type="button"
-                    className={`review-queue-chip${isSuggestionSelected(s) ? ' on' : ''}`}
-                    onClick={() => toggleSuggestion(s)}
-                  >
-                    {s.name}
-                    <span className="review-queue-chip-meta">
-                      {Math.round(s.confidence * 100)}%
-                      {!s.keyword_id ? ' · 신규' : ''}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <section className="review-queue-section" aria-label="조직 키워드">
-            <h4>조직 키워드</h4>
-            <input
-              className="input review-queue-filter"
-              placeholder="키워드 검색…"
-              value={keywordFilter}
-              onChange={(e) => setKeywordFilter(e.target.value)}
-            />
-            <div className="review-queue-chips">
-              {filteredKeywords.slice(0, 40).map((k) => (
-                <button
-                  key={k.id}
-                  type="button"
-                  className={`review-queue-chip${selectedIds.has(k.id) ? ' on' : ''}`}
-                  onClick={() => toggleKeyword(k.id)}
-                >
-                  {k.name}
-                </button>
+          <div className="review-desk-work-grid">
+            <section className="review-desk-pane" aria-label="조직 키워드">
+              <header className="review-desk-pane-head">
+                <h4>조직 키워드</h4>
+                <input
+                  className="input review-desk-filter"
+                  placeholder="키워드 검색"
+                  value={keywordFilter}
+                  onChange={(e) => setKeywordFilter(e.target.value)}
+                />
+              </header>
+              {keywordGroups.length === 0 && (
+                <p className="review-desk-empty">검색과 맞는 키워드가 없습니다.</p>
+              )}
+              {keywordGroups.map((group) => (
+                <div key={group.id} className="review-desk-group">
+                  <h5>{group.name}</h5>
+                  <div className="review-desk-picks">
+                    {group.keywords.map((k) => (
+                      <button
+                        key={k.id}
+                        type="button"
+                        className={`review-queue-chip${selectedIds.has(k.id) ? ' on' : ''}`}
+                        onClick={() => toggleKeyword(k.id)}
+                      >
+                        {k.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
-            </div>
-          </section>
+            </section>
 
-          <section className="review-queue-section" aria-label="새 키워드">
-            <h4>새 키워드</h4>
-            <div className="review-queue-new-row">
-              <input
-                className="input"
-                placeholder="키워드 이름 입력"
-                value={newNameDraft}
-                onChange={(e) => setNewNameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addNewName()
-                  }
-                }}
-              />
-              <Btn size="sm" variant="outline" onClick={addNewName}>
-                추가
-              </Btn>
-            </div>
-            {newNames.length > 0 && (
-              <div className="review-queue-chips">
-                {newNames.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    className="review-queue-chip on"
-                    onClick={() => setNewNames((prev) => prev.filter((n) => n !== name))}
+            <aside className="review-desk-pane review-desk-side" aria-label="추천과 새 키워드">
+              <section className="review-desk-side-block">
+                <header className="review-desk-pane-head">
+                  <h4>AI 추천</h4>
+                  <Btn
+                    size="sm"
+                    variant="soft"
+                    icon="sparkles"
+                    onClick={() => suggest.mutate()}
+                    disabled={suggest.isPending}
                   >
-                    {name} ×
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
+                    {suggest.isPending ? '분석 중…' : '추천 받기'}
+                  </Btn>
+                </header>
+                {suggestions.length > 0 ? (
+                  <div className="review-desk-picks">
+                    {suggestions.map((s) => (
+                      <button
+                        key={`${s.name}-${s.keyword_id ?? 'new'}`}
+                        type="button"
+                        className={`review-queue-chip${isSuggestionSelected(s) ? ' on' : ''}`}
+                        onClick={() => toggleSuggestion(s)}
+                      >
+                        <span>{s.name}</span>
+                        <em className="review-queue-chip-meta">
+                          {Math.round(s.confidence * 100)}%{!s.keyword_id ? ' · 신규' : ''}
+                        </em>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="review-desk-empty">추천을 받으면 이 기사에 가까운 주제가 뜹니다.</p>
+                )}
+              </section>
 
-          <div className="review-queue-editor-footer">
+              <section className="review-desk-side-block" aria-label="새 키워드">
+                <h4>새 키워드</h4>
+                <div className="review-desk-new-row">
+                  <input
+                    className="input"
+                    placeholder="이름 입력 후 추가"
+                    value={newNameDraft}
+                    onChange={(e) => setNewNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addNewName()
+                      }
+                    }}
+                  />
+                  <Btn size="sm" variant="outline" onClick={addNewName}>
+                    추가
+                  </Btn>
+                </div>
+                {newNames.length > 0 && (
+                  <div className="review-desk-picks">
+                    {newNames.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="review-queue-chip on"
+                        onClick={() => setNewNames((prev) => prev.filter((n) => n !== name))}
+                      >
+                        {name} ×
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </aside>
+          </div>
+
+          <div className="review-desk-work-foot">
+            <p className="review-desk-hint">{copy.hint} 저장하면 이 건은 검수함에서 빠집니다.</p>
             <Btn
               variant="primary"
               onClick={() => apply.mutate()}

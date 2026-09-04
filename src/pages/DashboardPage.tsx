@@ -1,10 +1,11 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { listEditions } from '../api/editionApi'
 import { getEditorialFeed, listKeywords } from '../api/personalizationApi'
 import { getLatestReport } from '../api/reportApi'
 import type { DashboardPostPreview, DashboardStats } from '../api/statsApi'
+import { FrontKiosk } from '../components/display/FrontKiosk'
 import { FrontPageSpread, type SpreadSheet } from '../components/dashboard/FrontPageSpread'
 import { MintFrontPage } from '../components/dashboard/MintFrontPage'
 import { FrontPageSkeleton } from '../components/common/Skeletons'
@@ -15,6 +16,8 @@ import { usePermissions } from '../hooks/usePermissions'
 import type { DailyReport } from '../types/report'
 import type { PersonalizedNews } from '../types/personalization'
 import { invalidateFrontPageQueries } from '../utils/frontPageQueries'
+import { sliceFrontPageStories } from '../utils/frontPageStories'
+import { mediaUrl } from '../utils/mediaUrl'
 
 const IDLE_POLL_MS = 60_000
 const BUSY_POLL_MS = 5_000
@@ -69,6 +72,18 @@ export function DashboardPage() {
   const stats = useDashboardStatsQuery()
   const seenFrontSignature = useRef<string | undefined>(undefined)
   const [spreadPage, setSpreadPage] = useState<string>('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const kioskOn = searchParams.get('kiosk') === '1'
+
+  const setKiosk = useCallback(
+    (on: boolean) => {
+      const next = new URLSearchParams(searchParams)
+      if (on) next.set('kiosk', '1')
+      else next.delete('kiosk')
+      setSearchParams(next, { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
 
   const pollMs = crawlBusy ? BUSY_POLL_MS : IDLE_POLL_MS
 
@@ -176,6 +191,7 @@ export function DashboardPage() {
             featuredKeywords={featured.map((item) => ({ id: item.id, name: item.name }))}
             stories={(feed?.items ?? []).map(toPreview)}
             report={report}
+            onOpenKiosk={() => setKiosk(true)}
           />
         ),
       }
@@ -191,10 +207,30 @@ export function DashboardPage() {
     year,
     stats.data,
     stats.isLoading,
+    setKiosk,
   ])
 
   const currentPage =
     sheets.some((sheet) => sheet.key === spreadPage) ? spreadPage : sheets[0]?.key ?? ''
+  const currentEditionIndex = Math.max(
+    0,
+    editions.findIndex((edition) => edition.id === currentPage),
+  )
+  const currentEdition = editions[currentEditionIndex]
+  const kioskDeck = sliceFrontPageStories(
+    (editorialQueries[currentEditionIndex]?.data?.items ?? []).map(toPreview),
+  ).deck
+  const kioskReport = toOrgReport(reportQueries[currentEditionIndex]?.data)
+
+  const kioskOverlay = kioskOn ? (
+    <FrontKiosk
+      editionName={currentEdition?.name ?? ''}
+      stories={kioskDeck}
+      heroImageUrl={mediaUrl(kioskReport?.illustration_url)}
+      heroImageSeed={kioskReport?.report_date ?? kioskDeck[0]?.id}
+      onClose={() => setKiosk(false)}
+    />
+  ) : null
 
   if (editionsQuery.isLoading) {
     return (
@@ -220,17 +256,24 @@ export function DashboardPage() {
             </Link>
           </div>
         </div>
+        {kioskOverlay}
       </div>
     )
   }
 
   if (sheets.length === 1) {
-    return <div className="content-inner np-page page-fade">{sheets[0].node}</div>
+    return (
+      <div className="content-inner np-page page-fade">
+        {sheets[0].node}
+        {kioskOverlay}
+      </div>
+    )
   }
 
   return (
     <div className="content-inner np-page page-fade">
       <FrontPageSpread page={currentPage} onPageChange={setSpreadPage} sheets={sheets} />
+      {kioskOverlay}
     </div>
   )
 }

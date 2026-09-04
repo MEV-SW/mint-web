@@ -4314,29 +4314,6 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .personal-report-detail header{border-top:4px solid var(--text);border-bottom:1px solid var(--text);padding:24px 0}.personal-report-detail header h1{font-family:var(--serif);font-size:34px}.personal-report-detail header p{font-size:16px;line-height:1.7;color:var(--text-muted)}
 .personal-report-detail ol{list-style:none;padding:0}.personal-report-detail li>a{display:grid;grid-template-columns:48px 1fr auto;gap:16px;padding:22px 0;border-bottom:1px solid var(--border);color:inherit;text-decoration:none}.report-rank{font-family:var(--serif);font-size:24px}.personal-report-detail h2{font-family:var(--serif);margin:7px 0}
 .review-list{display:flex;flex-direction:column;gap:0}
-.review-queue-item{padding:18px 0;border-bottom:1px solid var(--border)}
-.review-queue-item.expanded{padding-bottom:22px}
-.review-queue-item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-.review-queue-item-title{display:flex;flex-direction:column;gap:6px;min-width:0}
-.review-queue-item-detail{margin:0;font-size:12px;color:var(--text-muted);line-height:1.45}
-.review-queue-reason{font-size:11px;color:var(--high-ink);font-weight:800}
-.review-queue-item-title a{font-family:var(--serif);font-weight:800;color:var(--text);text-decoration:none}
-.review-queue-item-title a:hover{text-decoration:underline}
-.review-queue-item-actions{display:flex;gap:8px;flex-shrink:0}
-.review-queue-editor{margin-top:14px;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;gap:16px}
-.review-queue-editor-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.review-queue-editor-hint{font-size:12px;color:var(--text-muted)}
-.review-queue-section h4{margin:0 0 8px;font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
-.review-queue-chips{display:flex;flex-wrap:wrap;gap:8px}
-.review-queue-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:2px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer;color:var(--text)}
-.review-queue-chip.on{border-color:var(--mint);background:var(--mint-soft);color:var(--mint-deep);font-weight:600}
-.review-queue-chip-meta{font-size:11px;color:var(--text-muted);font-weight:500}
-.review-queue-chip.on .review-queue-chip-meta{color:var(--mint-deep);opacity:.85}
-.review-queue-filter{max-width:280px;margin-bottom:8px}
-.review-queue-new-row{display:flex;gap:8px;max-width:360px}
-.review-queue-new-row .input{flex:1}
-.review-queue-editor-footer{display:flex;justify-content:flex-end;padding-top:4px}
-.review-list article{display:flex;justify-content:space-between;gap:20px;padding:18px 0;border-bottom:1px solid var(--border)}.review-list article>div{display:flex;gap:10px;align-items:center}.review-list article span{font-size:11px;color:var(--high-ink);font-weight:800}.review-list article a{font-family:var(--serif);font-weight:800;color:var(--text)}
 @media(max-width:700px){.news-tools,.keyword-create{flex-direction:column}.news-tools select{min-width:0}.personal-news-row{flex-direction:column}.report-archive>a{grid-template-columns:90px 1fr}.report-archive small{display:none}}
 
 /* admin hub sub-nav */
