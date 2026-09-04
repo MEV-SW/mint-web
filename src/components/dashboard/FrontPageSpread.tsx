@@ -34,7 +34,6 @@ export function FrontPageSpread({ page, onPageChange, sheets }: FrontPageSpreadP
   const lastIndex = Math.max(sheets.length - 1, 0)
   const index = Math.max(0, sheets.findIndex((sheet) => sheet.key === page))
   const current = sheets[index]
-  const showTabs = sheets.length >= 4
 
   useLayoutEffect(() => {
     const el = viewportRef.current
@@ -118,27 +117,30 @@ export function FrontPageSpread({ page, onPageChange, sheets }: FrontPageSpreadP
 
   return (
     <div className="np-spread" data-page={page}>
-      <div className="np-spread-edition-bar" role="tablist" aria-label="1면 선택">
-        {sheets.map((sheet) => (
-          <button
-            type="button"
-            role="tab"
-            key={sheet.key}
-            aria-selected={page === sheet.key}
-            className={`np-spread-edition-tab${page === sheet.key ? ' active' : ''}`}
-            onClick={() => onPageChange(sheet.key)}
-          >
-            {sheet.label}
-          </button>
-        ))}
+      <div className="np-spread-edition-bar">
+        <div className="np-spread-segment" role="tablist" aria-label="1면 선택">
+          {sheets.map((sheet) => (
+            <button
+              type="button"
+              role="tab"
+              key={sheet.key}
+              aria-selected={page === sheet.key}
+              className={`np-spread-edition-tab${page === sheet.key ? ' active' : ''}`}
+              onClick={() => onPageChange(sheet.key)}
+            >
+              {sheet.label}
+            </button>
+          ))}
+        </div>
         <span className="np-spread-edition-label" aria-hidden>
           {current?.subtitle ?? current?.label}
         </span>
+        <p className="np-spread-hint">밀어서 넘기기</p>
       </div>
 
       <div
         ref={viewportRef}
-        className={`np-spread-viewport${isDragging ? ' is-dragging' : ''}${showTabs ? ' np-spread-many' : ''}`}
+        className={`np-spread-viewport${isDragging ? ' is-dragging' : ''}`}
         style={
           viewportWidth > 0
             ? ({ ['--spread-viewport-width' as string]: `${viewportWidth}px` } as CSSProperties)
@@ -169,10 +171,6 @@ export function FrontPageSpread({ page, onPageChange, sheets }: FrontPageSpreadP
           ))}
         </div>
       </div>
-
-      <p className="np-spread-hint" aria-hidden>
-        좌우로 밀어 지면을 넘기세요
-      </p>
     </div>
   )
 }

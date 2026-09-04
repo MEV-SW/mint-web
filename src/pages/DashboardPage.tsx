@@ -1,11 +1,13 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { listEditions } from '../api/editionApi'
 import { getEditorialFeed, listKeywords } from '../api/personalizationApi'
 import { getLatestReport } from '../api/reportApi'
 import type { DashboardPostPreview, DashboardStats } from '../api/statsApi'
 import { FrontPageSpread, type SpreadSheet } from '../components/dashboard/FrontPageSpread'
 import { MintFrontPage } from '../components/dashboard/MintFrontPage'
+import { FrontPageSkeleton } from '../components/common/Skeletons'
 import { useToast } from '../components/common/Toast'
 import { useDashboardStatsQuery } from '../hooks/useDashboardStatsQuery'
 import { useActiveJobs } from '../hooks/useJobsQuery'
@@ -197,9 +199,7 @@ export function DashboardPage() {
   if (editionsQuery.isLoading) {
     return (
       <div className="content-inner np-page page-fade">
-        <div className="np-spread" aria-busy="true">
-          <p className="np-spread-hint">지면을 불러오는 중</p>
-        </div>
+        <FrontPageSkeleton />
       </div>
     )
   }
@@ -207,13 +207,18 @@ export function DashboardPage() {
   if (sheets.length === 0) {
     return (
       <div className="content-inner np-page page-fade">
-        <div className="personal-empty" style={{ padding: '64px 24px', textAlign: 'center' }}>
-          <h2 style={{ marginBottom: 8 }}>분야가 배정되지 않았습니다</h2>
+        <div className="personal-empty">
+          <h2>아직 펼칠 지면이 없습니다</h2>
           <p>
             {isAdmin
-              ? '설정에서 사업 분야를 만들거나, 계정 관리에서 자신에게 분야를 배정하세요.'
-              : '총관이 사업 분야를 배정하면 홈 지면이 열립니다.'}
+              ? '설정에서 사업 분야를 만들면 홈 지면이 열립니다.'
+              : '설정에서 볼 분야를 고르면 홈 지면이 열립니다.'}
           </p>
+          <div className="personal-empty-actions">
+            <Link to={isAdmin ? '/admin/settings#editions' : '/admin/settings#my-editions'} className="np-read-more">
+              {isAdmin ? '분야 설정 →' : '내 지면 고르기 →'}
+            </Link>
+          </div>
         </div>
       </div>
     )

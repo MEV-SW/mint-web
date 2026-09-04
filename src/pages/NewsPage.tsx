@@ -1,87 +1,106 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type CompositionEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import { listEditions } from '../api/editionApi'
 import { getNews, listCategories, listKeywords } from '../api/personalizationApi'
-import { ImportanceBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
+import { NewsListRow } from '../components/news/NewsListRow'
+import { NewsListSkeleton } from '../components/common/Skeletons'
 import { PageShell } from '../components/layout/PageShell'
 import type { Importance } from '../types/post'
-import { formatDate } from '../utils/date'
-import { SearchHighlight } from '../components/common/SearchHighlight'
-import { groupKeywords } from '../utils/groupKeywords'
+import {
+  newsListSearchParams,
+  readNewsListParams,
+  type NewsKind,
+  type NewsListParams,
+} from '../utils/newsListState'
+import {
+  keywordsForEdition,
+  rankNewsCategories,
+  rankNewsKeywords,
+  visibleNewsCategories,
+} from '../utils/newsTaxonomy'
 
-const IMPORTANCE_FILTERS: { value: '' | Importance; label: string }[] = [
+const IMPORTANCE_FILTERS: { value: '' | Exclude<Importance, 'unknown'>; label: string }[] = [
   { value: '', label: '전체' },
   { value: 'high', label: '높음' },
   { value: 'medium', label: '보통' },
   { value: 'low', label: '낮음' },
 ]
 
-const CONTENT_KIND_FILTERS: { value: '' | 'news' | 'community'; label: string }[] = [
+const CONTENT_KIND_FILTERS: { value: NewsKind | ''; label: string }[] = [
   { value: '', label: '전체' },
   { value: 'news', label: '뉴스' },
+  { value: 'discovery', label: '탐문' },
   { value: 'community', label: '커뮤니티' },
 ]
 
-function contentKindLabel(post: {
-  is_community?: boolean
-  board_type?: string | null
-}): string {
-  if (post.is_community) return '커뮤니티'
-  if (post.board_type === 'discovery') return '탐문'
-  return '뉴스'
-}
-
 const PAGE_SIZE = 20
-/** Collapsed chip counts before “전체보기”. */
-const CATEGORY_PREVIEW_LIMIT = 6
-const KEYWORD_PREVIEW_LIMIT = 8
-
-function rankCategoriesForPreview(items: Awaited<ReturnType<typeof listCategories>>) {
-  return [...items].sort((a, b) => {
-    const aFeatured = a.is_featured ? 0 : 1
-    const bFeatured = b.is_featured ? 0 : 1
-    if (aFeatured !== bFeatured) return aFeatured - bFeatured
-    const aDiscovered = a.is_discovered ? 1 : 0
-    const bDiscovered = b.is_discovered ? 1 : 0
-    if (aDiscovered !== bDiscovered) return aDiscovered - bDiscovered
-    const posts = (b.post_count ?? 0) - (a.post_count ?? 0)
-    if (posts !== 0) return posts
-    return a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'ko')
-  })
-}
-
-function rankKeywordsForPreview(
-  items: Awaited<ReturnType<typeof listKeywords>>,
-  featuredCategoryIds: Set<string>,
-) {
-  return [...items].sort((a, b) => {
-    const aCurated = a.is_curated ? 0 : 1
-    const bCurated = b.is_curated ? 0 : 1
-    if (aCurated !== bCurated) return aCurated - bCurated
-    const aFeatured = a.category_id && featuredCategoryIds.has(a.category_id) ? 0 : 1
-    const bFeatured = b.category_id && featuredCategoryIds.has(b.category_id) ? 0 : 1
-    if (aFeatured !== bFeatured) return aFeatured - bFeatured
-    return a.name.localeCompare(b.name, 'ko')
-  })
-}
+const KEYWORD_PREVIEW_LIMIT = 4
 
 export function NewsPage() {
-  const navigate = useNavigate()
-  const [queryDraft, setQueryDraft] = useState('')
-  const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('')
-  const [keywordId, setKeywordId] = useState('')
-  const [importance, setImportance] = useState<'' | Importance>('')
-  const [contentKind, setContentKind] = useState<'' | 'news' | 'community'>('')
-  const [showAllCategories, setShowAllCategories] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const fromUrl = readNewsListParams(searchParams)
+  const [queryDraft, setQueryDraft] = useState(fromUrl.q)
+  const [query, setQuery] = useState(fromUrl.q)
+  const [category, setCategory] = useState(fromUrl.category)
+  const [keywordId, setKeywordId] = useState(fromUrl.kw)
+  const [importance, setImportance] = useState<NewsListParams['importance']>(fromUrl.importance)
+  const [contentKind, setContentKind] = useState<NewsKind | ''>(fromUrl.kind)
+  const [editionId, setEditionId] = useState(fromUrl.edition)
   const [showAllKeywords, setShowAllKeywords] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(fromUrl.category || fromUrl.importance))
   const [page, setPage] = useState(1)
   const isComposingRef = useRef(false)
 
-  const openTopicHub = (id: string) => {
-    navigate(`/topics/${id}`)
+  const persist = (patch: Partial<NewsListParams>) => {
+    const next = newsListSearchParams({
+      q: patch.q ?? query,
+      kind: patch.kind ?? contentKind,
+      edition: patch.edition ?? editionId,
+      category: patch.category ?? category,
+      kw: patch.kw ?? keywordId,
+      importance: patch.importance ?? importance,
+    })
+    if (next.toString() === searchParams.toString()) return
+    setSearchParams(next, { replace: true })
   }
+  const persistRef = useRef(persist)
+  persistRef.current = persist
+
+  useEffect(() => {
+    const next = readNewsListParams(searchParams)
+    setQueryDraft((prev) => (prev === next.q ? prev : next.q))
+    setQuery((prev) => (prev === next.q ? prev : next.q))
+    setContentKind((prev) => (prev === next.kind ? prev : next.kind))
+    setCategory((prev) => (prev === next.category ? prev : next.category))
+    setKeywordId((prev) => (prev === next.kw ? prev : next.kw))
+    setImportance((prev) => (prev === next.importance ? prev : next.importance))
+    setEditionId((prev) => (prev === next.edition ? prev : next.edition))
+  }, [searchParams])
+
+  const editionsQuery = useQuery({
+    queryKey: ['editions', 'active'],
+    queryFn: () => listEditions(true),
+  })
+  const editions = editionsQuery.data ?? []
+
+  useEffect(() => {
+    if (!editions.length) return
+    if (editionId && editions.some((item) => item.id === editionId)) return
+    const fallback = editions[0].id
+    const invalid = Boolean(editionId)
+    setEditionId(fallback)
+    persistRef.current(
+      invalid
+        ? { edition: fallback, category: '', kw: '' }
+        : { edition: fallback },
+    )
+    if (invalid) {
+      setCategory('')
+      setKeywordId('')
+    }
+  }, [editions, editionId])
 
   const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
   const keywords = useQuery({ queryKey: ['keywords'], queryFn: () => listKeywords() })
@@ -102,228 +121,125 @@ export function NewsPage() {
   useEffect(() => {
     if (isComposingRef.current) return
     const timer = window.setTimeout(() => {
-      setQuery(queryDraft.trim())
+      const nextQuery = queryDraft.trim()
+      setQuery(nextQuery)
       setPage(1)
+      persistRef.current({ q: nextQuery })
     }, 300)
     return () => window.clearTimeout(timer)
   }, [queryDraft])
 
-  const allCategories = categories.data ?? []
-  const rankedCategories = useMemo(
-    () => rankCategoriesForPreview(allCategories),
-    [allCategories],
+  const editionCategories = useMemo(
+    () => rankNewsCategories(visibleNewsCategories(categories.data ?? [], editionId)),
+    [categories.data, editionId],
   )
-  const categoryOverflow = rankedCategories.length > CATEGORY_PREVIEW_LIMIT
-  const visibleCategories = useMemo(() => {
-    if (showAllCategories || !categoryOverflow) return rankedCategories
-    const preview = rankedCategories.slice(0, CATEGORY_PREVIEW_LIMIT)
-    if (!category) return preview
-    if (preview.some((c) => c.name === category)) return preview
-    const active = rankedCategories.find((c) => c.name === category)
-    return active ? [...preview.slice(0, CATEGORY_PREVIEW_LIMIT - 1), active] : preview
-  }, [showAllCategories, categoryOverflow, rankedCategories, category])
+  const curatedCategories = editionCategories.filter((item) => !item.is_discovered)
+  const discoveredCategories = editionCategories.filter((item) => item.is_discovered)
 
-  const allKeywords = keywords.data ?? []
-  const featuredCategoryIds = useMemo(
-    () => new Set(allCategories.filter((c) => c.is_featured).map((c) => c.id)),
-    [allCategories],
+  const editionKeywords = useMemo(
+    () => rankNewsKeywords(keywordsForEdition(keywords.data ?? [], editionId)),
+    [keywords.data, editionId],
   )
-  const rankedKeywords = useMemo(
-    () => rankKeywordsForPreview(allKeywords, featuredCategoryIds),
-    [allKeywords, featuredCategoryIds],
-  )
-  const keywordOverflow = rankedKeywords.length > KEYWORD_PREVIEW_LIMIT
+  const keywordOverflow = editionKeywords.length > KEYWORD_PREVIEW_LIMIT
   const visibleKeywords = useMemo(() => {
-    if (showAllKeywords || !keywordOverflow) return rankedKeywords
-    const preview = rankedKeywords.slice(0, KEYWORD_PREVIEW_LIMIT)
+    if (showAllKeywords || !keywordOverflow) return editionKeywords
+    const preview = editionKeywords.slice(0, KEYWORD_PREVIEW_LIMIT)
     if (!keywordId) return preview
-    if (preview.some((k) => k.id === keywordId)) return preview
-    const active = rankedKeywords.find((k) => k.id === keywordId)
+    if (preview.some((item) => item.id === keywordId)) return preview
+    const active = editionKeywords.find((item) => item.id === keywordId)
     return active ? [...preview.slice(0, KEYWORD_PREVIEW_LIMIT - 1), active] : preview
-  }, [showAllKeywords, keywordOverflow, rankedKeywords, keywordId])
-  const keywordGroups = useMemo(
-    () => groupKeywords(visibleKeywords, allCategories),
-    [visibleKeywords, allCategories],
-  )
-  const showGroupedKeywords = showAllKeywords && rankedKeywords.length > KEYWORD_PREVIEW_LIMIT
+  }, [showAllKeywords, keywordOverflow, editionKeywords, keywordId])
+
+  const extraFiltersOn = Boolean(category || importance)
+  const anyFilterOn = Boolean(category || keywordId || importance || contentKind || query)
 
   const resetFilters = () => {
+    const keepEdition = editionId
     setQueryDraft('')
     setQuery('')
     setCategory('')
     setKeywordId('')
     setImportance('')
     setContentKind('')
-    setShowAllCategories(false)
     setShowAllKeywords(false)
+    setFiltersOpen(false)
     setPage(1)
+    persistRef.current({
+      q: '',
+      kind: '',
+      edition: keepEdition,
+      category: '',
+      kw: '',
+      importance: '',
+    })
   }
+
+  const filterSummary = [
+    category || null,
+    importance === 'high' ? '높음' : importance === 'medium' ? '보통' : importance === 'low' ? '낮음' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <PageShell
       section="전체 뉴스"
       title="뉴스"
-      lead="EV·충전 관련 뉴스·커뮤니티를 구분·탐색합니다."
+      lead="지금 보는 지면의 뉴스·탐문·커뮤니티를 구분·탐색합니다."
       actions={
-        category || keywordId || importance || contentKind || query ? (
+        anyFilterOn ? (
           <Btn variant="outline" size="sm" onClick={resetFilters}>
             필터 초기화
           </Btn>
         ) : undefined
       }
     >
-      <div className="news-filter-row">
-        <span className="news-filter-label">출처</span>
-        {CONTENT_KIND_FILTERS.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            className={`news-chip ${contentKind === item.value ? 'active' : ''}`}
-            onClick={() => {
-              setContentKind(item.value)
-              setPage(1)
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="news-filter-row">
-        <span className="news-filter-label">분류</span>
-        <button
-          type="button"
-          className={`news-chip ${!category ? 'active' : ''}`}
-          onClick={() => {
-            setCategory('')
-            setPage(1)
-          }}
-        >
-          전체
-        </button>
-        {visibleCategories.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`news-chip ${category === item.name ? 'active' : ''}`}
-            onClick={() => {
-              setCategory(item.name)
-              setPage(1)
-            }}
-          >
-            {item.name}
-          </button>
-        ))}
-        {categoryOverflow && (
-          <button
-            type="button"
-            className="news-chip-toggle"
-            onClick={() => setShowAllCategories((v) => !v)}
-          >
-            {showAllCategories
-              ? '접기'
-              : `전체보기 (+${rankedCategories.length - CATEGORY_PREVIEW_LIMIT})`}
-          </button>
+      <div className="news-toolbar">
+        {editions.length > 1 && (
+          <div className="news-segment" role="tablist" aria-label="지면">
+            {editions.map((edition) => (
+              <button
+                key={edition.id}
+                type="button"
+                role="tab"
+                aria-selected={editionId === edition.id}
+                className={`news-segment-tab${editionId === edition.id ? ' active' : ''}`}
+                onClick={() => {
+                  setEditionId(edition.id)
+                  setCategory('')
+                  setKeywordId('')
+                  setShowAllKeywords(false)
+                  setPage(1)
+                  persist({ edition: edition.id, category: '', kw: '' })
+                }}
+              >
+                {edition.name}
+              </button>
+            ))}
+          </div>
         )}
-      </div>
 
-      {showGroupedKeywords ? (
-        <>
-          <div className="news-filter-row">
-            <span className="news-filter-label">키워드</span>
+        <div className="news-segment" role="tablist" aria-label="출처">
+          {CONTENT_KIND_FILTERS.map((item) => (
             <button
+              key={item.label}
               type="button"
-              className={`news-chip ${!keywordId ? 'active' : ''}`}
+              role="tab"
+              aria-selected={contentKind === item.value}
+              className={`news-segment-tab${contentKind === item.value ? ' active' : ''}`}
               onClick={() => {
-                setKeywordId('')
+                setContentKind(item.value)
                 setPage(1)
+                persist({ kind: item.value })
               }}
             >
-              전체
-            </button>
-            <button
-              type="button"
-              className="news-chip-toggle"
-              onClick={() => setShowAllKeywords(false)}
-            >
-              접기
-            </button>
-          </div>
-          {keywordGroups.map((group) => (
-            <div key={group.id} className="news-filter-row news-filter-row-grouped">
-              <span className="news-filter-label">{group.name}</span>
-              {group.keywords.map((keyword) => (
-                <button
-                  key={keyword.id}
-                  type="button"
-                  className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
-                  onClick={() => openTopicHub(keyword.id)}
-                >
-                  {keyword.name}
-                  {keyword.status === 'candidate' ? ' · 신규' : ''}
-                </button>
-              ))}
-            </div>
-          ))}
-        </>
-      ) : (
-        <div className="news-filter-row">
-          <span className="news-filter-label">키워드</span>
-          <button
-            type="button"
-            className={`news-chip ${!keywordId ? 'active' : ''}`}
-            onClick={() => {
-              setKeywordId('')
-              setPage(1)
-            }}
-          >
-            전체
-          </button>
-          {visibleKeywords.map((keyword) => (
-            <button
-              key={keyword.id}
-              type="button"
-              className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
-              onClick={() => openTopicHub(keyword.id)}
-            >
-              {keyword.name}
-              {keyword.status === 'candidate' ? ' · 신규' : ''}
+              {item.label}
             </button>
           ))}
-          {keywordOverflow && (
-            <button
-              type="button"
-              className="news-chip-toggle"
-              onClick={() => setShowAllKeywords((v) => !v)}
-            >
-              {showAllKeywords
-                ? '접기'
-                : `전체보기 (+${rankedKeywords.length - KEYWORD_PREVIEW_LIMIT})`}
-            </button>
-          )}
         </div>
-      )}
 
-      <div className="news-filter-row">
-        <span className="news-filter-label">중요도</span>
-        {IMPORTANCE_FILTERS.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            className={`news-chip ${importance === item.value ? 'active' : ''}`}
-            onClick={() => {
-              setImportance(item.value)
-              setPage(1)
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="news-tools" style={{ marginBottom: 20 }}>
         <input
-          className="input"
+          className="input news-toolbar-search"
           type="search"
           value={queryDraft}
           onChange={(e) => setQueryDraft(e.target.value)}
@@ -336,6 +252,125 @@ export function NewsPage() {
           }}
           placeholder="제목과 요약 검색"
         />
+
+        <button
+          type="button"
+          className={`news-filter-toggle${extraFiltersOn || filtersOpen ? ' active' : ''}`}
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          필터{filterSummary ? ` · ${filterSummary}` : ''}
+        </button>
+      </div>
+
+      {filtersOpen && (
+        <div className="news-filter-panel">
+          <div className="news-filter-row">
+            <span className="news-filter-label">분류</span>
+            <button
+              type="button"
+              className={`news-chip ${!category ? 'active' : ''}`}
+              onClick={() => {
+                setCategory('')
+                setPage(1)
+                persist({ category: '' })
+              }}
+            >
+              전체
+            </button>
+            {curatedCategories.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`news-chip ${category === item.name ? 'active' : ''}`}
+                onClick={() => {
+                  setCategory(item.name)
+                  setPage(1)
+                  persist({ category: item.name })
+                }}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+          {discoveredCategories.length > 0 && (
+            <div className="news-filter-row">
+              <span className="news-filter-label">발견</span>
+              {discoveredCategories.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`news-chip news-chip-discovered ${category === item.name ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategory(item.name)
+                    setPage(1)
+                    persist({ category: item.name })
+                  }}
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="news-filter-row">
+            <span className="news-filter-label">중요도</span>
+            {IMPORTANCE_FILTERS.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className={`news-chip ${importance === item.value ? 'active' : ''}`}
+                onClick={() => {
+                  setImportance(item.value)
+                  setPage(1)
+                  persist({ importance: item.value })
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="news-filter-row news-keyword-row">
+        <span className="news-filter-label">키워드</span>
+        <button
+          type="button"
+          className={`news-chip ${!keywordId ? 'active' : ''}`}
+          onClick={() => {
+            setKeywordId('')
+            setPage(1)
+            persist({ kw: '' })
+          }}
+        >
+          전체
+        </button>
+        {visibleKeywords.map((keyword) => (
+          <button
+            key={keyword.id}
+            type="button"
+            className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
+            onClick={() => {
+              setKeywordId(keyword.id)
+              setPage(1)
+              persist({ kw: keyword.id })
+            }}
+          >
+            {keyword.name}
+            {keyword.status === 'candidate' ? ' · 신규' : ''}
+          </button>
+        ))}
+        {keywordOverflow && (
+          <button
+            type="button"
+            className="news-chip-toggle"
+            onClick={() => setShowAllKeywords((v) => !v)}
+          >
+            {showAllKeywords
+              ? '접기'
+              : `더보기 (+${editionKeywords.length - KEYWORD_PREVIEW_LIMIT})`}
+          </button>
+        )}
       </div>
 
       <div className="personal-news-list">
@@ -344,45 +379,24 @@ export function NewsPage() {
           <span>{news.data?.total ?? 0}건</span>
         </header>
 
-        {news.data?.items.map((post) => (
-          <Link key={post.id} to={`/posts/${post.id}`} className="personal-news-row">
-            <div>
-              <div className="personal-news-tags">
-                <span
-                  className={
-                    post.is_community
-                      ? 'news-kind-badge news-kind-community'
-                      : post.board_type === 'discovery'
-                        ? 'news-kind-badge news-kind-discovery'
-                        : 'news-kind-badge news-kind-news'
-                  }
-                >
-                  {contentKindLabel(post)}
-                </span>
-                {post.category && <span>{post.category}</span>}
-                {post.matched_keywords.map((item) => (
-                  <span key={item.id}>{item.name}</span>
-                ))}
-                {!post.category && !post.matched_keywords.length && (
-                  <span>미분류</span>
-                )}
-              </div>
-              <h3>{post.title}</h3>
-              {(post.summary_highlight || post.summary) && (
-                <p>
-                  <SearchHighlight html={post.summary_highlight} fallback={post.summary} />
-                </p>
-              )}
-              <small>
-                {post.source_name ?? '출처 정보 없음'} · {formatDate(post.collected_at)}
-              </small>
-            </div>
-            <ImportanceBadge level={post.importance} />
-          </Link>
-        ))}
+        {news.isLoading && <NewsListSkeleton />}
+
+        {!news.isLoading &&
+          news.data?.items.map((post) => (
+            <NewsListRow key={post.id} post={post} highlightQuery />
+          ))}
 
         {!news.isLoading && !news.data?.items.length && (
-          <div className="personal-empty">조건에 맞는 뉴스가 없습니다.</div>
+          <div className="personal-empty">
+            <p>조건에 맞는 뉴스가 없습니다.</p>
+            {anyFilterOn && (
+              <div className="personal-empty-actions">
+                <button type="button" className="np-read-more" onClick={resetFilters}>
+                  필터 초기화 →
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

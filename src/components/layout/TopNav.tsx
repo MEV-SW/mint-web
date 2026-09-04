@@ -23,10 +23,11 @@ const PATH_LABELS: Record<string, string> = {
   '/': '1면',
   '/news': '뉴스',
   '/reports': '리포트',
-  '/settings': '설정',
   '/admin': '관리',
+  '/admin/settings': '설정',
   '/admin/review-queue': '검수함',
-  '/admin/accounts': '계정 관리',
+  '/admin/accounts': '계정',
+  '/admin/inquiries': '문의',
   '/admin/sources': '소스',
   '/admin/webhooks': '웹훅',
   '/inquiries': '문의',
@@ -83,7 +84,9 @@ export function TopNav() {
   const counts = {
     pending: stats?.review_queue_pending ?? 0,
     openInquiries,
-    pendingUsers: isAdmin ? pendingUsers.filter((u) => !u.is_active).length : 0,
+    pendingUsers: isAdmin
+      ? pendingUsers.filter((u) => u.approval_status === 'pending').length
+      : 0,
   }
 
   const adminBadgeTotal = counts.pending + counts.openInquiries + counts.pendingUsers
@@ -128,17 +131,14 @@ export function TopNav() {
     )
   }
 
-  const mobileNav: NavItem[] = [
-    ...APP_NAV_MAIN,
-    ...(isAdmin || canEditAny ? [APP_NAV_ADMIN_HUB] : []),
-  ]
+  const mobileNav: NavItem[] = [...APP_NAV_MAIN, APP_NAV_ADMIN_HUB]
 
   return (
     <header className="topnav">
       <div className="topnav-dateline">
         <span className="topnav-edition">MotrexEV Intelligence · Daily Edition</span>
         <span className="topnav-dateline-date">{dateFull}</span>
-        <span className="topnav-dateline-topic">EV · 충전 · CSMS</span>
+        <span className="topnav-dateline-topic">전기차 · 충전 · 자율주행</span>
       </div>
 
       <div className="topnav-rule" aria-hidden />
@@ -164,16 +164,14 @@ export function TopNav() {
             </span>
           ))}
 
-          {(isAdmin || canEditAny) && (
-            <span className="topnav-link-wrap">
-              <NavSeparator />
-              {renderNavLink(APP_NAV_ADMIN_HUB, adminBadgeTotal)}
-            </span>
-          )}
+          <span className="topnav-link-wrap">
+            <NavSeparator />
+            {renderNavLink(APP_NAV_ADMIN_HUB, adminBadgeTotal)}
+          </span>
         </nav>
 
         <div className="topnav-actions">
-          <JobStatusPanel />
+          {canEditAny && <JobStatusPanel />}
           <GlobalSearch />
           <div
             className={cx('topnav-settings topnav-user-menu', userMenuOpen && 'open')}
@@ -195,18 +193,6 @@ export function TopNav() {
             </button>
             {userMenuOpen && (
               <div className="topnav-settings-menu topnav-user-dropdown" role="menu">
-                <NavLink
-                  to="/settings"
-                  role="menuitem"
-                  className={({ isActive }) => cx('topnav-settings-item', isActive && 'active')}
-                  onClick={() => {
-                    setUserMenuOpen(false)
-                    setMenuOpen(false)
-                  }}
-                >
-                  <Icon name="settings" />
-                  <span>설정</span>
-                </NavLink>
                 <NavLink
                   to="/inquiries"
                   role="menuitem"
@@ -288,14 +274,6 @@ export function TopNav() {
           })}
           <div className="topnav-mobile-group">
             <div className="topnav-mobile-group-label">내 계정</div>
-            <NavLink
-              to="/settings"
-              className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
-              onClick={() => setMenuOpen(false)}
-            >
-              <Icon name="settings" />
-              <span>설정</span>
-            </NavLink>
             <NavLink
               to="/inquiries"
               className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}

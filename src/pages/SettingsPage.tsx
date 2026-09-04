@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   createStandardKeyword,
   listCategories,
@@ -15,12 +16,19 @@ import {
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { MyEditionsSection } from '../components/onboarding/MyEditionsSection'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
+import { isHiddenNewsCategory } from '../utils/newsTaxonomy'
+
+function sameIds(a: string[], b: string[]) {
+  return [...a].sort().join('|') === [...b].sort().join('|')
+}
 
 export function SettingsPage() {
   const toast = useToast()
   const qc = useQueryClient()
+  const location = useLocation()
   const { isAdmin, canEditAny, canEditEdition } = usePermissions()
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -41,7 +49,6 @@ export function SettingsPage() {
     null,
   )
   const [newEditionName, setNewEditionName] = useState('')
-  const [newEditionSlug, setNewEditionSlug] = useState('')
   const [newEditionTerms, setNewEditionTerms] = useState('')
   const [newKeywordByEdition, setNewKeywordByEdition] = useState<Record<string, string>>({})
 
@@ -78,7 +85,6 @@ export function SettingsPage() {
     mutationFn: () =>
       createEdition({
         name: newEditionName.trim(),
-        slug: newEditionSlug.trim().toLowerCase(),
         topic_terms: newEditionTerms
           .split(/[,/\n]/)
           .map((term) => term.trim())
@@ -86,7 +92,6 @@ export function SettingsPage() {
       }),
     onSuccess: () => {
       setNewEditionName('')
-      setNewEditionSlug('')
       setNewEditionTerms('')
       void qc.invalidateQueries({ queryKey: ['editions'] })
       toast('사업 분야를 추가했습니다. 키워드와 소스를 이어서 등록하세요.')
@@ -107,7 +112,7 @@ export function SettingsPage() {
         if (!current) return current
         const next = { ...current }
         delete next[vars.editionId]
-        return next
+        return Object.keys(next).length ? next : null
       })
       toast('지면 메인 키워드를 저장했습니다.')
     },
@@ -142,36 +147,57 @@ export function SettingsPage() {
     onError: (error) => toast(apiErrorDetail(error) ?? '분야 수정에 실패했습니다.', 'err'),
   })
 
-  const featuredKeywordIds = (editionId: string) =>
-    editionFeaturedDraft?.[editionId] ??
+  const savedFeaturedKeywordIds = (editionId: string) =>
     keywords
       .filter((item) => item.edition_id === editionId && item.is_featured)
       .map((item) => item.id)
 
+  const featuredKeywordIds = (editionId: string) =>
+    editionFeaturedDraft?.[editionId] ?? savedFeaturedKeywordIds(editionId)
+
+  const editionFeaturedDirty = (editionId: string) =>
+    Boolean(editionFeaturedDraft && editionId in editionFeaturedDraft)
+
   const toggleEditionKeyword = (editionId: string, keywordId: string) => {
     const current = featuredKeywordIds(editionId)
-    setEditionFeaturedDraft((draft) => ({
-      ...(draft ?? {}),
-      [editionId]: current.includes(keywordId)
-        ? current.filter((item) => item !== keywordId)
-        : [...current, keywordId],
-    }))
+    const next = current.includes(keywordId)
+      ? current.filter((item) => item !== keywordId)
+      : [...current, keywordId]
+    const saved = savedFeaturedKeywordIds(editionId)
+    setEditionFeaturedDraft((draft) => {
+      const copy = { ...(draft ?? {}) }
+      if (sameIds(next, saved)) delete copy[editionId]
+      else copy[editionId] = next
+      return Object.keys(copy).length ? copy : null
+    })
   }
 
+  const savedFeaturedCategoryIds = categories
+    .filter((item) => item.is_featured)
+    .map((item) => item.id)
+  const featuredDirty = featuredDraft !== null && !sameIds(featuredDraft, savedFeaturedCategoryIds)
+
   const toggleFeatured = (id: string) => {
-    setFeaturedDraft(
-      featuredCategories.includes(id)
-        ? featuredCategories.filter((item) => item !== id)
-        : [...featuredCategories, id],
-    )
+    const next = featuredCategories.includes(id)
+      ? featuredCategories.filter((item) => item !== id)
+      : [...featuredCategories, id]
+    setFeaturedDraft(sameIds(next, savedFeaturedCategoryIds) ? null : next)
   }
+
+  useEffect(() => {
+    const id = location.hash.replace('#', '')
+    if (!id) return
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [location.hash])
 
   return (
     <PageShell
       section="설정"
       title="설정"
-      lead="사업 분야 지면과 뉴스 탭 강조 분야를 관리합니다."
+      lead="볼 지면과 사업 분야를 관리합니다."
     >
+      {!isAdmin && <MyEditionsSection />}
+      {canEditAny && (
       <section className="settings-section" id="editions">
         <header className="settings-section-head">
           <div>
@@ -182,12 +208,6 @@ export function SettingsPage() {
             </p>
           </div>
         </header>
-        {!canEditAny ? (
-          <p className="personal-empty personal-empty-inline">
-            사업 분야·지면 키워드는 총관 또는 분야 편집장만 변경할 수 있습니다.
-          </p>
-        ) : (
-          <>
             {isAdmin && (
             <div className="keyword-create edition-create">
               <input
@@ -198,20 +218,14 @@ export function SettingsPage() {
               />
               <input
                 className="input"
-                value={newEditionSlug}
-                onChange={(e) => setNewEditionSlug(e.target.value)}
-                placeholder="슬러그 (예: hydrogen)"
-              />
-              <input
-                className="input"
                 value={newEditionTerms}
                 onChange={(e) => setNewEditionTerms(e.target.value)}
-                placeholder="주제 키워드, 쉼표로 구분"
+                placeholder="주제 키워드, 쉼표로 구분 (선택)"
               />
               <Btn
                 variant="outline"
                 size="sm"
-                disabled={!newEditionName.trim() || !newEditionSlug.trim() || addEdition.isPending}
+                disabled={!newEditionName.trim() || addEdition.isPending}
                 onClick={() => addEdition.mutate()}
               >
                 분야 추가
@@ -224,16 +238,14 @@ export function SettingsPage() {
                 (item) =>
                   item.scope === 'organization' &&
                   item.status !== 'archived' &&
-                  (item.edition_id === edition.id || !item.edition_id),
+                  item.edition_id === edition.id,
               )
               const selected = featuredKeywordIds(edition.id)
+              const dirty = editionFeaturedDirty(edition.id)
               return (
                 <div key={edition.id} className="keyword-section">
                   <div className="keyword-section-head">
-                    <h3>
-                      {edition.name}
-                      <span className="edition-slug">/{edition.slug}</span>
-                    </h3>
+                    <h3>{edition.name}</h3>
                     {isAdmin && (
                     <label className="edition-active-toggle">
                       <input
@@ -256,17 +268,20 @@ export function SettingsPage() {
                       지정해 주세요.
                     </p>
                   )}
-                  <div className="personal-category-keywords" style={{ padding: 0 }}>
+                  <div className="pick-list pick-list-dense">
                     {editionKeywords.map((keyword) => (
-                      <button
-                        type="button"
+                      <label
                         key={keyword.id}
-                        className={`keyword-chip-option ${selected.includes(keyword.id) ? 'selected' : ''}`}
-                        disabled={!canEdit}
-                        onClick={() => canEdit && toggleEditionKeyword(edition.id, keyword.id)}
+                        className={`pick-row${selected.includes(keyword.id) ? ' is-on' : ''}`}
                       >
-                        {keyword.name}
-                      </button>
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(keyword.id)}
+                          disabled={!canEdit}
+                          onChange={() => canEdit && toggleEditionKeyword(edition.id, keyword.id)}
+                        />
+                        <span>{keyword.name}</span>
+                      </label>
                     ))}
                     {editionKeywords.length === 0 && (
                       <p className="personal-empty personal-empty-inline">
@@ -311,9 +326,9 @@ export function SettingsPage() {
                   </div>
                   <div className="settings-section-actions">
                     <Btn
-                      variant="outline"
+                      variant={dirty ? 'primary' : 'outline'}
                       size="sm"
-                      disabled={!canEdit || saveEditionFeatured.isPending}
+                      disabled={!canEdit || !dirty || saveEditionFeatured.isPending}
                       onClick={() =>
                         saveEditionFeatured.mutate({
                           editionId: edition.id,
@@ -321,56 +336,85 @@ export function SettingsPage() {
                         })
                       }
                     >
-                      {edition.name} 메인 키워드 저장
+                      {dirty ? `${edition.name} · 저장되지 않은 변경` : `${edition.name} 메인 키워드 저장`}
                     </Btn>
                   </div>
                 </div>
               )
             })}
-          </>
-        )}
       </section>
+      )}
 
+      {isAdmin && (
       <section className="settings-section">
         <header className="settings-section-head">
           <div>
             <h3>뉴스 탭 강조 분야</h3>
-            <p>뉴스 화면 상단 칩에서 강조하는 카테고리입니다. 홈 지면 키워드와는 별개입니다.</p>
+            <p>뉴스 필터에 노출하는 분류입니다. 지면별로 나누고, 일반·커뮤니티는 분류에서 빼 둡니다.</p>
           </div>
-          {isAdmin && (
             <Btn
-              variant="outline"
+              variant={featuredDirty ? 'primary' : 'outline'}
               size="sm"
               onClick={() => saveFeatured.mutate()}
-              disabled={saveFeatured.isPending || featuredCategories.length < 1}
+              disabled={saveFeatured.isPending || !featuredDirty || featuredCategories.length < 1}
             >
-              메인 분야 저장
+              {featuredDirty ? '저장되지 않은 변경 · 저장' : '메인 분야 저장'}
             </Btn>
-          )}
         </header>
-        {!isAdmin && (
-          <p className="personal-empty personal-empty-inline">
-            뉴스 탭 강조 분야는 관리자만 변경할 수 있습니다.
-          </p>
-        )}
-        <div className="category-grid category-grid-compact">
-          {sortedCategories.map((category) => {
-            const featured = featuredCategories.includes(category.id)
-            return (
-              <button
-                type="button"
-                key={`featured-${category.id}`}
-                className={`category-option category-option-compact ${featured ? 'featured' : ''} ${isAdmin ? '' : 'readonly'}`}
-                onClick={() => isAdmin && toggleFeatured(category.id)}
-                disabled={!isAdmin}
-              >
-                <span>{category.name}</span>
-                <small>{featured ? '메인' : isAdmin ? '탭하여 지정' : ''}</small>
-              </button>
-            )
-          })}
-        </div>
+        {editions.map((edition) => {
+          const cats = sortedCategories.filter(
+            (item) => item.edition_id === edition.id && !isHiddenNewsCategory(item),
+          )
+          const main = cats.filter((item) => !item.is_discovered)
+          const discovered = cats.filter((item) => item.is_discovered)
+          if (!cats.length) return null
+          return (
+            <div key={edition.id} className="keyword-section">
+              <div className="keyword-section-head">
+                <h4>{edition.name}</h4>
+              </div>
+              <div className="category-grid category-grid-compact">
+                {main.map((category) => {
+                  const featured = featuredCategories.includes(category.id)
+                  return (
+                    <button
+                      type="button"
+                      key={`featured-${category.id}`}
+                      className={`category-option category-option-compact ${featured ? 'featured' : ''}`}
+                      onClick={() => toggleFeatured(category.id)}
+                    >
+                      <span>{category.name}</span>
+                      <small>{featured ? '메인' : '탭하여 지정'}</small>
+                    </button>
+                  )
+                })}
+              </div>
+              {discovered.length > 0 && (
+                <>
+                  <p className="settings-discovered-label">발견 분류</p>
+                  <div className="category-grid category-grid-compact category-grid-discovered">
+                    {discovered.map((category) => {
+                      const featured = featuredCategories.includes(category.id)
+                      return (
+                        <button
+                          type="button"
+                          key={`featured-${category.id}`}
+                          className={`category-option category-option-compact category-option-discovered ${featured ? 'featured' : ''}`}
+                          onClick={() => toggleFeatured(category.id)}
+                        >
+                          <span>{category.name}</span>
+                          <small>{featured ? '메인' : '탭하여 지정'}</small>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })}
       </section>
+      )}
     </PageShell>
   )
 }

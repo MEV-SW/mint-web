@@ -1,8 +1,11 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { ChatWidget } from '../chat/ChatWidget'
 import { TopNav } from './TopNav'
 
 export function AppLayout() {
+  const { pathname } = useLocation()
+  const showChat = pathname === '/' || pathname.startsWith('/news')
+
   return (
     <div className="app app-topnav">
       <TopNav />
@@ -11,7 +14,7 @@ export function AppLayout() {
           <Outlet />
         </div>
       </div>
-      <ChatWidget />
+      {showChat && <ChatWidget />}
     </div>
   )
 }

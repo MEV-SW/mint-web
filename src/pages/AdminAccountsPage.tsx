@@ -1,34 +1,53 @@
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import {
-  addInquiryMessage,
-  closeInquiry,
-  getInquiry,
-  listInquiries,
-  type Inquiry,
-  type InquiryStatus,
-} from '../api/inquiryApi'
 import { listEditions } from '../api/editionApi'
-import { listUsers, setUserActive, updateUserEditions, type UserAdmin } from '../api/usersApi'
+import {
+  listUsers,
+  setUserActive,
+  updateUserEditions,
+  updateUserRole,
+  type UserAdmin,
+  type UserEditionAssignment,
+} from '../api/usersApi'
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { useAuthStore } from '../store/authStore'
 import { formatDateTime } from '../utils/date'
 import { apiErrorDetail } from '../utils/apiError'
+import type { Edition } from '../types/edition'
 
-const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
-  open: '미답변',
-  answered: '답변 완료',
-  closed: '종료',
+type Filter = 'all' | 'unassigned' | 'admin' | 'pending' | 'inactive'
+
+function membershipsOf(user: UserAdmin) {
+  return new Map((user.editions ?? []).map((item) => [item.id, item.is_editor]))
+}
+
+function assignmentsFrom(map: Map<string, boolean>): UserEditionAssignment[] {
+  return [...map.entries()].map(([edition_id, is_editor]) => ({ edition_id, is_editor }))
+}
+
+function sameAssignments(a: UserEditionAssignment[], b: UserEditionAssignment[]) {
+  const key = (items: UserEditionAssignment[]) =>
+    [...items]
+      .sort((x, y) => x.edition_id.localeCompare(y.edition_id))
+      .map((item) => `${item.edition_id}:${item.is_editor ? 1 : 0}`)
+      .join('|')
+  return key(a) === key(b)
+}
+
+function draftFor(user: UserAdmin, drafts: Record<string, UserEditionAssignment[]>) {
+  return drafts[user.id] ?? assignmentsFrom(membershipsOf(user))
 }
 
 export function AdminAccountsPage() {
   const toast = useToast()
   const qc = useQueryClient()
-
-  const [statusFilter, setStatusFilter] = useState<InquiryStatus | 'all'>('all')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [reply, setReply] = useState('')
+  const me = useAuthStore((s) => s.user)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
+  const [drafts, setDrafts] = useState<Record<string, UserEditionAssignment[]>>({})
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
 
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['users'],
@@ -39,22 +58,16 @@ export function AdminAccountsPage() {
     queryFn: () => listEditions(false),
   })
 
-  const { data: inquiries = [], isLoading: inquiriesLoading } = useQuery({
-    queryKey: ['inquiries', 'admin', statusFilter],
-    queryFn: () => listInquiries(statusFilter === 'all' ? undefined : statusFilter),
-  })
-
-  const { data: detail } = useQuery({
-    queryKey: ['inquiry', selectedId],
-    queryFn: () => getInquiry(selectedId!),
-    enabled: !!selectedId,
-  })
-
   const saveEditions = useMutation({
-    mutationFn: ({ userId, editions: next }: { userId: string; editions: { edition_id: string; is_editor: boolean }[] }) =>
+    mutationFn: ({ userId, editions: next }: { userId: string; editions: UserEditionAssignment[] }) =>
       updateUserEditions(userId, next),
-    onSuccess: () => {
+    onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: ['users'] })
+      setDrafts((current) => {
+        const next = { ...current }
+        delete next[vars.userId]
+        return next
+      })
       toast('분야 배정을 저장했습니다.')
     },
     onError: (e) => toast(apiErrorDetail(e) || '분야 배정 실패', 'err'),
@@ -70,282 +83,285 @@ export function AdminAccountsPage() {
     onError: (e) => toast(apiErrorDetail(e) || '상태 변경 실패', 'err'),
   })
 
-  const sendReply = useMutation({
-    mutationFn: () => addInquiryMessage(selectedId!, reply.trim()),
-    onSuccess: () => {
-      setReply('')
-      qc.invalidateQueries({ queryKey: ['inquiry', selectedId] })
-      qc.invalidateQueries({ queryKey: ['inquiries'] })
-      qc.invalidateQueries({ queryKey: ['inquiries-open-count'] })
-      toast('답변을 등록했습니다.')
+  const saveRole = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: 'admin' | 'viewer' }) =>
+      updateUserRole(userId, role),
+    onSuccess: (row) => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast(row.role === 'admin' ? '총관으로 지정했습니다.' : '총관을 해제했습니다.')
     },
-    onError: (e) => toast(apiErrorDetail(e) || '답변 등록 실패', 'err'),
+    onError: (e) => toast(apiErrorDetail(e) || '역할 변경 실패', 'err'),
   })
 
-  const close = useMutation({
-    mutationFn: () => closeInquiry(selectedId!),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inquiry', selectedId] })
-      qc.invalidateQueries({ queryKey: ['inquiries'] })
-      qc.invalidateQueries({ queryKey: ['inquiries-open-count'] })
-      toast('문의를 종료했습니다.', 'info')
-    },
-    onError: (e) => toast(apiErrorDetail(e) || '종료 실패', 'err'),
-  })
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    return users.filter((user) => {
+      if (needle) {
+        const hay = `${user.name} ${user.email}`.toLowerCase()
+        if (!hay.includes(needle)) return false
+      }
+      if (filter === 'unassigned') return user.role !== 'admin' && (user.editions ?? []).length === 0
+      if (filter === 'admin') return user.role === 'admin'
+      if (filter === 'pending') return user.approval_status === 'pending'
+      if (filter === 'inactive') return !user.is_active
+      return true
+    })
+  }, [users, query, filter])
 
-  function selectInquiry(item: Inquiry) {
-    setSelectedId(item.id)
-    setReply('')
-  }
-
-  function membershipsOf(user: UserAdmin) {
-    return new Map((user.editions ?? []).map((item) => [item.id, item.is_editor]))
+  function setDraft(user: UserAdmin, next: UserEditionAssignment[]) {
+    const saved = assignmentsFrom(membershipsOf(user))
+    setDrafts((current) => {
+      const copy = { ...current }
+      if (sameAssignments(saved, next)) delete copy[user.id]
+      else copy[user.id] = next
+      return copy
+    })
   }
 
   function toggleMembership(user: UserAdmin, editionId: string) {
-    const current = membershipsOf(user)
+    const current = new Map(draftFor(user, drafts).map((item) => [item.edition_id, item.is_editor]))
     if (current.has(editionId)) current.delete(editionId)
     else current.set(editionId, false)
-    saveEditions.mutate({
-      userId: user.id,
-      editions: [...current.entries()].map(([edition_id, is_editor]) => ({ edition_id, is_editor })),
-    })
+    setDraft(user, assignmentsFrom(current))
   }
 
   function toggleEditor(user: UserAdmin, editionId: string) {
-    const current = membershipsOf(user)
+    const current = new Map(draftFor(user, drafts).map((item) => [item.edition_id, item.is_editor]))
     if (!current.has(editionId)) current.set(editionId, true)
     else current.set(editionId, !current.get(editionId))
-    saveEditions.mutate({
-      userId: user.id,
-      editions: [...current.entries()].map(([edition_id, is_editor]) => ({ edition_id, is_editor })),
-    })
+    setDraft(user, assignmentsFrom(current))
+  }
+
+  function confirmAdmin(user: UserAdmin, makeAdmin: boolean) {
+    if (makeAdmin) {
+      if (!window.confirm(`${user.name}님을 총관으로 지정할까요? 모든 지면과 계정·문의 관리를 볼 수 있습니다.`)) {
+        return
+      }
+      saveRole.mutate({ userId: user.id, role: 'admin' })
+      return
+    }
+    if (!window.confirm(`${user.name}님의 총관을 해제할까요? 지정된 분야만 보게 됩니다.`)) return
+    saveRole.mutate({ userId: user.id, role: 'viewer' })
+  }
+
+  function confirmActive(user: UserAdmin, nextActive: boolean) {
+    if (!nextActive) {
+      if (!window.confirm(`${user.name}님 계정을 비활성화할까요? 로그인이 막힙니다.`)) return
+    }
+    toggleActive.mutate({ userId: user.id, isActive: nextActive })
   }
 
   return (
     <PageShell
-      section="관리 · Accounts"
+      section="관리 · 계정"
       title="계정 관리"
-      lead="SSO로 들어온 구성원에게 사업 분야를 배정하고 문의를 처리합니다."
+      lead="SSO로 들어온 구성원에게 사업 분야를 배정하고 총관을 지정합니다."
       leadSingleLine
     >
-      <section className="admin-accounts-section">
-        <header className="admin-accounts-section-head">
-          <h2>분야 배정</h2>
-          <p>한 사람은 여러 분야에 속할 수 있고, 분야 편집장도 여러 명일 수 있습니다.</p>
-        </header>
+      <div className="admin-accounts-toolbar">
+        <input
+          className="input"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="이름 또는 이메일 검색"
+          aria-label="이름 또는 이메일 검색"
+        />
+        <div className="seg" role="tablist" aria-label="계정 필터">
+          {(
+            [
+              ['all', '전체'],
+              ['unassigned', '미배정'],
+              ['admin', '총관'],
+              ['pending', '승인 대기'],
+              ['inactive', '비활성'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={filter === id ? 'on' : undefined}
+              onClick={() => setFilter(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead>
+      <div className="tbl-wrap">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th>이메일</th>
+              <th>분야</th>
+              <th style={{ width: 88 }}>총관</th>
+              <th style={{ width: 100 }}>활성</th>
+              <th className="num" style={{ width: 168 }}>최근 로그인</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usersLoading && (
               <tr>
-                <th>이름</th>
-                <th>이메일</th>
-                <th>분야</th>
-                <th style={{ width: 100 }}>활성</th>
-                <th style={{ width: 160 }}>최근 로그인</th>
+                <td colSpan={6}>로딩 중…</td>
               </tr>
-            </thead>
-            <tbody>
-              {usersLoading && (
-                <tr>
-                  <td colSpan={5}>로딩 중…</td>
-                </tr>
-              )}
-              {!usersLoading && users.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={{ color: 'var(--text-muted)' }}>
-                    SSO로 로그인한 사용자가 아직 없습니다.
+            )}
+            {!usersLoading && visible.length === 0 && (
+              <tr>
+                <td colSpan={6} className="sources-empty-cell">
+                  {users.length === 0
+                    ? 'SSO로 로그인한 사용자가 아직 없습니다.'
+                    : '조건에 맞는 계정이 없습니다.'}
+                </td>
+              </tr>
+            )}
+            {visible.map((user) => {
+              const assigned = new Map(draftFor(user, drafts).map((item) => [item.edition_id, item.is_editor]))
+              const dirty = Boolean(drafts[user.id])
+              const isSelf = me?.id === user.id
+              return (
+                <tr key={user.id} className={dirty ? 'admin-accounts-row-dirty' : undefined}>
+                  <td>
+                    {user.name}
+                    {user.role === 'admin' && (
+                      <span className="pill" style={{ marginLeft: 8 }}>
+                        총관
+                      </span>
+                    )}
+                    {isSelf && (
+                      <span className="pill" style={{ marginLeft: 8 }}>
+                        나
+                      </span>
+                    )}
+                  </td>
+                  <td>{user.email}</td>
+                  <td>
+                    {(() => {
+                      const named = editions.filter((edition) => assigned.has(edition.id))
+                      const summary =
+                        named.length === 0
+                          ? '미배정'
+                          : named
+                              .map((edition) =>
+                                assigned.get(edition.id) ? `${edition.name}·편집` : edition.name,
+                              )
+                              .join(', ')
+                      const open = editingUserId === user.id || dirty
+                      return (
+                        <div className="account-editions">
+                          <div className="account-editions-summary">
+                            <span>{summary}</span>
+                            <button
+                              type="button"
+                              className="news-chip-toggle"
+                              onClick={() =>
+                                setEditingUserId((current) => (current === user.id ? null : user.id))
+                              }
+                            >
+                              {open ? '접기' : '수정'}
+                            </button>
+                          </div>
+                          {open && (
+                            <div className="pick-list">
+                              {editions.map((edition: Edition) => {
+                                const on = assigned.has(edition.id)
+                                const editor = assigned.get(edition.id) === true
+                                return (
+                                  <label key={edition.id} className={`pick-row${on ? ' is-on' : ''}`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={on}
+                                      disabled={saveEditions.isPending}
+                                      onChange={() => toggleMembership(user, edition.id)}
+                                    />
+                                    <span>{edition.name}</span>
+                                    {on && (
+                                      <button
+                                        type="button"
+                                        className="pick-row-sub"
+                                        disabled={saveEditions.isPending}
+                                        onClick={() => toggleEditor(user, edition.id)}
+                                      >
+                                        {editor ? '편집장' : '열람'}
+                                      </button>
+                                    )}
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          )}
+                          {dirty && (
+                            <div className="admin-accounts-row-actions">
+                              <Btn
+                                variant="primary"
+                                size="sm"
+                                disabled={saveEditions.isPending}
+                                onClick={() =>
+                                  saveEditions.mutate({
+                                    userId: user.id,
+                                    editions: drafts[user.id] ?? [],
+                                  })
+                                }
+                              >
+                                배정 저장
+                              </Btn>
+                              <Btn
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setDrafts((current) => {
+                                    const next = { ...current }
+                                    delete next[user.id]
+                                    return next
+                                  })
+                                }
+                              >
+                                취소
+                              </Btn>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </td>
+                  <td>
+                    <label className="edition-active-toggle">
+                      <input
+                        type="checkbox"
+                        checked={user.role === 'admin'}
+                        disabled={saveRole.isPending || isSelf}
+                        title={isSelf ? '자신의 총관 권한은 해제할 수 없습니다.' : '총관 지정'}
+                        onChange={(e) => confirmAdmin(user, e.target.checked)}
+                      />
+                      {user.role === 'admin' ? '총관' : '일반'}
+                    </label>
+                  </td>
+                  <td>
+                    <label className="edition-active-toggle">
+                      <input
+                        type="checkbox"
+                        checked={user.is_active}
+                        disabled={toggleActive.isPending || isSelf}
+                        title={isSelf ? '자신의 계정은 비활성화할 수 없습니다.' : undefined}
+                        onChange={(e) => confirmActive(user, e.target.checked)}
+                      />
+                      {user.approval_status === 'pending'
+                        ? '승인 대기'
+                        : user.is_active
+                          ? '활성'
+                          : '비활성'}
+                    </label>
+                  </td>
+                  <td className="mono admin-accounts-login">
+                    <span>{formatDateTime(user.last_login_at)}</span>
+                    <small>가입 {formatDateTime(user.created_at)}</small>
                   </td>
                 </tr>
-              )}
-              {users.map((user) => {
-                const assigned = membershipsOf(user)
-                return (
-                  <tr key={user.id}>
-                    <td>
-                      {user.name}
-                      {user.role === 'admin' && (
-                        <span className="pill" style={{ marginLeft: 8 }}>
-                          총관
-                        </span>
-                      )}
-                    </td>
-                    <td>{user.email}</td>
-                    <td>
-                      <div className="personal-category-keywords" style={{ padding: 0, gap: 6 }}>
-                        {editions.map((edition) => {
-                          const on = assigned.has(edition.id)
-                          const editor = assigned.get(edition.id) === true
-                          return (
-                            <span key={edition.id} style={{ display: 'inline-flex', gap: 4 }}>
-                              <button
-                                type="button"
-                                className={`keyword-chip-option ${on ? 'selected' : ''}`}
-                                disabled={saveEditions.isPending}
-                                onClick={() => toggleMembership(user, edition.id)}
-                              >
-                                {edition.name}
-                              </button>
-                              {on && (
-                                <button
-                                  type="button"
-                                  className={`keyword-chip-option ${editor ? 'selected' : ''}`}
-                                  disabled={saveEditions.isPending}
-                                  title="이 분야 편집장"
-                                  onClick={() => toggleEditor(user, edition.id)}
-                                >
-                                  편집장
-                                </button>
-                              )}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </td>
-                    <td>
-                      <label className="edition-active-toggle">
-                        <input
-                          type="checkbox"
-                          checked={user.is_active}
-                          disabled={toggleActive.isPending}
-                          onChange={(e) =>
-                            toggleActive.mutate({ userId: user.id, isActive: e.target.checked })
-                          }
-                        />
-                        {user.is_active ? '활성' : '차단'}
-                      </label>
-                    </td>
-                    <td className="mono" style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-                      {formatDateTime(user.created_at)}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="admin-accounts-section">
-        <header className="admin-accounts-section-head">
-          <h2>문의 관리</h2>
-          <p>사용자 문의를 확인하고 답변합니다.</p>
-        </header>
-
-        <div className="inquiry-layout">
-          <div className="inquiry-list-panel">
-            <div className="seg" style={{ marginBottom: 12 }}>
-              <button
-                type="button"
-                className={statusFilter === 'all' ? 'on' : undefined}
-                onClick={() => setStatusFilter('all')}
-              >
-                전체
-              </button>
-              <button
-                type="button"
-                className={statusFilter === 'open' ? 'on' : undefined}
-                onClick={() => setStatusFilter('open')}
-              >
-                미답변
-              </button>
-              <button
-                type="button"
-                className={statusFilter === 'answered' ? 'on' : undefined}
-                onClick={() => setStatusFilter('answered')}
-              >
-                답변 완료
-              </button>
-            </div>
-
-            {inquiriesLoading && <p style={{ color: 'var(--text-muted)' }}>로딩 중…</p>}
-            {!inquiriesLoading && inquiries.length === 0 && (
-              <p style={{ color: 'var(--text-muted)' }}>문의가 없습니다.</p>
-            )}
-            <ul className="inquiry-list">
-              {inquiries.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={`inquiry-list-item${selectedId === item.id ? ' active' : ''}`}
-                    onClick={() => selectInquiry(item)}
-                  >
-                    <strong>{item.title}</strong>
-                    <span>
-                      {item.user.name} · {INQUIRY_STATUS_LABELS[item.status]}
-                    </span>
-                    <span className="mono">{formatDateTime(item.updated_at)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="inquiry-detail-panel">
-            {!detail && <p style={{ color: 'var(--text-muted)' }}>문의를 선택하세요.</p>}
-            {detail && (
-              <>
-                <header className="inquiry-detail-head">
-                  <h3>{detail.title}</h3>
-                  <p>
-                    {detail.user.name} ({detail.user.email}) · {INQUIRY_STATUS_LABELS[detail.status]}
-                  </p>
-                </header>
-                <div className="inquiry-thread">
-                  {detail.messages.map((msg) => (
-                    <article
-                      key={msg.id}
-                      className={`inquiry-message${msg.author.role === 'admin' ? ' admin' : ''}`}
-                    >
-                      <header>
-                        <strong>{msg.author.name}</strong>
-                        <span className="mono">{formatDateTime(msg.created_at)}</span>
-                      </header>
-                      <p>{msg.body}</p>
-                    </article>
-                  ))}
-                </div>
-                {detail.status !== 'closed' && (
-                  <form
-                    className="inquiry-reply-form"
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      if (!reply.trim()) return
-                      sendReply.mutate()
-                    }}
-                  >
-                    <textarea
-                      className="input"
-                      rows={4}
-                      value={reply}
-                      onChange={(e) => setReply(e.target.value)}
-                      placeholder="답변을 입력하세요"
-                    />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <Btn
-                        variant="primary"
-                        type="submit"
-                        disabled={sendReply.isPending || !reply.trim()}
-                      >
-                        답변 등록
-                      </Btn>
-                      <Btn
-                        variant="outline"
-                        type="button"
-                        disabled={close.isPending}
-                        onClick={() => close.mutate()}
-                      >
-                        문의 종료
-                      </Btn>
-                    </div>
-                  </form>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </section>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </PageShell>
   )
 }

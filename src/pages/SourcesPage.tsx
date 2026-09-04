@@ -15,6 +15,7 @@ import {
 import { TrustBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
+import { OverflowMenu } from '../components/common/OverflowMenu'
 import { Modal } from '../components/common/Modal'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
@@ -49,7 +50,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   news_page: '뉴스',
   notice_page: '공지',
   manual: '수동',
-  reddit: 'Reddit',
+  reddit: 'Reddit (수집 불가)',
   community_forum: '커뮤니티',
 }
 
@@ -73,13 +74,18 @@ function sourceToForm(s: Source): SourceCreate {
 }
 
 function normalizeFormForSave(form: SourceCreate, mode: AddMode): SourceCreate {
-  if (mode !== 'community') return form
+  const reddit = form.source_type === 'reddit'
+  if (mode !== 'community') {
+    return reddit ? { ...form, is_active: false, crawl_frequency: 'daily' } : { ...form, crawl_frequency: 'daily' }
+  }
   return {
     ...form,
     trust_level: 'low',
     reliability_score: 45,
     auto_publish: false,
     category: '커뮤니티/현장',
+    crawl_frequency: 'daily',
+    is_active: reddit ? false : form.is_active,
   }
 }
 
@@ -213,9 +219,9 @@ export function SourcesPage() {
     try {
       await crawlSource(s.id)
       qc.invalidateQueries({ queryKey: ['jobs'] })
-      toast('크롤링을 백그라운드에서 시작했습니다. 상단 작업 패널에서 진행 상태를 확인하세요.', 'info')
+      toast('중요 게시판 수집을 백그라운드에서 시작했습니다. 상단 작업 패널에서 진행 상태를 확인하세요.', 'info')
     } catch (e) {
-      toast(apiErrorDetail(e) || '크롤링 요청 실패', 'err')
+      toast(apiErrorDetail(e) || '중요 게시판 수집 요청 실패', 'err')
     } finally {
       setCrawling(null)
     }
@@ -226,9 +232,9 @@ export function SourcesPage() {
     try {
       await crawlSourceToDiscovery(s.id)
       qc.invalidateQueries({ queryKey: ['jobs'] })
-      toast('[발견] 백그라운드에서 실행 중입니다. 작업 패널에서 진행 상태를 확인하세요.', 'info')
+      toast('탐문 수집을 백그라운드에서 시작했습니다. 작업 패널에서 진행 상태를 확인하세요.', 'info')
     } catch (e) {
-      toast(apiErrorDetail(e) || '[발견] 크롤링 요청 실패', 'err')
+      toast(apiErrorDetail(e) || '탐문 수집 요청 실패', 'err')
     } finally {
       setCrawling(null)
     }
@@ -239,9 +245,9 @@ export function SourcesPage() {
     try {
       await crawlAllToDiscovery({ trusted_only: true })
       qc.invalidateQueries({ queryKey: ['jobs'] })
-      toast('[발견] 전체 파이프라인을 백그라운드에서 시작했습니다.', 'info')
+      toast('탐문 파이프라인을 백그라운드에서 시작했습니다.', 'info')
     } catch (e) {
-      toast(apiErrorDetail(e) || '[발견] 전체 파이프라인 요청 실패', 'err')
+      toast(apiErrorDetail(e) || '탐문 파이프라인 요청 실패', 'err')
     } finally {
       setRunningPipeline(false)
     }
@@ -292,9 +298,9 @@ export function SourcesPage() {
 
   return (
     <PageShell
-      section="관리 · Sources"
+      section="관리 · 소스"
       title="소스 관리"
-      lead="크롤링 대상 소스를 등록·관리합니다. 신뢰도와 자동 게시 여부에 따라 수집 글 처리 방식이 달라집니다."
+      lead="크롤링 대상을 등록합니다. 자동 수집은 매일 06:00·06:30(KST)에 돌아가며, 주기는 바꿀 수 없습니다."
       leadSingleLine
     >
       {busy && (
@@ -335,7 +341,7 @@ export function SourcesPage() {
                   disabled={busy || runningPipeline}
                   title={crawlBlockedTitle}
                 >
-                  {busy ? '…' : runningPipeline ? '…' : '실행'}
+                  {busy ? '…' : runningPipeline ? '…' : '지금 실행'}
                 </Btn>
               </div>
             </article>
@@ -364,7 +370,7 @@ export function SourcesPage() {
                   disabled={busy || runningCommunityPipeline}
                   title={crawlBlockedTitle}
                 >
-                  {busy ? '…' : runningCommunityPipeline ? '…' : '실행'}
+                  {busy ? '…' : runningCommunityPipeline ? '…' : '지금 실행'}
                 </Btn>
               </div>
             </article>
@@ -470,9 +476,9 @@ export function SourcesPage() {
                   <th style={{ width: 130 }}>관련 분야</th>
                   <th style={{ width: 130 }}>신뢰도</th>
                   <th style={{ width: 90 }}>자동 게시</th>
-                  <th style={{ width: 130 }}>마지막 크롤링</th>
+                  <th className="num" style={{ width: 130 }}>마지막 크롤링</th>
                   <th style={{ width: 76 }}>활성</th>
-                  <th style={{ width: 140 }} />
+                  <th style={{ width: 48 }} />
                 </tr>
               </thead>
               <tbody>
@@ -529,38 +535,59 @@ export function SourcesPage() {
                     </td>
                     <td>
                       <div
-                        className={`switch ${s.is_active ? 'on' : ''}`}
-                        onClick={() => toggleActive.mutate(s)}
+                        className={`switch ${s.is_active ? 'on' : ''} ${s.source_type === 'reddit' ? 'is-locked' : ''}`}
+                        onClick={() => {
+                          if (s.source_type === 'reddit' && !s.is_active) {
+                            toast('Reddit 소스는 서버에서 수집이 막혀 활성으로 둘 수 없습니다.', 'info')
+                            return
+                          }
+                          toggleActive.mutate(s)
+                        }}
                         role="button"
                         tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && toggleActive.mutate(s)}
+                        title={
+                          s.source_type === 'reddit'
+                            ? 'Reddit은 서버에서 수집이 막혀 활성으로 둘 수 없습니다.'
+                            : undefined
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return
+                          if (s.source_type === 'reddit' && !s.is_active) return
+                          toggleActive.mutate(s)
+                        }}
                       />
                     </td>
-                    <td>
-                      <div className="sources-row-actions">
-                        <Btn variant="ghost" size="sm" title="설정" onClick={() => openEdit(s)}>
-                          <Icon name="filter" />
-                        </Btn>
-                        <Btn
-                          variant="soft"
-                          size="sm"
-                          onClick={() => crawl(s)}
-                          disabled={busy || crawling === s.id || !s.is_active}
-                          title={busy ? crawlBlockedTitle : '중요 게시판 크롤링'}
-                        >
-                          <Icon name="refresh" className={crawling === s.id ? 'spin' : ''} />
-                        </Btn>
-                        <Btn
-                          variant="soft"
-                          size="sm"
-                          onClick={() => crawlDiscoveryPipeline(s)}
-                          disabled={busy || crawling === s.id || !s.is_active}
-                          title={busy ? crawlBlockedTitle : `${DISCOVERY_BOARD_LABEL} 크롤링`}
-                        >
-                          <Icon name="sparkles" className={crawling === s.id ? 'spin' : ''} />
-                        </Btn>
-                        <Btn variant="outline" size="sm" icon="trash" onClick={() => remove.mutate(s.id)} />
-                      </div>
+                    <td className="row-actions">
+                      <OverflowMenu
+                        items={[
+                          {
+                            key: 'edit',
+                            label: '수정',
+                            onClick: () => openEdit(s),
+                          },
+                          {
+                            key: 'trusted',
+                            label: '중요 수집',
+                            disabled: busy || crawling === s.id || !s.is_active,
+                            onClick: () => crawl(s),
+                          },
+                          {
+                            key: 'discovery',
+                            label: '탐문 수집',
+                            disabled: busy || crawling === s.id || !s.is_active,
+                            onClick: () => crawlDiscoveryPipeline(s),
+                          },
+                          {
+                            key: 'delete',
+                            label: '삭제',
+                            danger: true,
+                            onClick: () => {
+                              if (!window.confirm(`「${s.name}」 소스를 삭제할까요?`)) return
+                              remove.mutate(s.id)
+                            },
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}

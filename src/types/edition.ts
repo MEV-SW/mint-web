@@ -15,7 +15,7 @@ export interface Edition {
 
 export interface EditionCreate {
   name: string
-  slug: string
+  slug?: string
   topic_terms?: string[]
   sort_order?: number
   is_active?: boolean

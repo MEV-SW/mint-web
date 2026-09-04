@@ -10,12 +10,40 @@ import { Btn } from '../common/Btn'
 import { useToast } from '../common/Toast'
 import { apiErrorDetail } from '../../utils/apiError'
 
-const reasonLabel: Record<ReviewQueueItem['reason'], string> = {
-  low_confidence: '낮은 분류 신뢰도',
-  uncategorized: '카테고리 미분류',
-  no_keywords: '키워딩 실패',
-  new_keyword: '신규 키워드 후보',
-  extraction_failed: '키워딩 API 실패',
+const REASON_COPY: Record<
+  ReviewQueueItem['reason'],
+  { label: string; open: string; save: string; hint: string }
+> = {
+  low_confidence: {
+    label: '낮은 분류 신뢰도',
+    open: '분류 수정',
+    save: '분류 저장',
+    hint: '가장 가까운 주제를 고르면 검수가 끝납니다.',
+  },
+  uncategorized: {
+    label: '카테고리 미분류',
+    open: '분류 수정',
+    save: '분류 저장',
+    hint: '분야 키워드를 지정하면 검수가 끝납니다.',
+  },
+  no_keywords: {
+    label: '키워드 없음',
+    open: '키워드 지정',
+    save: '키워드 저장',
+    hint: '빈 키워드로 두지 말고 가장 가까운 주제를 붙이세요.',
+  },
+  new_keyword: {
+    label: '신규 키워드 후보',
+    open: '검토',
+    save: '키워드 승인',
+    hint: '후보를 승인하거나 기존 키워드로 바꾸세요.',
+  },
+  extraction_failed: {
+    label: '키워드 추출 실패',
+    open: '키워드 지정',
+    save: '키워드 저장',
+    hint: '직접 키워드를 고르면 검수가 끝납니다.',
+  },
 }
 
 type Props = {
@@ -89,7 +117,13 @@ export function ReviewQueueItemEditor({
         category: suggestedCategory,
       }),
     onSuccess: (data) => {
-      toast(`키워드 ${data.linked_keywords.length}개를 저장했습니다.`)
+      if (item.reason === 'new_keyword') {
+        toast(`키워드 ${data.linked_keywords.length}개를 승인했습니다.`)
+      } else if (item.reason === 'low_confidence' || item.reason === 'uncategorized') {
+        toast('분류를 저장했습니다.')
+      } else {
+        toast(`키워드 ${data.linked_keywords.length}개를 저장했습니다.`)
+      }
       invalidate()
     },
     onError: (e) => toast(apiErrorDetail(e) || '키워드 저장 실패', 'err'),
@@ -151,21 +185,31 @@ export function ReviewQueueItemEditor({
     return newNames.includes(s.name)
   }
 
+  const copy = REASON_COPY[item.reason]
+
   return (
     <article className={`review-queue-item${expanded ? ' expanded' : ''}`}>
       <div className="review-queue-item-head">
         <div className="review-queue-item-title">
-          <span className="review-queue-reason">{reasonLabel[item.reason]}</span>
+          <span className="review-queue-reason">{copy.label}</span>
           <Link to={`/posts/${item.post_id}`} state={{ from: '/admin/review-queue' }}>
             {item.post_title}
           </Link>
+          {item.detail && <p className="review-queue-item-detail">{item.detail}</p>}
         </div>
         <div className="review-queue-item-actions">
           <Btn size="sm" variant={expanded ? 'outline' : 'primary'} onClick={onToggle}>
-            {expanded ? '접기' : '키워딩'}
+            {expanded ? '접기' : copy.open}
           </Btn>
-          <Btn size="sm" variant="outline" onClick={() => onExcluded(item.id)}>
-            뉴스 제외
+          <Btn
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (!window.confirm('이 뉴스를 검수함에서 제외할까요?')) return
+              onExcluded(item.id)
+            }}
+          >
+            제외
           </Btn>
         </div>
       </div>
@@ -183,7 +227,7 @@ export function ReviewQueueItemEditor({
               {suggest.isPending ? 'AI 분석 중…' : 'AI 추천 받기'}
             </Btn>
             <span className="review-queue-editor-hint">
-              선택 {selectedCount}/5 · 저장 시 검수함에서 자동 완료
+              {copy.hint} 선택 {selectedCount}/5 · 저장 시 검수함에서 자동 완료
             </span>
           </div>
 
@@ -272,7 +316,7 @@ export function ReviewQueueItemEditor({
               onClick={() => apply.mutate()}
               disabled={!canSave || apply.isPending}
             >
-              {apply.isPending ? '저장 중…' : '키워드 저장'}
+              {apply.isPending ? '저장 중…' : copy.save}
             </Btn>
           </div>
         </div>

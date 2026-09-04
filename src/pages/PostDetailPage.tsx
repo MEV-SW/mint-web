@@ -69,13 +69,12 @@ export function PostDetailPage() {
   const isDiscovery = post.board_type === 'discovery'
   const showSplit = Boolean(post.original_url || post.raw_content?.trim())
   const backTo =
-    (location.state as { from?: string } | null)?.from ??
-    (isDiscovery ? '/discovery' : '/trusted')
+    (location.state as { from?: string } | null)?.from ?? '/news'
 
   return (
     <div className="content-inner page-fade np-sheet post-detail-page">
       <Link to={backTo} className="back-link">
-        <Icon name="chevL" style={{ width: 14, height: 14 }} /> 게시판으로
+        <Icon name="chevL" style={{ width: 14, height: 14 }} /> 뉴스로
       </Link>
 
       <article className="pg-article-hero">

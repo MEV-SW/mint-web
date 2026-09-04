@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { listEditions } from '../api/editionApi'
 import { generateReport, listReports } from '../api/reportApi'
 import { ReportCalendar } from '../components/reports/ReportCalendar'
 import { PageShell } from '../components/layout/PageShell'
@@ -15,6 +16,13 @@ export function ReportsPage() {
     queryKey: ['reports'],
     queryFn: listReports,
   })
+  const editionsQuery = useQuery({
+    queryKey: ['editions', 'active'],
+    queryFn: () => listEditions(true),
+  })
+  const editionNameById = new Map(
+    (editionsQuery.data ?? []).map((edition) => [edition.id, edition.name]),
+  )
 
   const generateOrg = useMutation({
     mutationFn: () => generateReport(),
@@ -34,7 +42,15 @@ export function ReportsPage() {
       lead="날짜를 골라 배정된 분야 브리핑을 확인합니다."
     >
       <ReportCalendar
-        orgReports={orgReports.data ?? []}
+        orgReports={(orgReports.data ?? []).map((report) => ({
+          id: report.id,
+          title: report.title,
+          report_date: report.report_date,
+          slack_sent: report.slack_sent,
+          edition_id: report.edition_id ?? null,
+          edition_name: report.edition_id ? editionNameById.get(report.edition_id) ?? null : null,
+          created_at: report.created_at,
+        }))}
         personalReports={[]}
         loading={orgReports.isLoading}
         hidePersonal

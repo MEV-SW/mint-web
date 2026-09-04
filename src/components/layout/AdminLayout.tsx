@@ -2,24 +2,30 @@ import { useQuery } from '@tanstack/react-query'
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { getOpenInquiryCount } from '../../api/inquiryApi'
 import { fetchDashboardStats } from '../../api/statsApi'
+import { listUsers } from '../../api/usersApi'
 import { cx } from '../../utils/cx'
-import { APP_NAV_ADMIN_SUB, adminNavBadgeCount } from './navItems'
+import { SETTINGS_PATH, adminNavBadgeCount, visibleAdminNav } from './navItems'
 import { usePermissions } from '../../hooks/usePermissions'
 
 export function AdminLayout() {
-  const { isAdmin } = usePermissions()
+  const { isAdmin, canEditAny } = usePermissions()
   const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
   const { data: openInquiries = 0 } = useQuery({
     queryKey: ['inquiries-open-count'],
     queryFn: getOpenInquiryCount,
     enabled: isAdmin,
   })
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: listUsers,
+    enabled: isAdmin,
+  })
 
-  const items = APP_NAV_ADMIN_SUB.filter((item) => isAdmin || !item.superAdminOnly)
+  const items = visibleAdminNav(isAdmin, canEditAny)
   const counts = {
     pending: stats?.review_queue_pending ?? 0,
     openInquiries,
-    pendingUsers: 0,
+    pendingUsers: users.filter((user) => user.approval_status === 'pending').length,
   }
 
   return (
@@ -46,5 +52,6 @@ export function AdminLayout() {
 }
 
 export function AdminIndexRedirect() {
-  return <Navigate to="/admin/review-queue" replace />
+  const { isAdmin, canEditAny } = usePermissions()
+  return <Navigate to={isAdmin || canEditAny ? '/admin/review-queue' : SETTINGS_PATH} replace />
 }

@@ -19,6 +19,9 @@ export function usePermissions() {
   const canWrite = canEditAny
   const canManageUsers = isAdmin
   const canSubmitInquiry = !!user && !isAdmin
+  const needsEditionOnboarding = Boolean(
+    user && !isAdmin && !(user.editions && user.editions.length > 0),
+  )
   const roleLabel = user
     ? isAdmin
       ? ROLE_LABELS.admin
@@ -35,6 +38,7 @@ export function usePermissions() {
     canWrite,
     canManageUsers,
     canSubmitInquiry,
+    needsEditionOnboarding,
     roleLabel,
   }
 }

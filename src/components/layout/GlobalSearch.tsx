@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { globalSearch } from '../../api/searchApi'
 import { Icon } from '../common/Icon'
 import { DISCOVERY_BOARD_LABEL, TRUSTED_BOARD_LABEL } from '../../constants/boardLabels'
+import { newsListPath } from '../../utils/newsListState'
+import { usePermissions } from '../../hooks/usePermissions'
 import { SearchHighlight } from '../common/SearchHighlight'
 
 function useDebounced(value: string, ms = 300): string {
@@ -17,6 +19,7 @@ function useDebounced(value: string, ms = 300): string {
 
 export function GlobalSearch() {
   const navigate = useNavigate()
+  const { canEditAny } = usePermissions()
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
@@ -66,11 +69,16 @@ export function GlobalSearch() {
 
   const goBoard = (board: 'trusted' | 'discovery') => {
     close()
-    navigate(`/${board}?keyword=${encodeURIComponent(debounced.trim())}`)
+    navigate(
+      newsListPath({
+        q: debounced.trim(),
+        kind: board === 'discovery' ? 'discovery' : 'news',
+      }),
+    )
   }
 
   const posts = data?.posts ?? []
-  const sources = data?.sources ?? []
+  const sources = canEditAny ? (data?.sources ?? []) : []
   const showLoading = canSearch && isFetching && posts.length === 0 && sources.length === 0
   const empty = canSearch && !isFetching && data && posts.length === 0 && sources.length === 0
   const errorDetail =

@@ -111,7 +111,7 @@ export function MintFrontPage({
           </div>
           {isAdmin && (
             <div className="np-personal-strip-right">
-              <Link to="/settings#editions" className="np-personal-edit">
+              <Link to="/admin/settings#editions" className="np-personal-edit">
                 지면 설정
               </Link>
             </div>

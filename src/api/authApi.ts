@@ -38,6 +38,13 @@ export async function fetchMe(): Promise<User> {
   return data
 }
 
+export async function setMyEditions(editionIds: string[]): Promise<User> {
+  const { data } = await apiClient.put<User>('/api/v1/auth/me/editions', {
+    edition_ids: editionIds,
+  })
+  return data
+}
+
 export async function logout(): Promise<void> {
   const revoked = await revokeRefreshToken()
   const idToken = takeIdToken()

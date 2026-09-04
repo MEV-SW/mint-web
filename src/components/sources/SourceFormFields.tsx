@@ -2,7 +2,6 @@ import type { SourceCreate, TrustLevel } from '../../types/source'
 import type { Edition } from '../../types/edition'
 import {
   COMMUNITY_SOURCE_TYPES,
-  CRAWL_FREQUENCIES,
   SOURCE_CATEGORIES,
   TRUST_SCORE_DEFAULTS,
 } from '../../types/source'
@@ -15,7 +14,7 @@ const ALL_SOURCE_TYPES: { value: SourceCreate['source_type']; label: string }[] 
   { value: 'news_page', label: '뉴스 페이지' },
   { value: 'notice_page', label: '공지사항' },
   { value: 'manual', label: '수동 등록' },
-  { value: 'reddit', label: 'Reddit / 서브레ddit' },
+  { value: 'reddit', label: 'Reddit (수집 비권장)' },
   { value: 'community_forum', label: '커뮤니티 게시판' },
 ]
 
@@ -68,6 +67,7 @@ export function SourceFormFields({
         reliability_score: TRUST_SCORE_DEFAULTS.low,
         auto_publish: false,
         category: '커뮤니티/현장',
+        is_active: sourceType === 'reddit' ? false : form.is_active,
       })
       return
     }
@@ -116,7 +116,7 @@ export function SourceFormFields({
           <label>유형</label>
           <select
             className="input"
-            value={form.source_type || (isCommunity ? 'reddit' : 'rss')}
+            value={form.source_type || (isCommunity ? 'community_forum' : 'rss')}
             disabled={lockSourceType}
             onChange={(e) =>
               setSourceType(e.target.value as SourceCreate['source_type'])
@@ -193,7 +193,7 @@ export function SourceFormFields({
               onChange={(e) => onChange({ ...form, auto_publish: e.target.checked })}
             />
             <div>
-              <div className="source-form-check-title">자동 게시 (auto-publish)</div>
+              <div className="source-form-check-title">자동 게시</div>
               <div className="source-form-check-desc">
                 켜면 수집 즉시 중요 게시판에 게시됩니다. 끄면 검토 대기 상태로 등록됩니다.
               </div>
@@ -202,34 +202,35 @@ export function SourceFormFields({
         </>
       )}
 
+      {form.source_type === 'reddit' && (
+        <p className="source-form-mode-hint source-form-mode-hint-community">
+          Reddit 목록은 대부분의 서버 IP에서 막혀 자동 수집이 되지 않습니다. 저장해도 비활성으로
+          두고, 국내 포럼·커뮤니티 게시판을 쓰는 것을 권합니다.
+        </p>
+      )}
+
       <div className="field">
-        <label>크롤링 주기</label>
-        <select
-          className="input"
-          value={form.crawl_frequency || 'daily'}
-          onChange={(e) => onChange({ ...form, crawl_frequency: e.target.value })}
-        >
-          {CRAWL_FREQUENCIES.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-        {isCommunity && (
-          <p className="source-form-field-note">실제 자동 수집은 매일 06:30(KST) 커뮤니티 탐문에 포함됩니다.</p>
-        )}
+        <label>자동 수집 일정</label>
+        <p className="source-form-field-note">
+          {isCommunity
+            ? '커뮤니티 탐문은 매일 06:30(KST)에 돌아갑니다. 주기를 바꿀 수 없으며, 지금 돌리려면 소스 화면의 「지금 실행」을 쓰세요.'
+            : '탐문 파이프라인은 매일 06:00(KST)에 돌아갑니다. 주기를 바꿀 수 없으며, 지금 돌리려면 소스 화면의 「지금 실행」을 쓰세요.'}
+        </p>
       </div>
 
       <label className="source-form-check">
         <input
           type="checkbox"
-          checked={form.is_active ?? true}
+          checked={form.source_type === 'reddit' ? false : (form.is_active ?? true)}
+          disabled={form.source_type === 'reddit'}
           onChange={(e) => onChange({ ...form, is_active: e.target.checked })}
         />
         <div>
           <div className="source-form-check-title">활성 소스</div>
           <div className="source-form-check-desc">
-            비활성 시 자동·수동 크롤링 대상에서 제외됩니다.
+            {form.source_type === 'reddit'
+              ? 'Reddit은 서버에서 수집이 막혀 활성으로 둘 수 없습니다.'
+              : '비활성 시 자동·수동 크롤링 대상에서 제외됩니다.'}
           </div>
         </div>
       </label>
@@ -241,26 +242,26 @@ export function SourceFormFields({
             비우면 전 분야 일반 소스입니다. 여러 분야를 고를 수 있으며, 수집 파이프라인은
             하나입니다.
           </p>
-          <div className="personal-category-keywords" style={{ padding: 0 }}>
+          <div className="pick-list">
             {editions.map((edition) => {
               const selected = (form.edition_ids ?? []).includes(edition.id)
               return (
-                <button
-                  type="button"
-                  key={edition.id}
-                  className={`keyword-chip-option ${selected ? 'selected' : ''}`}
-                  onClick={() => {
-                    const current = form.edition_ids ?? []
-                    onChange({
-                      ...form,
-                      edition_ids: selected
-                        ? current.filter((id) => id !== edition.id)
-                        : [...current, edition.id],
-                    })
-                  }}
-                >
-                  {edition.name}
-                </button>
+                <label key={edition.id} className={`pick-row${selected ? ' is-on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => {
+                      const current = form.edition_ids ?? []
+                      onChange({
+                        ...form,
+                        edition_ids: selected
+                          ? current.filter((id) => id !== edition.id)
+                          : [...current, edition.id],
+                      })
+                    }}
+                  />
+                  <span>{edition.name}</span>
+                </label>
               )
             })}
           </div>

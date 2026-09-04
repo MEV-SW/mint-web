@@ -28,7 +28,7 @@ export function LoginPage() {
 
   async function startLogin() {
     if (!configQuery.data?.configured) {
-      setError('Keycloak SSO가 설정되지 않았습니다. 관리자에게 KEYCLOAK_ISSUER를 확인해 주세요.')
+      setError('사내 로그인이 아직 준비되지 않았습니다. 총관에게 문의해 주세요.')
       return
     }
     setStarting(true)
@@ -47,7 +47,7 @@ export function LoginPage() {
     (configQuery.isError
       ? '백엔드에 연결하지 못했습니다. API가 실행 중인지 확인하세요.'
       : configQuery.isSuccess && !configured
-        ? 'Keycloak SSO가 설정되지 않았습니다. KEYCLOAK_ISSUER와 KEYCLOAK_CLIENT_ID를 확인해 주세요.'
+        ? '사내 로그인이 아직 준비되지 않았습니다. 총관에게 문의해 주세요.'
         : '')
 
   return (
@@ -57,11 +57,13 @@ export function LoginPage() {
         Keycloak SSO · 사내 전용
       </div>
 
-      <h1>Login</h1>
+      <h1>로그인</h1>
       <p className="login-sso-lead">
         별도 아이디·비밀번호는 없습니다.
         <br />
         사내 통합 인증으로 본인 확인만 하면 바로 들어옵니다.
+        <br />
+        처음 접속하면 관심 분야를 직접 고를 수 있습니다.
       </p>
 
       {configError ? <div className="login-sso-error">{configError}</div> : null}
@@ -104,8 +106,7 @@ export function LoginPage() {
       </dl>
 
       <div className="login-sso-foot">
-        <span title="Keycloak에서 계정을 발급받은 뒤 접속하세요">계정 발급 신청</span>
-        <span title="사내 IT에 문의하세요">IT 헬프데스크</span>
+        <span className="login-sso-foot-note">MotrexEV 사내 전용</span>
         <span className="login-sso-foot-date">{todayLong()}</span>
       </div>
     </LoginSsoLayout>

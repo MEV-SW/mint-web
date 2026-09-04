@@ -33,7 +33,7 @@ export function ReviewQueuePage() {
   const reclassifyAll = useMutation({
     mutationFn: () => triggerReclassifyAll(),
     onSuccess: () => {
-      toast('전체 재분류 작업을 시작했습니다. 작업 패널에서 진행 상황을 확인하세요.')
+      toast('검수함에 있는 기사만 다시 분류합니다. 작업 패널에서 진행 상황을 확인하세요.')
       qc.invalidateQueries({ queryKey: ['jobs'] })
     },
     onError: (e) => toast(apiErrorDetail(e) || '재분류 시작 실패', 'err'),
@@ -41,16 +41,16 @@ export function ReviewQueuePage() {
 
   return (
     <PageShell
-      section="관리 · Review"
+      section="관리 · 검수함"
       title="검수함"
-      lead="키워딩에 실패한 뉴스입니다. AI 추천을 고르거나 조직 키워드·신규 키워드를 지정한 뒤 저장하세요."
+      lead="저신뢰 분류, 미분류, 신규 키워드 후보를 검토합니다. 애매한 기사도 빈 키워드로 두지 않고 가장 가까운 주제로 붙입니다."
       actions={
         <Btn
           variant="outline"
           onClick={() => reclassifyAll.mutate()}
-          disabled={reclassifyAll.isPending}
+          disabled={reclassifyAll.isPending || !queue.data?.length}
         >
-          {reclassifyAll.isPending ? '시작 중…' : '전체 재분류'}
+          {reclassifyAll.isPending ? '시작 중…' : '검수함 재분류'}
         </Btn>
       }
     >

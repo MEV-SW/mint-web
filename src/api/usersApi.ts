@@ -15,6 +15,7 @@ export interface UserAdmin {
   role: UserRole
   approval_status: 'pending' | 'approved' | 'rejected'
   is_active: boolean
+  last_login_at: string | null
   created_at: string
   editions: UserEditionMembership[]
 }
@@ -36,5 +37,10 @@ export async function setUserActive(userId: string, isActive: boolean): Promise<
   const { data } = await apiClient.patch<UserAdmin>(`/api/v1/users/${userId}/active`, {
     is_active: isActive,
   })
+  return data
+}
+
+export async function updateUserRole(userId: string, role: UserRole): Promise<UserAdmin> {
+  const { data } = await apiClient.patch<UserAdmin>(`/api/v1/users/${userId}/role`, { role })
   return data
 }

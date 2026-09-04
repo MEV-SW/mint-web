@@ -15,15 +15,15 @@ interface ChatMessage {
 }
 
 const SUGGESTIONS = [
-  '최근 충전 인프라 이슈 요약해줘',
-  '중요 게시판 최근 동향 알려줘',
-  'EV 정책 변화가 있었나?',
+  '오늘 전기차·충전에서 중요한 소식은?',
+  '자율주행 관련 최근 동향 알려줘',
+  '탐문 데스크에 올라온 이슈 요약해줘',
 ]
 
 const WELCOME: ChatMessage = {
   role: 'assistant',
   content:
-    '안녕하세요! EV·충전 관련 질문은 MINT에 수집된 기사를 먼저 찾아 답변합니다.\n그 외 질문은 일반 지식 답변을 안내해 드릴게요.',
+    '안녕하세요. 전기차·충전과 자율주행, MINT에 수집된 기사를 찾아 답합니다.\n그 외 질문은 일반 지식 답변을 안내합니다.',
 }
 
 function TypingDots() {
@@ -131,7 +131,7 @@ export function ChatWidget() {
       prev.map((m) => (m.generalConfirm ? { ...m, generalConfirm: undefined } : m)),
     )
     appendAssistant({
-      content: '알겠습니다. EV·충전이나 MINT 수집 자료 관련 질문을 해 주세요.',
+      content: '알겠습니다. 전기차·충전, 자율주행, 또는 MINT 수집 자료 관련 질문을 해 주세요.',
     })
   }
 
@@ -155,7 +155,7 @@ export function ChatWidget() {
               </div>
               <div className="chat-widget-hero-copy">
                 <strong>MINT AI</strong>
-                <span>EV·충전 인텔리전스 어시스턴트</span>
+                <span>전기차·충전 · 자율주행 어시스턴트</span>
               </div>
               <span className="chat-widget-status">
                 <i /> Live

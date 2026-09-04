@@ -92,7 +92,7 @@ export function MyFrontPage({
           <span className="np-personal-strip-meta">
             내 관심 기사 <b className="np-pine">{feedTotal}</b>건
           </span>
-          <Link to="/settings#my-interests" className="np-personal-edit">
+          <Link to="/admin/settings#my-interests" className="np-personal-edit">
             판 편집
           </Link>
         </div>
@@ -103,7 +103,7 @@ export function MyFrontPage({
           <p>
             <strong>관심 분야를 1개 이상 선택</strong>하면 나만의 1면이 완성됩니다.
           </p>
-          <Link to="/settings#my-interests" className="btn btn-outline btn-sm">
+          <Link to="/admin/settings#my-interests" className="btn btn-outline btn-sm">
             분야 설정
           </Link>
         </div>
@@ -232,7 +232,7 @@ export function MyFrontPage({
                   ? '관심 분야를 설정하면 맞춤 헤드라인이 이곳에 표시됩니다.'
                   : '선택한 분야에 맞는 새 소식이 아직 없습니다.'}
               </p>
-              <Link to={needsKeywords ? '/settings#my-interests' : '/news'} className="np-read-more">
+              <Link to={needsKeywords ? '/admin/settings#my-interests' : '/news'} className="np-read-more">
                 {needsKeywords ? '분야 설정하기 →' : '전체 뉴스 보기 →'}
               </Link>
             </div>
@@ -298,8 +298,8 @@ export function MyFrontPage({
             <Link to="/news" className="np-read-more">
               전체 뉴스 →
             </Link>
-            <Link to="/settings#my-interests" className="np-read-more">
-              관심사 설정 →
+            <Link to="/admin/settings#my-editions" className="np-read-more">
+              내 지면 →
             </Link>
           </div>
         </aside>

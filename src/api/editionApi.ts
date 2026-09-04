@@ -9,6 +9,11 @@ export async function listEditions(activeOnly = true): Promise<Edition[]> {
   return data
 }
 
+export async function listAvailableEditions(): Promise<Edition[]> {
+  const { data } = await apiClient.get<Edition[]>('/api/v1/editions/available')
+  return data
+}
+
 export async function createEdition(payload: EditionCreate): Promise<Edition> {
   const { data } = await apiClient.post<Edition>('/api/v1/editions', payload)
   return data

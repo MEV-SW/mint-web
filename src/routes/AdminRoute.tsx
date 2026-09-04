@@ -7,7 +7,7 @@ export function AdminRoute() {
   const { isAdmin, canEditAny } = usePermissions()
 
   if (!token) return <Navigate to="/login" replace />
-  if (!isAdmin && !canEditAny) return <Navigate to="/" replace />
+  if (!isAdmin && !canEditAny) return <Navigate to="/admin/settings" replace />
   return <Outlet />
 }
 

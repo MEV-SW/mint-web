@@ -8,6 +8,9 @@ export interface OrgReportDay {
   title: string
   report_date: string
   slack_sent: boolean
+  edition_id?: string | null
+  edition_name?: string | null
+  created_at?: string
 }
 
 export interface PersonalReportDay {
@@ -76,8 +79,30 @@ function buildMonthCells(year: number, monthIndex: number): (string | null)[] {
   return cells
 }
 
+function briefingKicker(report: OrgReportDay): string {
+  if (report.edition_name) return report.edition_name
+  const parts = report.title.split(' · ')
+  if (parts.length >= 3) return parts[1]
+  return '브리핑'
+}
+
+function sortBriefings(a: OrgReportDay, b: OrgReportDay): number {
+  const aOrder = a.edition_name ?? a.title
+  const bOrder = b.edition_name ?? b.title
+  return aOrder.localeCompare(bOrder, 'ko')
+}
+
+function latestPerEdition(reports: OrgReportDay[]): OrgReportDay[] {
+  const newest = new Map<string, OrgReportDay>()
+  const ordered = [...reports].sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
+  for (const report of ordered) {
+    newest.set(report.edition_id ?? report.id, report)
+  }
+  return [...newest.values()].sort(sortBriefings)
+}
+
 function pickInitialDate(
-  orgByDate: Map<string, OrgReportDay>,
+  orgByDate: Map<string, OrgReportDay[]>,
   personalByDate: Map<string, PersonalReportDay>,
 ): string {
   const today = todayKey()
@@ -101,8 +126,13 @@ export function ReportCalendar({
   onGeneratePersonal: _onGeneratePersonal,
 }: ReportCalendarProps) {
   const orgByDate = useMemo(() => {
-    const map = new Map<string, OrgReportDay>()
-    for (const report of orgReports) map.set(report.report_date, report)
+    const map = new Map<string, OrgReportDay[]>()
+    for (const report of orgReports) {
+      const list = map.get(report.report_date) ?? []
+      list.push(report)
+      map.set(report.report_date, list)
+    }
+    for (const [day, list] of map) map.set(day, latestPerEdition(list))
     return map
   }, [orgReports])
 
@@ -134,7 +164,7 @@ export function ReportCalendar({
   )
 
   const selectedKey = selected ?? todayKey()
-  const selectedOrg = orgByDate.get(selectedKey)
+  const selectedOrgReports = orgByDate.get(selectedKey) ?? []
   const selectedPersonal = personalByDate.get(selectedKey)
   const today = todayKey()
 
@@ -218,7 +248,8 @@ export function ReportCalendar({
                   if (!key) {
                     return <div key={`empty-${index}`} className="report-cal-cell is-empty" />
                   }
-                  const hasOrg = orgByDate.has(key)
+                  const dayReports = orgByDate.get(key) ?? []
+                  const hasOrg = dayReports.length > 0
                   const hasPersonal = personalByDate.has(key)
                   const isToday = key === today
                   const isSelected = key === selectedKey
@@ -239,7 +270,13 @@ export function ReportCalendar({
                     >
                       <span className="report-cal-daynum">{dayNum}</span>
                       <span className="report-cal-markers">
-                        {hasOrg && <i className="report-cal-dot report-cal-dot-org" />}
+                        {dayReports.slice(0, 3).map((report) => (
+                          <i
+                            key={report.id}
+                            className="report-cal-dot report-cal-dot-org"
+                            title={briefingKicker(report)}
+                          />
+                        ))}
                         {!hidePersonal && hasPersonal && (
                           <i className="report-cal-dot report-cal-dot-mine" />
                         )}
@@ -259,14 +296,16 @@ export function ReportCalendar({
           </div>
 
           <div className="report-cal-panel-body">
-            {selectedOrg ? (
-              <Link to={`/reports/${selectedOrg.id}`} className="report-cal-entry">
-                <span className="report-cal-entry-kicker">
-                  <i className="report-cal-dot report-cal-dot-org" /> 브리핑
-                </span>
-                <strong>{selectedOrg.title}</strong>
-                <small>{selectedOrg.slack_sent ? 'Slack 발송됨' : '미발송'}</small>
-              </Link>
+            {selectedOrgReports.length > 0 ? (
+              selectedOrgReports.map((report) => (
+                <Link key={report.id} to={`/reports/${report.id}`} className="report-cal-entry">
+                  <span className="report-cal-entry-kicker">
+                    <i className="report-cal-dot report-cal-dot-org" /> {briefingKicker(report)}
+                  </span>
+                  <strong>{report.title}</strong>
+                  <small>{report.slack_sent ? 'Slack 발송됨' : '미발송'}</small>
+                </Link>
+              ))
             ) : (
               <div className="report-cal-entry is-empty">
                 <span className="report-cal-entry-kicker">

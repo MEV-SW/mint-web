@@ -3,7 +3,7 @@ export interface NavItem {
   label: string
   icon: string
   end?: boolean
-  countKey?: 'pending' | 'openInquiries' | 'pendingUsers' | 'accounts'
+  countKey?: 'pending' | 'openInquiries' | 'pendingUsers'
   adminOnly?: boolean
   superAdminOnly?: boolean
 }
@@ -14,20 +14,30 @@ export const APP_NAV_MAIN: NavItem[] = [
   { path: '/reports', label: '리포트', icon: 'doc' },
 ]
 
+export const SETTINGS_PATH = '/admin/settings'
+
 export const APP_NAV_ADMIN_HUB: NavItem = {
   path: '/admin',
   label: '관리',
   icon: 'shield',
-  adminOnly: true,
 }
 
 export const APP_NAV_ADMIN_SUB: NavItem[] = [
+  { path: SETTINGS_PATH, label: '설정', icon: 'settings' },
   { path: '/admin/review-queue', label: '검수함', icon: 'inbox', countKey: 'pending', adminOnly: true },
   {
     path: '/admin/accounts',
-    label: '계정 관리',
+    label: '계정',
     icon: 'shield',
-    countKey: 'accounts',
+    countKey: 'pendingUsers',
+    adminOnly: true,
+    superAdminOnly: true,
+  },
+  {
+    path: '/admin/inquiries',
+    label: '문의',
+    icon: 'message',
+    countKey: 'openInquiries',
     adminOnly: true,
     superAdminOnly: true,
   },
@@ -45,6 +55,14 @@ export const ADMIN_PATHS = APP_NAV_ADMIN_SUB.map((item) => item.path)
 
 export const APP_NAV: NavItem[] = [...APP_NAV_MAIN, APP_NAV_ADMIN_HUB, ...APP_NAV_ADMIN_SUB]
 
+export function visibleAdminNav(isAdmin: boolean, canEditAny: boolean): NavItem[] {
+  return APP_NAV_ADMIN_SUB.filter((item) => {
+    if (item.superAdminOnly) return isAdmin
+    if (item.adminOnly) return isAdmin || canEditAny
+    return true
+  })
+}
+
 export function adminNavBadgeCount(
   item: NavItem,
   counts: { pending: number; openInquiries: number; pendingUsers: number },
@@ -52,6 +70,5 @@ export function adminNavBadgeCount(
   if (item.countKey === 'pending') return counts.pending
   if (item.countKey === 'openInquiries') return counts.openInquiries
   if (item.countKey === 'pendingUsers') return counts.pendingUsers
-  if (item.countKey === 'accounts') return counts.pendingUsers + counts.openInquiries
   return 0
 }
