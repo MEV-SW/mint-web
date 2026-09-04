@@ -4409,11 +4409,11 @@ a.report-cal-entry:hover strong {
   height: calc(100% / 6);
   flex: none;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 36px;
-  align-items: stretch;
+  align-items: center;
   min-width: 0;
-  padding: 12px 8px 12px 0;
+  padding: 14px 8px 16px 0;
   border-bottom: 1px solid var(--line);
   overflow: hidden;
 }
@@ -4427,9 +4427,6 @@ a.report-cal-entry:hover strong {
   border-bottom: 0;
   padding: 28px 0;
 }
-.front-kiosk-stage.is-single .front-kiosk-copy {
-  justify-content: center;
-}
 .front-kiosk-stage.is-single .front-kiosk-title {
   font-size: clamp(32px, 3.8vw, 52px);
   -webkit-line-clamp: 4;
@@ -4438,15 +4435,12 @@ a.report-cal-entry:hover strong {
   font-size: clamp(18px, 1.45vw, 22px);
   -webkit-line-clamp: 4;
 }
-.front-kiosk-stage.is-single .front-kiosk-byline {
-  margin-top: 18px;
-}
 .front-kiosk-copy {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   min-width: 0;
-  height: 100%;
+  overflow: visible;
 }
 .front-kiosk-kicker {
   display: flex;
@@ -4478,32 +4472,34 @@ a.report-cal-entry:hover strong {
   font-size: clamp(22px, 2.5vw, 34px);
   font-weight: 700;
   letter-spacing: -0.03em;
-  line-height: 1.22;
+  line-height: 1.3;
   color: var(--ink);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  padding: 0.04em 0 0.2em;
 }
 .front-kiosk-dek {
-  margin: 0;
+  margin: 0 0 10px;
   font-family: var(--serif);
   font-size: clamp(15px, 1.25vw, 19px);
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--ink2);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  padding-bottom: 0.18em;
 }
 .front-kiosk-byline {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px 16px;
-  margin: auto 0 0;
-  padding-top: 12px;
+  margin: 0;
+  padding-top: 2px;
   border-top: 0;
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -4516,23 +4512,26 @@ a.report-cal-entry:hover strong {
 }
 .front-kiosk-plate {
   display: flex;
-  align-items: stretch;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
   height: 100%;
+  padding: 10px 0;
+  box-sizing: border-box;
 }
 .front-kiosk-plate .np-photo-slot-wrap,
 .front-kiosk-plate .np-photo-slot {
-  width: 100%;
-  height: 100%;
+  width: min(210px, 18vw);
+  height: auto;
+  max-height: 100%;
   max-width: none;
 }
 .front-kiosk-plate .np-photo-slot,
 .front-kiosk-plate img {
-  width: 100%;
-  height: 100%;
-  max-height: none;
-  aspect-ratio: auto;
+  width: min(210px, 18vw);
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   border: 1px solid var(--line);
   background: var(--panel);
