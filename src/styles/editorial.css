@@ -4359,6 +4359,28 @@ a.report-cal-entry:hover strong {
 .front-kiosk-skip:hover {
   color: var(--pine);
 }
+.front-kiosk-interval {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  cursor: pointer;
+}
+.front-kiosk-interval input[type='range'] {
+  width: 72px;
+  accent-color: var(--pine);
+  cursor: pointer;
+}
+.front-kiosk-interval-value {
+  min-width: 24px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink2);
+}
 .front-kiosk-skip {
   position: absolute;
   top: 50%;

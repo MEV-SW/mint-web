@@ -3,11 +3,45 @@ import type { DashboardPostPreview } from '../../api/statsApi'
 import { formatDate } from '../../utils/date'
 import { StoryPhoto } from '../posts/StoryPhoto'
 
-const INTERVAL_MS = 8_000
+const MIN_INTERVAL_SEC = 3
+const MAX_INTERVAL_SEC = 60
+const DEFAULT_INTERVAL_SEC = 8
+const INTERVAL_STORAGE_KEY = 'mint.kioskIntervalSec'
 const VISIBLE = 4
 const SLOT_OFFSETS = [-1, 0, 1, 2, 3, 4] as const
 
 type Shift = 'rest' | 'fwd' | 'back'
+
+function clampIntervalSec(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_INTERVAL_SEC
+  return Math.min(MAX_INTERVAL_SEC, Math.max(MIN_INTERVAL_SEC, Math.round(value)))
+}
+
+function readStoredIntervalSec(): number {
+  try {
+    const raw = window.localStorage.getItem(INTERVAL_STORAGE_KEY)
+    if (raw === null) return DEFAULT_INTERVAL_SEC
+    return clampIntervalSec(Number(raw))
+  } catch {
+    return DEFAULT_INTERVAL_SEC
+  }
+}
+
+function useKioskIntervalSec() {
+  const [sec, setSec] = useState(readStoredIntervalSec)
+
+  const update = useCallback((value: number) => {
+    const clamped = clampIntervalSec(value)
+    setSec(clamped)
+    try {
+      window.localStorage.setItem(INTERVAL_STORAGE_KEY, String(clamped))
+    } catch {
+      /* private mode or storage disabled — ignore */
+    }
+  }, [])
+
+  return [sec, update] as const
+}
 
 type Props = {
   editionName: string
@@ -68,6 +102,8 @@ export function FrontKiosk({
   const [shift, setShift] = useState<Shift>('rest')
   const [paused, setPaused] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [intervalSec, setIntervalSec] = useKioskIntervalSec()
+  const intervalMs = intervalSec * 1000
   const clock = useClockLabel()
 
   const count = stories.length
@@ -130,9 +166,9 @@ export function FrontKiosk({
 
   useEffect(() => {
     if (paused || !looping || shift !== 'rest') return
-    const timer = window.setInterval(() => go(1), INTERVAL_MS)
+    const timer = window.setInterval(() => go(1), intervalMs)
     return () => window.clearInterval(timer)
-  }, [paused, looping, go, shift, topIndex])
+  }, [paused, looping, go, shift, topIndex, intervalMs])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -217,14 +253,29 @@ export function FrontKiosk({
           <span className="front-kiosk-edition">{editionName || '1면'}</span>
           {looping && shift === 'rest' && (
             <span
-              key={`${stories[topIndex]?.id ?? topIndex}-${paused ? 'p' : 'r'}`}
+              key={`${stories[topIndex]?.id ?? topIndex}-${paused ? 'p' : 'r'}-${intervalSec}`}
               className="front-kiosk-progress-fill"
-              style={{ animationDuration: `${INTERVAL_MS}ms`, animationPlayState: paused ? 'paused' : 'running' }}
+              style={{ animationDuration: `${intervalMs}ms`, animationPlayState: paused ? 'paused' : 'running' }}
             />
           )}
         </div>
         <div className="front-kiosk-mast-end">
           <time>{clock}</time>
+          {looping && (
+            <label className="front-kiosk-interval">
+              <span className="front-kiosk-interval-label">전환 간격</span>
+              <input
+                type="range"
+                min={MIN_INTERVAL_SEC}
+                max={MAX_INTERVAL_SEC}
+                step={1}
+                value={intervalSec}
+                onChange={(event) => setIntervalSec(Number(event.target.value))}
+                aria-label="자동 전환 간격(초)"
+              />
+              <span className="front-kiosk-interval-value">{intervalSec}초</span>
+            </label>
+          )}
           <span className="front-kiosk-mast-actions">
             <button type="button" onClick={() => void toggleFullscreen()}>
               {isFullscreen ? '창 모드' : '전체화면'}
