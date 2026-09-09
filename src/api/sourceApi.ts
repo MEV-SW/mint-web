@@ -1,6 +1,6 @@
 import { apiClient } from './client'
 import type { BackgroundJob } from '../types/job'
-import type { Source, SourceCreate } from '../types/source'
+import type { Source, SourceCreate, SourceSuggestionCandidate, SourceSuggestResponse } from '../types/source'
 
 export async function listSources(): Promise<Source[]> {
   const { data } = await apiClient.get<Source[]>('/api/v1/sources')
@@ -70,6 +70,28 @@ export interface CollectionSettings {
   discovery_pending_retention_days: number
   default_retention_days: number
   is_custom: boolean
+}
+
+export async function suggestCategorySources(
+  categoryId: string,
+  count = 5,
+): Promise<SourceSuggestResponse> {
+  const { data } = await apiClient.post<SourceSuggestResponse>(
+    `/api/v1/categories/${categoryId}/source-suggestions`,
+    { count },
+  )
+  return data
+}
+
+export async function approveCategorySourceSuggestion(
+  categoryId: string,
+  candidate: SourceSuggestionCandidate,
+): Promise<Source> {
+  const { data } = await apiClient.post<Source>(
+    `/api/v1/categories/${categoryId}/source-suggestions/approve`,
+    candidate,
+  )
+  return data
 }
 
 export async function getCollectionSettings(): Promise<CollectionSettings> {
