@@ -6,13 +6,21 @@ import {
   listCategories,
   updateCategory,
 } from '../api/personalizationApi'
-import { listSources } from '../api/sourceApi'
+import { approveCategorySourceSuggestion, listSources, suggestCategorySources } from '../api/sourceApi'
 import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { apiErrorDetail } from '../utils/apiError'
 import type { NewsCategory } from '../types/personalization'
+import type { SourceSuggestionCandidate } from '../types/source'
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  rss: 'RSS',
+  webpage: '웹페이지',
+  news_page: '뉴스',
+  notice_page: '공지',
+}
 
 interface CategoryForm {
   name: string
@@ -31,6 +39,8 @@ export function AdminCategoriesPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<NewsCategory | null>(null)
   const [form, setForm] = useState<CategoryForm>(emptyForm)
+  const [suggestFor, setSuggestFor] = useState<NewsCategory | null>(null)
+  const [candidates, setCandidates] = useState<SourceSuggestionCandidate[]>([])
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['categories'],
@@ -78,6 +88,34 @@ export function AdminCategoriesPage() {
     },
     onError: (e) => toast(apiErrorDetail(e) || '비활성화 실패', 'err'),
   })
+
+  const suggest = useMutation({
+    mutationFn: (category: NewsCategory) => suggestCategorySources(category.id),
+    onSuccess: (res) => setCandidates(res.candidates),
+    onError: (e) => toast(apiErrorDetail(e) || '소스 제안 생성 실패', 'err'),
+  })
+
+  const approve = useMutation({
+    mutationFn: (candidate: SourceSuggestionCandidate) =>
+      approveCategorySourceSuggestion(suggestFor!.id, candidate),
+    onSuccess: (_row, candidate) => {
+      qc.invalidateQueries({ queryKey: ['sources'] })
+      setCandidates((current) => current.filter((c) => c.url !== candidate.url))
+      toast('소스를 승인했습니다.')
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '승인 실패', 'err'),
+  })
+
+  function openSuggest(category: NewsCategory) {
+    setSuggestFor(category)
+    setCandidates([])
+    suggest.mutate(category)
+  }
+
+  function closeSuggest() {
+    setSuggestFor(null)
+    setCandidates([])
+  }
 
   function openAdd() {
     setForm(emptyForm)
@@ -147,6 +185,9 @@ export function AdminCategoriesPage() {
                 </td>
                 <td className="num">{sourceCountByCategory.get(category.id) ?? 0}</td>
                 <td>
+                  <Btn variant="ghost" size="sm" icon="sparkles" onClick={() => openSuggest(category)}>
+                    AI 소스 제안
+                  </Btn>
                   <Btn variant="ghost" size="sm" icon="settings" onClick={() => openEdit(category)}>
                     수정
                   </Btn>
@@ -205,6 +246,63 @@ export function AdminCategoriesPage() {
               onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) || 0 })}
             />
           </div>
+        </Modal>
+      )}
+
+      {suggestFor && (
+        <Modal
+          title={`${suggestFor.name} 소스 제안`}
+          wide
+          onClose={closeSuggest}
+          footer={
+            <>
+              <Btn
+                variant="outline"
+                icon="refresh"
+                onClick={() => suggest.mutate(suggestFor)}
+                disabled={suggest.isPending}
+              >
+                {suggest.isPending ? '생성 중…' : '다시 생성'}
+              </Btn>
+              <Btn variant="primary" onClick={closeSuggest}>
+                닫기
+              </Btn>
+            </>
+          }
+        >
+          {suggest.isPending && <p className="sources-empty-cell">소스 후보를 찾는 중…</p>}
+          {!suggest.isPending && candidates.length === 0 && (
+            <p className="sources-empty-cell">적절한 소스 후보를 찾지 못했습니다. "다시 생성"을 눌러보세요.</p>
+          )}
+          {!suggest.isPending && candidates.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {candidates.map((candidate) => {
+                const approving = approve.isPending && approve.variables?.url === candidate.url
+                return (
+                  <article key={candidate.url} className="card card-pad">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <strong style={{ flex: 1 }}>{candidate.name}</strong>
+                      <span className="pill">
+                        {SOURCE_TYPE_LABELS[candidate.source_type] ?? candidate.source_type}
+                      </span>
+                    </div>
+                    <a href={candidate.url} target="_blank" rel="noreferrer" className="mono">
+                      {candidate.url}
+                    </a>
+                    <p style={{ margin: '8px 0' }}>{candidate.reason}</p>
+                    <Btn
+                      variant="primary"
+                      size="sm"
+                      onClick={() => approve.mutate(candidate)}
+                      disabled={approving}
+                    >
+                      {approving ? '승인 중…' : '승인'}
+                    </Btn>
+                  </article>
+                )
+              })}
+            </div>
+          )}
         </Modal>
       )}
     </PageShell>

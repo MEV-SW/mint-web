@@ -29,6 +29,19 @@ export interface Source {
   updated_at: string
 }
 
+export interface SourceSuggestionCandidate {
+  name: string
+  url: string
+  source_type: SourceType
+  reason: string
+}
+
+export interface SourceSuggestResponse {
+  category_id: string
+  candidates: SourceSuggestionCandidate[]
+  generated_at: string
+}
+
 export interface SourceCreate {
   name: string
   url: string
