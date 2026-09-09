@@ -16,6 +16,23 @@ export async function listCategories(): Promise<NewsCategory[]> {
   return data
 }
 
+export async function createCategory(payload: { name: string; sort_order?: number }): Promise<NewsCategory> {
+  const { data } = await apiClient.post<NewsCategory>('/api/v1/categories', payload)
+  return data
+}
+
+export async function updateCategory(
+  id: string,
+  payload: { name?: string; sort_order?: number; is_active?: boolean },
+): Promise<NewsCategory> {
+  const { data } = await apiClient.patch<NewsCategory>(`/api/v1/categories/${id}`, payload)
+  return data
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await apiClient.delete(`/api/v1/categories/${id}`)
+}
+
 export async function listKeywords(includeDiscovered = false): Promise<Keyword[]> {
   const { data } = await apiClient.get<Keyword[]>('/api/v1/keywords', {
     params: includeDiscovered ? { include_discovered: true } : undefined,

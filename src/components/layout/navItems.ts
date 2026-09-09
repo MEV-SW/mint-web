@@ -34,6 +34,13 @@ export const APP_NAV_ADMIN_SUB: NavItem[] = [
     superAdminOnly: true,
   },
   {
+    path: '/admin/categories',
+    label: '카테고리',
+    icon: 'book',
+    adminOnly: true,
+    superAdminOnly: true,
+  },
+  {
     path: '/admin/inquiries',
     label: '문의',
     icon: 'message',

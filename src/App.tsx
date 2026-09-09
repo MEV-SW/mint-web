@@ -18,6 +18,7 @@ import { HelpPage } from './pages/HelpPage'
 import { SourcesPage } from './pages/SourcesPage'
 import { InquiriesPage } from './pages/InquiriesPage'
 import { AdminAccountsPage } from './pages/AdminAccountsPage'
+import { AdminCategoriesPage } from './pages/AdminCategoriesPage'
 import { AdminInquiriesPage } from './pages/AdminInquiriesPage'
 import { OnboardingGate } from './routes/OnboardingGate'
 import { ProtectedRoute } from './routes/ProtectedRoute'
@@ -75,6 +76,7 @@ export default function App() {
                       <Route path="sources" element={<SourcesPage />} />
                       <Route element={<SuperAdminRoute />}>
                         <Route path="accounts" element={<AdminAccountsPage />} />
+                        <Route path="categories" element={<AdminCategoriesPage />} />
                         <Route path="accounts/users" element={<Navigate to="/admin/accounts" replace />} />
                         <Route path="accounts/inquiries" element={<Navigate to="/admin/inquiries" replace />} />
                         <Route path="users" element={<Navigate to="/admin/accounts" replace />} />

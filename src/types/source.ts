@@ -16,6 +16,7 @@ export interface Source {
   source_type: SourceType
   industry: string
   category: string
+  category_id: string | null
   trust_level: TrustLevel
   reliability_score: number
   discovery_type: string

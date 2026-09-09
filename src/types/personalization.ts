@@ -4,6 +4,7 @@ export interface NewsCategory {
   id: string
   name: string
   sort_order: number
+  is_active?: boolean
   selected?: boolean
   is_featured?: boolean
   is_discovered?: boolean
