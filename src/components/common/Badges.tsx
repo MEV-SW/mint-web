@@ -102,3 +102,25 @@ export function NewBadge() {
     </span>
   )
 }
+
+const CHANGE_STATE_LABEL: Record<string, string> = {
+  development: '실질 변화',
+  correction: '정정 반영',
+  duplicates_only: '중복 보도',
+  quiet: '조용함',
+}
+const CHANGE_STATE_CLASS: Record<string, string> = {
+  development: 'badge-high',
+  correction: 'badge-med',
+  duplicates_only: 'badge-unknown',
+  quiet: 'badge-outline',
+}
+
+export function ChangeStateBadge({ state }: { state: string }) {
+  return (
+    <span className={cx('badge', CHANGE_STATE_CLASS[state] || 'badge-unknown')}>
+      <span className="dot" />
+      {CHANGE_STATE_LABEL[state] || state}
+    </span>
+  )
+}
