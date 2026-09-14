@@ -64,3 +64,26 @@ export const ISSUE_LIST_FILTERS: { value: IssueListFilter; label: string }[] = [
   { value: 'tracked', label: '추적 중' },
   { value: 'changed', label: '이번 주 변화' },
 ]
+
+export interface IssueRevision {
+  id: string
+  kind: string
+  fact_type: string | null
+  headline: string
+  note: string
+  post_id: string | null
+  post_title: string | null
+  source_name: string | null
+  duplicate_post_ids: string[] | null
+  actor: { user_id: string; name: string } | null
+  occurred_at: string
+  is_unseen: boolean
+}
+
+export interface IssueRevisionPage {
+  items: IssueRevision[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}
