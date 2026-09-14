@@ -11,6 +11,8 @@ const ROLE_LABELS: Record<UserRole, string> = {
 export function usePermissions() {
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const isManager = user?.role === 'manager'
+  const canReviewSources = isAdmin || isManager
   const editorEditionIds = new Set(
     (user?.editions ?? []).filter((item) => item.is_editor).map((item) => item.id),
   )
@@ -33,6 +35,8 @@ export function usePermissions() {
   return {
     user,
     isAdmin,
+    isManager,
+    canReviewSources,
     canEditAny,
     canEditEdition,
     canWrite,

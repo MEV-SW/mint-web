@@ -11,6 +11,7 @@ import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import type { NewsCategory } from '../types/personalization'
 import type { SourceSuggestionCandidate } from '../types/source'
@@ -34,6 +35,7 @@ function formFor(category: NewsCategory): CategoryForm {
 }
 
 export function AdminCategoriesPage() {
+  const { isAdmin } = usePermissions()
   const toast = useToast()
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
@@ -147,9 +149,11 @@ export function AdminCategoriesPage() {
       lead="뉴스 분류에 쓰이는 카테고리를 만들고 정렬합니다."
       leadSingleLine
       actions={
-        <Btn variant="primary" size="sm" icon="plus" onClick={openAdd}>
-          카테고리 추가
-        </Btn>
+        isAdmin ? (
+          <Btn variant="primary" size="sm" icon="plus" onClick={openAdd}>
+            카테고리 추가
+          </Btn>
+        ) : undefined
       }
     >
       <div className="tbl-wrap">
@@ -188,18 +192,22 @@ export function AdminCategoriesPage() {
                   <Btn variant="ghost" size="sm" icon="sparkles" onClick={() => openSuggest(category)}>
                     AI 소스 제안
                   </Btn>
-                  <Btn variant="ghost" size="sm" icon="settings" onClick={() => openEdit(category)}>
-                    수정
-                  </Btn>
-                  <Btn
-                    variant="ghost"
-                    size="sm"
-                    icon="trash"
-                    onClick={() => confirmDeactivate(category)}
-                    disabled={deactivate.isPending}
-                  >
-                    비활성화
-                  </Btn>
+                  {isAdmin && (
+                    <>
+                      <Btn variant="ghost" size="sm" icon="settings" onClick={() => openEdit(category)}>
+                        수정
+                      </Btn>
+                      <Btn
+                        variant="ghost"
+                        size="sm"
+                        icon="trash"
+                        onClick={() => confirmDeactivate(category)}
+                        disabled={deactivate.isPending}
+                      >
+                        비활성화
+                      </Btn>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

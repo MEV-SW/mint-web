@@ -8,7 +8,7 @@ import { SETTINGS_PATH, adminNavBadgeCount, visibleAdminNav } from './navItems'
 import { usePermissions } from '../../hooks/usePermissions'
 
 export function AdminLayout() {
-  const { isAdmin, canEditAny } = usePermissions()
+  const { isAdmin, canEditAny, canReviewSources } = usePermissions()
   const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
   const { data: openInquiries = 0 } = useQuery({
     queryKey: ['inquiries-open-count'],
@@ -21,7 +21,7 @@ export function AdminLayout() {
     enabled: isAdmin,
   })
 
-  const items = visibleAdminNav(isAdmin, canEditAny)
+  const items = visibleAdminNav(isAdmin, canEditAny, canReviewSources)
   const counts = {
     pending: stats?.review_queue_pending ?? 0,
     openInquiries,

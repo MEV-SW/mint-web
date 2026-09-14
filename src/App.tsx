@@ -22,7 +22,7 @@ import { AdminCategoriesPage } from './pages/AdminCategoriesPage'
 import { AdminInquiriesPage } from './pages/AdminInquiriesPage'
 import { OnboardingGate } from './routes/OnboardingGate'
 import { ProtectedRoute } from './routes/ProtectedRoute'
-import { AdminRoute, SuperAdminRoute } from './routes/AdminRoute'
+import { AdminRoute, SourceReviewRoute, SuperAdminRoute } from './routes/AdminRoute'
 import { NewsPage } from './pages/NewsPage'
 import { ReviewQueuePage } from './pages/ReviewQueuePage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -74,9 +74,11 @@ export default function App() {
                     <Route element={<AdminRoute />}>
                       <Route path="review-queue" element={<ReviewQueuePage />} />
                       <Route path="sources" element={<SourcesPage />} />
+                      <Route element={<SourceReviewRoute />}>
+                        <Route path="categories" element={<AdminCategoriesPage />} />
+                      </Route>
                       <Route element={<SuperAdminRoute />}>
                         <Route path="accounts" element={<AdminAccountsPage />} />
-                        <Route path="categories" element={<AdminCategoriesPage />} />
                         <Route path="accounts/users" element={<Navigate to="/admin/accounts" replace />} />
                         <Route path="accounts/inquiries" element={<Navigate to="/admin/inquiries" replace />} />
                         <Route path="users" element={<Navigate to="/admin/accounts" replace />} />
