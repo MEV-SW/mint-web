@@ -74,6 +74,21 @@ export interface IssueRevision {
   is_unseen: boolean
 }
 
+export interface IssueChangeItem {
+  id: string
+  title: string
+  edition_id: string | null
+  last_activity_at: string
+  new_revision_count: number
+  top_change_kinds: string[]
+  new_member_count: number
+}
+
+export interface IssueChangesResponse {
+  since: string | null
+  items: IssueChangeItem[]
+}
+
 export interface IssueRevisionPage {
   items: IssueRevision[]
   total: number

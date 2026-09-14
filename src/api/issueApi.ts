@@ -1,5 +1,6 @@
 import { apiClient } from './client'
 import type {
+  IssueChangesResponse,
   IssueDetail,
   IssueListFilter,
   IssuePage,
@@ -18,6 +19,13 @@ export async function listIssues(params: {
   query.set('page', String(params.page ?? 1))
   query.set('size', String(params.size ?? 20))
   const { data } = await apiClient.get<IssuePage>(`/api/v1/issues?${query.toString()}`)
+  return data
+}
+
+export async function listIssueChanges(limit = 20): Promise<IssueChangesResponse> {
+  const { data } = await apiClient.get<IssueChangesResponse>(
+    `/api/v1/issues/changes?limit=${limit}`,
+  )
   return data
 }
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getIssue, markIssueSeen, updateIssueTracking } from '../api/issueApi'
 import { ChangeTimeline } from '../components/issues/ChangeTimeline'
@@ -14,6 +14,7 @@ export function IssueDetailPage() {
   const location = useLocation()
   const toast = useToast()
   const qc = useQueryClient()
+  const timelineRef = useRef<HTMLDivElement>(null)
 
   const { data: issue, isLoading, isError } = useQuery({
     queryKey: ['issue', id],
@@ -21,6 +22,12 @@ export function IssueDetailPage() {
     enabled: !!id,
     retry: false,
   })
+
+  useEffect(() => {
+    if (location.hash === '#timeline' && issue) {
+      timelineRef.current?.scrollIntoView({ block: 'start' })
+    }
+  }, [location.hash, issue])
 
   useEffect(() => {
     if (!id || !issue) return
@@ -129,7 +136,7 @@ export function IssueDetailPage() {
         ))}
       </section>
 
-      <section className="card card-pad">
+      <section className="card card-pad" ref={timelineRef} id="timeline">
         <h2 style={{ fontSize: 14, margin: '0 0 8px' }}>변화 타임라인</h2>
         <ChangeTimeline issueId={issue.id} lastSeenAt={issue.last_seen_at} />
       </section>
