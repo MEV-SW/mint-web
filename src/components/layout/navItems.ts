@@ -43,6 +43,13 @@ export const APP_NAV_ADMIN_SUB: NavItem[] = [
     sourceReviewOnly: true,
   },
   {
+    path: '/admin/issues',
+    label: '이슈 정리',
+    icon: 'inbox',
+    adminOnly: true,
+    superAdminOnly: true,
+  },
+  {
     path: '/admin/inquiries',
     label: '문의',
     icon: 'message',
