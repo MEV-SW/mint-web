@@ -12,6 +12,7 @@ export interface NavItem {
 export const APP_NAV_MAIN: NavItem[] = [
   { path: '/', label: '1면', icon: 'dashboard', end: true },
   { path: '/news', label: '뉴스', icon: 'feed' },
+  { path: '/issues', label: '이슈', icon: 'inbox' },
   { path: '/reports', label: '리포트', icon: 'doc' },
 ]
 
