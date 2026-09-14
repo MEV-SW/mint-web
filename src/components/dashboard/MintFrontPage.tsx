@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { DashboardPostPreview, DashboardStats } from '../../api/statsApi'
+import type { IssueChangeItem } from '../../types/issue'
+import { ChangesBand } from './ChangesBand'
 import { CommunityVoicesStrip } from './CommunityVoicesStrip'
 import { DailyCorner } from './DailyCorner'
 import { StoryPhoto } from '../posts/StoryPhoto'
@@ -21,6 +23,7 @@ interface MintFrontPageProps {
   stories?: DashboardPostPreview[]
   report?: OrgReport | null
   onOpenKiosk?: () => void
+  issueChanges?: IssueChangeItem[]
 }
 
 function levelLabel(level: string | null | undefined): string {
@@ -59,6 +62,7 @@ export function MintFrontPage({
   stories,
   report,
   onOpenKiosk,
+  issueChanges,
 }: MintFrontPageProps) {
   const { isAdmin } = usePermissions()
   const orgReport = report === undefined ? stats?.latest_report : report
@@ -138,6 +142,8 @@ export function MintFrontPage({
           )}
         </div>
       )}
+
+      <ChangesBand items={issueChanges ?? []} />
 
       <section className="np-brief-band" aria-label="AI 데일리 브리핑">
         <div className="np-brief-band-main">

@@ -2,6 +2,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { listEditions } from '../api/editionApi'
+import { listIssueChanges } from '../api/issueApi'
 import { getEditorialFeed, listKeywords } from '../api/personalizationApi'
 import { getLatestReport } from '../api/reportApi'
 import type { DashboardPostPreview, DashboardStats } from '../api/statsApi'
@@ -95,6 +96,11 @@ export function DashboardPage() {
     queryKey: ['keywords'],
     queryFn: () => listKeywords(false),
   })
+  const issueChangesQuery = useQuery({
+    queryKey: ['issue-changes'],
+    queryFn: () => listIssueChanges(),
+  })
+  const issueChanges = issueChangesQuery.data?.items ?? []
 
   const editions = editionsQuery.data ?? []
   const editorialQueries = useQueries({
@@ -192,6 +198,7 @@ export function DashboardPage() {
             stories={(feed?.items ?? []).map(toPreview)}
             report={report}
             onOpenKiosk={() => setKiosk(true)}
+            issueChanges={issueChanges}
           />
         ),
       }
@@ -203,6 +210,7 @@ export function DashboardPage() {
     editorialQueries,
     reportQueries,
     keywords,
+    issueChanges,
     dateLabel,
     year,
     stats.data,
