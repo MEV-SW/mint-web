@@ -74,6 +74,7 @@ export interface IssueRevision {
   post_id: string | null
   post_title: string | null
   source_name: string | null
+  original_url: string | null
   duplicate_post_ids: string[] | null
   actor: { user_id: string; name: string } | null
   occurred_at: string

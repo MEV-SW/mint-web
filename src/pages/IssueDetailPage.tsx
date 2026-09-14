@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { getIssue, markIssueSeen, updateIssueTracking } from '../api/issueApi'
+import { ChangeTimeline } from '../components/issues/ChangeTimeline'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
 import { apiErrorDetail } from '../utils/apiError'
@@ -126,9 +127,7 @@ export function IssueDetailPage() {
 
       <section className="card card-pad">
         <h2 style={{ fontSize: 14, margin: '0 0 8px' }}>변화 타임라인</h2>
-        <p style={{ margin: 0, color: 'var(--ink3, #999)' }}>
-          변화 이력 뷰는 준비 중입니다.
-        </p>
+        <ChangeTimeline issueId={issue.id} lastSeenAt={issue.last_seen_at} />
       </section>
     </div>
   )
