@@ -6,6 +6,7 @@ export interface NavItem {
   countKey?: 'pending' | 'openInquiries' | 'pendingUsers'
   adminOnly?: boolean
   superAdminOnly?: boolean
+  sourceReviewOnly?: boolean
 }
 
 export const APP_NAV_MAIN: NavItem[] = [
@@ -38,7 +39,7 @@ export const APP_NAV_ADMIN_SUB: NavItem[] = [
     label: '카테고리',
     icon: 'book',
     adminOnly: true,
-    superAdminOnly: true,
+    sourceReviewOnly: true,
   },
   {
     path: '/admin/inquiries',
@@ -62,8 +63,13 @@ export const ADMIN_PATHS = APP_NAV_ADMIN_SUB.map((item) => item.path)
 
 export const APP_NAV: NavItem[] = [...APP_NAV_MAIN, APP_NAV_ADMIN_HUB, ...APP_NAV_ADMIN_SUB]
 
-export function visibleAdminNav(isAdmin: boolean, canEditAny: boolean): NavItem[] {
+export function visibleAdminNav(
+  isAdmin: boolean,
+  canEditAny: boolean,
+  canReviewSources: boolean,
+): NavItem[] {
   return APP_NAV_ADMIN_SUB.filter((item) => {
+    if (item.sourceReviewOnly) return canReviewSources
     if (item.superAdminOnly) return isAdmin
     if (item.adminOnly) return isAdmin || canEditAny
     return true

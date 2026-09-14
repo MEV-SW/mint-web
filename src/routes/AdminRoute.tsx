@@ -16,3 +16,9 @@ export function SuperAdminRoute() {
   if (!isAdmin) return <Navigate to="/admin/review-queue" replace />
   return <Outlet />
 }
+
+export function SourceReviewRoute() {
+  const { canReviewSources } = usePermissions()
+  if (!canReviewSources) return <Navigate to="/admin/review-queue" replace />
+  return <Outlet />
+}
