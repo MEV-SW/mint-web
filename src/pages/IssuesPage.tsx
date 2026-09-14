@@ -3,14 +3,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listIssues, updateIssueTracking } from '../api/issueApi'
 import { PageShell } from '../components/layout/PageShell'
+import { ChangeStateBadge, NewBadge } from '../components/common/Badges'
 import { useToast } from '../components/common/Toast'
 import { apiErrorDetail } from '../utils/apiError'
 import { formatDateTime } from '../utils/date'
-import {
-  ISSUE_CHANGE_STATE_LABELS,
-  ISSUE_LIST_FILTERS,
-  type IssueListFilter,
-} from '../types/issue'
+import { ISSUE_LIST_FILTERS, type IssueListFilter } from '../types/issue'
 
 const EMPTY_COPY: Record<IssueListFilter, { title: string; body: string }> = {
   all: { title: '아직 묶인 사건이 없습니다', body: '크롤·배정이 도는 중일 수 있습니다.' },
@@ -130,8 +127,8 @@ export function IssuesPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <strong>{issue.title}</strong>
-                  <span className="pill">{ISSUE_CHANGE_STATE_LABELS[issue.change_state]}</span>
-                  {issue.has_unseen_change && <span className="pill">변화 있음</span>}
+                  <ChangeStateBadge state={issue.change_state} />
+                  {issue.has_unseen_change && <NewBadge />}
                 </div>
                 <p style={{ margin: '0 0 6px', color: 'var(--ink2, #666)' }}>{issue.summary}</p>
                 <div style={{ fontSize: 12, color: 'var(--ink3, #999)' }}>

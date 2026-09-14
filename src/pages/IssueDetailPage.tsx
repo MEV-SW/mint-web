@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { getIssue, markIssueSeen, updateIssueTracking } from '../api/issueApi'
 import { ChangeTimeline } from '../components/issues/ChangeTimeline'
 import { Icon } from '../components/common/Icon'
+import { NewBadge } from '../components/common/Badges'
 import { useToast } from '../components/common/Toast'
 import { apiErrorDetail } from '../utils/apiError'
 import { formatDateTime } from '../utils/date'
@@ -62,7 +63,10 @@ export function IssueDetailPage() {
       </Link>
 
       <article className="pg-article-hero">
-        <h1 className="pg-article-title">{issue.title}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 className="pg-article-title" style={{ margin: 0 }}>{issue.title}</h1>
+          {issue.has_unseen_change && <NewBadge />}
+        </div>
         <div className="pg-article-meta">
           <span>기사 {issue.member_count} · 출처 {issue.source_count}</span>
           <span>

@@ -52,13 +52,6 @@ export interface IssueDetail {
   members: IssueMember[]
 }
 
-export const ISSUE_CHANGE_STATE_LABELS: Record<IssueChangeState, string> = {
-  development: '실질 변화',
-  correction: '정정 반영',
-  duplicates_only: '중복 보도',
-  quiet: '조용함',
-}
-
 export const ISSUE_LIST_FILTERS: { value: IssueListFilter; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'tracked', label: '추적 중' },
