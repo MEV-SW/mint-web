@@ -57,3 +57,48 @@ export function AiBadge({ label = 'AI 요약' }: { label?: string }) {
     </span>
   )
 }
+
+const CHANGE_KIND_LABEL: Record<string, string> = {
+  first_report: '첫 보도',
+  development: '실질 변화',
+  duplicates: '중복 보도',
+  correction: '정정',
+  admin_adjust: '관리자 조정',
+}
+
+export function ChangeKindBadge({ kind }: { kind: string }) {
+  return (
+    <span className={cx('badge', 'badge-outline')}>
+      <span className="dot" />
+      {CHANGE_KIND_LABEL[kind] || kind}
+    </span>
+  )
+}
+
+const FACT_TYPE_LABEL: Record<string, string> = {
+  fact: '사실',
+  ai_interpretation: 'AI 해석',
+  needs_check: '추가 확인 필요',
+}
+const FACT_TYPE_CLASS: Record<string, string> = {
+  fact: 'badge-mint',
+  ai_interpretation: 'badge-info',
+  needs_check: 'badge-med',
+}
+
+export function FactTypeBadge({ factType }: { factType: string }) {
+  return (
+    <span className={cx('badge', FACT_TYPE_CLASS[factType] || 'badge-unknown')}>
+      <span className="dot" />
+      {FACT_TYPE_LABEL[factType] || factType}
+    </span>
+  )
+}
+
+export function NewBadge() {
+  return (
+    <span className={cx('badge', 'badge-failed')} style={{ fontWeight: 700 }}>
+      NEW
+    </span>
+  )
+}
