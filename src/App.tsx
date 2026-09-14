@@ -20,6 +20,8 @@ import { InquiriesPage } from './pages/InquiriesPage'
 import { AdminAccountsPage } from './pages/AdminAccountsPage'
 import { AdminCategoriesPage } from './pages/AdminCategoriesPage'
 import { AdminInquiriesPage } from './pages/AdminInquiriesPage'
+import { IssueDetailPage } from './pages/IssueDetailPage'
+import { IssuesPage } from './pages/IssuesPage'
 import { OnboardingGate } from './routes/OnboardingGate'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { AdminRoute, SourceReviewRoute, SuperAdminRoute } from './routes/AdminRoute'
@@ -57,6 +59,8 @@ export default function App() {
                 <Route element={<OnboardingGate />}>
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/news" element={<NewsPage />} />
+                  <Route path="/issues" element={<IssuesPage />} />
+                  <Route path="/issues/:id" element={<IssueDetailPage />} />
                   <Route path="/settings" element={<RedirectWithHash to="/admin/settings" />} />
                   <Route path="/topics/:keywordId" element={<TopicHubPage />} />
                   <Route path="/keywords" element={<Navigate to="/admin/settings#editions" replace />} />
