@@ -1642,6 +1642,26 @@ button.btn.btn-danger {
   margin-left: 6px;
 }
 
+@media (max-width: 640px) {
+  .chat-widget-fab {
+    right: 16px;
+    bottom: 16px;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+  .chat-widget-fab-copy,
+  .chat-widget-fab-arrow {
+    display: none;
+  }
+  .chat-widget-fab-icon {
+    width: 30px;
+    height: 30px;
+  }
+}
+
 /* Chat panel — pine / paper editorial */
 .chat-widget-panel {
   border-radius: 4px !important;
@@ -1961,6 +1981,8 @@ button.btn.btn-danger {
 .np-section-voices {
   margin-top: 28px;
   padding-top: 16px;
+  padding-left: var(--page-pad, 26px);
+  padding-right: var(--page-pad, 26px);
   border-top: 2px solid var(--ink);
   position: relative;
 }
@@ -4175,8 +4197,11 @@ a.report-cal-entry:hover strong {
     grid-template-columns: 1fr;
   }
   .np-edition-sample .np-photo-slot {
-    width: min(236px, 100%);
+    width: 100%;
     margin-top: 4px;
+  }
+  .np-photo-slot-wrap {
+    width: 100%;
   }
   .np-col-digest {
     margin-top: 28px;
@@ -4217,7 +4242,8 @@ a.report-cal-entry:hover strong {
     position: static;
     max-height: none;
   }
-  .topnav-bar {
+  .topnav-bar,
+  .app-topnav .topnav-bar {
     display: flex;
     flex-wrap: wrap;
     grid-template-columns: none;
@@ -4229,16 +4255,47 @@ a.report-cal-entry:hover strong {
     justify-self: unset;
   }
   .topnav-link.active::after { bottom: -2px; }
+  /* re-hide: unconditional display:flex above (L691/L917) outranks mint.css's @media(960px) hide.
+     .app-topnav .topnav-bar (L72/738, unconditional, higher specificity than plain .topnav-bar)
+     also pins display:grid + fixed height:58px unless matched here. */
+  .topnav-links,
+  .topnav-section-bar {
+    display: none;
+  }
+  /* mobile: one compact row — M mark only, no date/name/role text, no job status button */
+  .topnav-dateline,
+  .topnav-brand-name,
+  .topnav-brand-sub,
+  .topnav-user-role,
+  .job-status-wrap {
+    display: none;
+  }
   .app-topnav {
     --page-pad: 16px;
   }
-  .app-topnav .topnav-actions .header-search {
-    width: min(128px, 28vw);
-    flex-basis: min(128px, 28vw);
+  .app-topnav .topnav-actions .header-search,
+  .app-topnav .topnav-actions .header-search:focus-within,
+  .app-topnav .topnav-actions .global-search.is-open {
+    width: auto;
+    flex: 1 1 auto;
     min-width: 0;
+  }
+  .app-topnav .topnav-actions {
+    flex: 1 1 auto;
   }
   .admin-subnav {
     gap: 0 16px;
+  }
+}
+
+/* 900–960px: mint.css already hides nav/section-bar and shows the hamburger here */
+@media (max-width: 960px) and (min-width: 901px) {
+  .topnav-links,
+  .topnav-section-bar {
+    display: none;
+  }
+  .app-topnav .topnav-bar {
+    grid-template-columns: 1fr auto;
   }
 }
 
