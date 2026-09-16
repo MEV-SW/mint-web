@@ -7,8 +7,8 @@ const MIN_INTERVAL_SEC = 3
 const MAX_INTERVAL_SEC = 60
 const DEFAULT_INTERVAL_SEC = 8
 const INTERVAL_STORAGE_KEY = 'mint.kioskIntervalSec'
-const VISIBLE = 4
-const SLOT_OFFSETS = [-1, 0, 1, 2, 3, 4] as const
+const VISIBLE = 6
+const SLOT_OFFSETS = [-1, 0, 1, 2, 3, 4, 5, 6] as const
 
 type Shift = 'rest' | 'fwd' | 'back'
 
