@@ -4222,6 +4222,9 @@ a.report-cal-entry:hover strong {
     flex-direction: column;
     align-items: flex-start;
   }
+  .np-kiosk-toggle {
+    display: none;
+  }
   .np-spread-edition-bar {
     padding: 8px 16px;
   }
@@ -4416,6 +4419,11 @@ a.report-cal-entry:hover strong {
 .front-kiosk-skip:hover {
   color: var(--pine);
 }
+.front-kiosk-interval-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .front-kiosk-interval {
   display: flex;
   align-items: center;
@@ -4437,6 +4445,24 @@ a.report-cal-entry:hover strong {
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--ink2);
+}
+.front-kiosk-exit-quick {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: none;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.front-kiosk-exit-quick:hover {
+  border-color: var(--pine);
+  color: var(--pine);
 }
 .front-kiosk-skip {
   position: absolute;
@@ -4668,6 +4694,10 @@ a.report-cal-entry:hover strong {
   .front-kiosk-mast-center,
   .front-kiosk-mast-end {
     align-items: flex-start;
+  }
+  .front-kiosk-exit-quick {
+    padding: 8px 16px;
+    font-size: 11px;
   }
   .front-kiosk-stage {
     padding: 0 16px;

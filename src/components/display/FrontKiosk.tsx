@@ -262,19 +262,29 @@ export function FrontKiosk({
         <div className="front-kiosk-mast-end">
           <time>{clock}</time>
           {looping && (
-            <label className="front-kiosk-interval">
-              <span className="front-kiosk-interval-label">전환 간격</span>
-              <input
-                type="range"
-                min={MIN_INTERVAL_SEC}
-                max={MAX_INTERVAL_SEC}
-                step={1}
-                value={intervalSec}
-                onChange={(event) => setIntervalSec(Number(event.target.value))}
-                aria-label="자동 전환 간격(초)"
-              />
-              <span className="front-kiosk-interval-value">{intervalSec}초</span>
-            </label>
+            <div className="front-kiosk-interval-group">
+              <label className="front-kiosk-interval">
+                <span className="front-kiosk-interval-label">전환 간격</span>
+                <input
+                  type="range"
+                  min={MIN_INTERVAL_SEC}
+                  max={MAX_INTERVAL_SEC}
+                  step={1}
+                  value={intervalSec}
+                  onChange={(event) => setIntervalSec(Number(event.target.value))}
+                  aria-label="자동 전환 간격(초)"
+                />
+                <span className="front-kiosk-interval-value">{intervalSec}초</span>
+              </label>
+              <button
+                type="button"
+                className="front-kiosk-exit-quick"
+                onClick={onClose}
+                aria-label="전시 모드 종료"
+              >
+                종료
+              </button>
+            </div>
           )}
           <span className="front-kiosk-mast-actions">
             <button type="button" onClick={() => void toggleFullscreen()}>
