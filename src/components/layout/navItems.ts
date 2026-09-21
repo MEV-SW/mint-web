@@ -3,7 +3,7 @@ export interface NavItem {
   label: string
   icon: string
   end?: boolean
-  countKey?: 'pending' | 'openInquiries' | 'pendingUsers'
+  countKey?: 'openInquiries' | 'pendingUsers'
   adminOnly?: boolean
   superAdminOnly?: boolean
   sourceReviewOnly?: boolean
@@ -85,9 +85,8 @@ export function visibleAdminNav(
 
 export function adminNavBadgeCount(
   item: NavItem,
-  counts: { pending: number; openInquiries: number; pendingUsers: number },
+  counts: { openInquiries: number; pendingUsers: number },
 ): number {
-  if (item.countKey === 'pending') return counts.pending
   if (item.countKey === 'openInquiries') return counts.openInquiries
   if (item.countKey === 'pendingUsers') return counts.pendingUsers
   return 0

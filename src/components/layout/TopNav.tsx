@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getOpenInquiryCount } from '../../api/inquiryApi'
-import { fetchDashboardStats } from '../../api/statsApi'
 import { listUsers } from '../../api/usersApi'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useAuthStore } from '../../store/authStore'
@@ -62,7 +61,6 @@ export function TopNav() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const user = useAuthStore((s) => s.user)
   const { isAdmin, canEditAny, roleLabel } = usePermissions()
-  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
   const { data: openInquiries = 0 } = useQuery({
     queryKey: ['inquiries-open-count'],
     queryFn: getOpenInquiryCount,
@@ -81,14 +79,13 @@ export function TopNav() {
   }
 
   const counts = {
-    pending: stats?.review_queue_pending ?? 0,
     openInquiries,
     pendingUsers: isAdmin
       ? pendingUsers.filter((u) => u.approval_status === 'pending').length
       : 0,
   }
 
-  const adminBadgeTotal = counts.pending + counts.openInquiries + counts.pendingUsers
+  const adminBadgeTotal = counts.openInquiries + counts.pendingUsers
   const adminActive =
     location.pathname === APP_NAV_ADMIN_HUB.path ||
     ADMIN_PATHS.some((path) => location.pathname.startsWith(path))

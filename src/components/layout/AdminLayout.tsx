@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { getOpenInquiryCount } from '../../api/inquiryApi'
-import { fetchDashboardStats } from '../../api/statsApi'
 import { listUsers } from '../../api/usersApi'
 import { cx } from '../../utils/cx'
 import { SETTINGS_PATH, adminNavBadgeCount, visibleAdminNav } from './navItems'
@@ -9,7 +8,6 @@ import { usePermissions } from '../../hooks/usePermissions'
 
 export function AdminLayout() {
   const { isAdmin, canEditAny, canReviewSources } = usePermissions()
-  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchDashboardStats })
   const { data: openInquiries = 0 } = useQuery({
     queryKey: ['inquiries-open-count'],
     queryFn: getOpenInquiryCount,
@@ -23,7 +21,6 @@ export function AdminLayout() {
 
   const items = visibleAdminNav(isAdmin, canEditAny, canReviewSources)
   const counts = {
-    pending: stats?.review_queue_pending ?? 0,
     openInquiries,
     pendingUsers: users.filter((user) => user.approval_status === 'pending').length,
   }
