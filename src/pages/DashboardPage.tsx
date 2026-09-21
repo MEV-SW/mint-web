@@ -70,7 +70,7 @@ export function DashboardPage() {
   const qc = useQueryClient()
   const { isAdmin, canEditAny } = usePermissions()
   const { busy: crawlBusy } = useActiveJobs(canEditAny)
-  const stats = useDashboardStatsQuery()
+  const stats = useDashboardStatsQuery(crawlBusy)
   const seenFrontSignature = useRef<string | undefined>(undefined)
   const [spreadPage, setSpreadPage] = useState<string>('')
   const [searchParams, setSearchParams] = useSearchParams()
