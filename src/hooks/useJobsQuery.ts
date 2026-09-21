@@ -7,10 +7,11 @@ function isActive(status: JobStatus) {
   return isActiveJobStatus(status)
 }
 
-export function useJobsQuery() {
+export function useJobsQuery(enabled = true) {
   return useQuery({
     queryKey: ['jobs'],
     queryFn: () => listJobs({ limit: 15 }),
+    enabled,
     refetchInterval: (query) => {
       const rows = query.state.data
       if (rows?.some((j) => isActive(j.status))) return 1000
@@ -19,8 +20,8 @@ export function useJobsQuery() {
   })
 }
 
-export function useActiveJobs() {
-  const query = useJobsQuery()
+export function useActiveJobs(enabled = true) {
+  const query = useJobsQuery(enabled)
   const activeJobs = (query.data ?? []).filter((j) => isActive(j.status))
   const activeJob = pickPrimaryActiveJob(query.data ?? [])
   return {

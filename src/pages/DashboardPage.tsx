@@ -68,8 +68,8 @@ function toOrgReport(row: DailyReport | null | undefined): DashboardStats['lates
 export function DashboardPage() {
   const toast = useToast()
   const qc = useQueryClient()
-  const { isAdmin } = usePermissions()
-  const { busy: crawlBusy } = useActiveJobs()
+  const { isAdmin, canEditAny } = usePermissions()
+  const { busy: crawlBusy } = useActiveJobs(canEditAny)
   const stats = useDashboardStatsQuery()
   const seenFrontSignature = useRef<string | undefined>(undefined)
   const [spreadPage, setSpreadPage] = useState<string>('')
