@@ -52,6 +52,5 @@ export function AdminLayout() {
 }
 
 export function AdminIndexRedirect() {
-  const { isAdmin, canEditAny } = usePermissions()
-  return <Navigate to={isAdmin || canEditAny ? '/admin/review-queue' : SETTINGS_PATH} replace />
+  return <Navigate to={SETTINGS_PATH} replace />
 }

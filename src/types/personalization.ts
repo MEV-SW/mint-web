@@ -80,30 +80,3 @@ export interface PersonalReport {
   items?: PersonalReportItem[]
 }
 
-export interface ReviewQueueItem {
-  id: string
-  post_id: string
-  post_title: string
-  reason: 'low_confidence' | 'uncategorized' | 'no_keywords' | 'new_keyword' | 'extraction_failed'
-  status: 'pending' | 'resolved' | 'excluded'
-  detail: string | null
-  created_at: string
-}
-
-export interface KeywordSuggestion {
-  name: string
-  confidence: number
-  keyword_id: string | null
-}
-
-export interface KeywordSuggestResponse {
-  post_id: string
-  category: string | null
-  suggestions: KeywordSuggestion[]
-}
-
-export interface ReviewQueueKeywordsApplyResponse {
-  post_id: string
-  linked_keywords: string[]
-  resolved_queue_item_ids: string[]
-}

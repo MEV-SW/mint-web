@@ -26,7 +26,6 @@ export const APP_NAV_ADMIN_HUB: NavItem = {
 
 export const APP_NAV_ADMIN_SUB: NavItem[] = [
   { path: SETTINGS_PATH, label: '설정', icon: 'settings' },
-  { path: '/admin/review-queue', label: '검수함', icon: 'inbox', countKey: 'pending', adminOnly: true },
   {
     path: '/admin/accounts',
     label: '계정',
