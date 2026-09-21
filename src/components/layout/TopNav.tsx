@@ -25,7 +25,6 @@ const PATH_LABELS: Record<string, string> = {
   '/reports': '리포트',
   '/admin': '관리',
   '/admin/settings': '설정',
-  '/admin/review-queue': '검수함',
   '/admin/accounts': '계정',
   '/admin/inquiries': '문의',
   '/admin/sources': '소스',

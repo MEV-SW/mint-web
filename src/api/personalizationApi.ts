@@ -2,13 +2,10 @@ import { apiClient } from './client'
 import type { BackgroundJob } from '../types/job'
 import type {
   Keyword,
-  KeywordSuggestResponse,
   NewsCategory,
   NewsPage,
   PersonalReport,
   PersonalizedNews,
-  ReviewQueueItem,
-  ReviewQueueKeywordsApplyResponse,
 } from '../types/personalization'
 
 export async function listCategories(): Promise<NewsCategory[]> {
@@ -159,52 +156,4 @@ export async function markPersonalReportViewed(id: string, opened = false): Prom
     popup_seen: true,
     opened,
   })
-}
-
-export async function listReviewQueue(status = 'pending'): Promise<ReviewQueueItem[]> {
-  const { data } = await apiClient.get<ReviewQueueItem[]>('/api/v1/review-queue', {
-    params: { status },
-  })
-  return data
-}
-
-export async function resolveReviewQueue(
-  id: string,
-  status: 'resolved' | 'excluded',
-): Promise<ReviewQueueItem> {
-  const { data } = await apiClient.patch<ReviewQueueItem>(`/api/v1/review-queue/${id}`, {
-    status,
-  })
-  return data
-}
-
-export async function suggestReviewQueueKeywords(
-  itemId: string,
-): Promise<KeywordSuggestResponse> {
-  const { data } = await apiClient.post<KeywordSuggestResponse>(
-    `/api/v1/review-queue/${itemId}/suggest-keywords`,
-  )
-  return data
-}
-
-export async function applyReviewQueueKeywords(
-  itemId: string,
-  body: {
-    keyword_ids: string[]
-    new_keyword_names: string[]
-    category?: string | null
-  },
-): Promise<ReviewQueueKeywordsApplyResponse> {
-  const { data } = await apiClient.put<ReviewQueueKeywordsApplyResponse>(
-    `/api/v1/review-queue/${itemId}/keywords`,
-    body,
-  )
-  return data
-}
-
-export async function triggerReclassifyAll(limit = 500) {
-  const { data } = await apiClient.post('/api/v1/review-queue/reclassify-all', null, {
-    params: { limit },
-  })
-  return data
 }

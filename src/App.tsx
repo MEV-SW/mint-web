@@ -27,7 +27,6 @@ import { OnboardingGate } from './routes/OnboardingGate'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { AdminRoute, SourceReviewRoute, SuperAdminRoute } from './routes/AdminRoute'
 import { NewsPage } from './pages/NewsPage'
-import { ReviewQueuePage } from './pages/ReviewQueuePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TopicHubPage } from './pages/TopicHubPage'
 import { legacyBoardToNewsPath } from './utils/newsListState'
@@ -77,7 +76,6 @@ export default function App() {
                     <Route index element={<AdminIndexRedirect />} />
                     <Route path="settings" element={<SettingsPage />} />
                     <Route element={<AdminRoute />}>
-                      <Route path="review-queue" element={<ReviewQueuePage />} />
                       <Route path="sources" element={<SourcesPage />} />
                       <Route element={<SourceReviewRoute />}>
                         <Route path="categories" element={<AdminCategoriesPage />} />

@@ -74,7 +74,6 @@ export function JobStatusPanel() {
       qc.invalidateQueries({ queryKey: ['sources'] })
       qc.invalidateQueries({ queryKey: ['posts'] })
       qc.invalidateQueries({ queryKey: ['reports'] })
-      qc.invalidateQueries({ queryKey: ['review-queue'] })
       qc.invalidateQueries({ queryKey: ['keywords'] })
       qc.invalidateQueries({ queryKey: ['news'] })
       qc.invalidateQueries({ queryKey: ['personal-feed'] })
