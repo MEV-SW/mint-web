@@ -113,8 +113,8 @@ export function DailyCorner({ editionSlug }: { editionSlug?: string }) {
   const edition = getDailyEdition(new Date(), editionSlug)
 
   return (
-    <section className="np-daily-corner" aria-label="MINT 휴식판">
-      <div className="np-section-label">MINT 휴식판</div>
+    <section className="np-daily-corner" aria-label="MOTREXEV 휴식판">
+      <div className="np-section-label">MOTREXEV 휴식판</div>
 
       <div className="np-daily-block np-daily-fact">
         <h4 className="np-daily-block-title">오늘의 상식</h4>

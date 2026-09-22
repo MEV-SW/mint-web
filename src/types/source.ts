@@ -24,7 +24,7 @@ export interface Source {
   crawl_frequency: string
   last_crawled_at: string | null
   is_active: boolean
-  edition_ids?: string[]
+  edition_id: string
   created_at: string
   updated_at: string
 }
@@ -48,12 +48,13 @@ export interface SourceCreate {
   source_type?: SourceType
   industry?: string
   category?: string
+  category_id?: string | null
   trust_level?: TrustLevel
   reliability_score?: number
   auto_publish?: boolean
   crawl_frequency?: string
   is_active?: boolean
-  edition_ids?: string[]
+  edition_id: string
 }
 
 export const SOURCE_CATEGORIES = [
@@ -77,6 +78,7 @@ export const COMMUNITY_SOURCE_PRESET: SourceCreate = {
   auto_publish: false,
   crawl_frequency: 'daily',
   is_active: true,
+  edition_id: '',
 }
 
 export const TRUST_SCORE_DEFAULTS: Record<TrustLevel, number> = {

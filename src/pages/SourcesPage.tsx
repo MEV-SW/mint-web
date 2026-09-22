@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   crawlAllToDiscovery,
@@ -41,7 +41,7 @@ const emptyForm: SourceCreate = {
   auto_publish: true,
   crawl_frequency: 'daily',
   is_active: true,
-  edition_ids: [],
+  edition_id: '',
 }
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
@@ -69,7 +69,7 @@ function sourceToForm(s: Source): SourceCreate {
     auto_publish: s.auto_publish,
     crawl_frequency: s.crawl_frequency,
     is_active: s.is_active,
-    edition_ids: s.edition_ids ?? [],
+    edition_id: s.edition_id,
   }
 }
 
@@ -94,11 +94,6 @@ export function SourcesPage() {
   const qc = useQueryClient()
   const [searchParams] = useSearchParams()
   const [q, setQ] = useState(() => searchParams.get('q') ?? '')
-
-  useEffect(() => {
-    const param = searchParams.get('q')
-    if (param != null) setQ(param)
-  }, [searchParams])
   const [showAdd, setShowAdd] = useState(false)
   const [addMode, setAddMode] = useState<AddMode>('official')
   const [editing, setEditing] = useState<Source | null>(null)
@@ -107,7 +102,7 @@ export function SourcesPage() {
   const [runningPipeline, setRunningPipeline] = useState(false)
   const [runningCommunityPipeline, setRunningCommunityPipeline] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
-  const [retentionDays, setRetentionDays] = useState('14')
+  const [retentionDraft, setRetentionDraft] = useState<string | null>(null)
 
   const { busy, activeLabel, activeProgress } = useActiveJobs()
 
@@ -125,11 +120,8 @@ export function SourcesPage() {
     queryFn: getCollectionSettings,
   })
 
-  useEffect(() => {
-    if (collectionSettings) {
-      setRetentionDays(String(collectionSettings.discovery_pending_retention_days))
-    }
-  }, [collectionSettings])
+  const retentionDays = retentionDraft
+    ?? String(collectionSettings?.discovery_pending_retention_days ?? 14)
 
   const qLower = q.trim().toLowerCase()
   const rows = sources.filter((s) => {
@@ -199,6 +191,7 @@ export function SourcesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['collection-settings'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      setRetentionDraft(null)
       toast('탐문 후보 삭제 기한을 저장했습니다.')
     },
     onError: (e) => toast(apiErrorDetail(e) || '저장 실패', 'err'),
@@ -271,13 +264,13 @@ export function SourcesPage() {
     : undefined
 
   function openAdd() {
-    setForm(emptyForm)
+    setForm({ ...emptyForm, edition_id: editions[0]?.id ?? '' })
     setAddMode('official')
     setShowAdd(true)
   }
 
   function openAddCommunity() {
-    setForm({ ...COMMUNITY_SOURCE_PRESET })
+    setForm({ ...COMMUNITY_SOURCE_PRESET, edition_id: editions[0]?.id ?? '' })
     setAddMode('community')
     setShowAdd(true)
   }
@@ -294,13 +287,13 @@ export function SourcesPage() {
     setForm(emptyForm)
   }
 
-  const canSave = Boolean(form.name.trim() && form.url.trim())
+  const canSave = Boolean(form.name.trim() && form.url.trim() && form.edition_id)
 
   return (
     <PageShell
-      section="관리 · 소스"
+      section="운영 · 수집"
       title="소스 관리"
-      lead="크롤링 대상을 등록합니다. 자동 수집은 매일 06:00·06:30(KST)에 돌아가며, 주기는 바꿀 수 없습니다."
+      lead="크롤링 대상 소스를 등록·관리합니다. 소스는 주제 1개에만 속하며, 크롤러는 그 주제의 관련성 키워드로 수집합니다. 범용 와이어는 주제별로 중복 등록해 양쪽을 커버합니다."
       leadSingleLine
     >
       {busy && (
@@ -399,7 +392,7 @@ export function SourcesPage() {
                     step={1}
                     inputMode="numeric"
                     value={retentionDays}
-                    onChange={(e) => setRetentionDays(e.target.value)}
+                    onChange={(e) => setRetentionDraft(e.target.value)}
                     aria-label="탐문 후보 삭제 기한(일)"
                   />
                   <span className="sources-retention-unit">일</span>
@@ -472,8 +465,8 @@ export function SourcesPage() {
                 <tr>
                   <th>소스</th>
                   <th style={{ width: 100 }}>유형</th>
-                  <th style={{ width: 90 }}>카테고리</th>
-                  <th style={{ width: 130 }}>관련 분야</th>
+                  <th style={{ width: 130 }}>주제 (1:1)</th>
+                  <th style={{ width: 100 }}>카테고리</th>
                   <th style={{ width: 130 }}>신뢰도</th>
                   <th style={{ width: 90 }}>자동 게시</th>
                   <th className="num" style={{ width: 130 }}>마지막 크롤링</th>
@@ -503,19 +496,12 @@ export function SourcesPage() {
                       </span>
                     </td>
                     <td>
-                      <span className="ctag">{s.category}</span>
+                      <span className="ctag">
+                        {editions.find((edition) => edition.id === s.edition_id)?.name ?? '알 수 없음'}
+                      </span>
                     </td>
                     <td>
-                      {(s.edition_ids ?? []).length === 0 ? (
-                        <span className="ctag">전 분야</span>
-                      ) : (
-                        <span className="ctag">
-                          {editions
-                            .filter((edition) => (s.edition_ids ?? []).includes(edition.id))
-                            .map((edition) => edition.name)
-                            .join(', ') || `${s.edition_ids?.length ?? 0}개`}
-                        </span>
-                      )}
+                      <span className="ctag">{s.category}</span>
                     </td>
                     <td>
                       <TrustBadge level={s.trust_level} score={s.reliability_score} />

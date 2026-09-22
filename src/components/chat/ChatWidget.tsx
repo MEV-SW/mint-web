@@ -23,7 +23,7 @@ const SUGGESTIONS = [
 const WELCOME: ChatMessage = {
   role: 'assistant',
   content:
-    '안녕하세요. 전기차·충전과 자율주행, MINT에 수집된 기사를 찾아 답합니다.\n그 외 질문은 일반 지식 답변을 안내합니다.',
+    '안녕하세요. 전기차·충전과 자율주행, MOTREXEV에 수집된 기사를 찾아 답합니다.\n그 외 질문은 일반 지식 답변을 안내합니다.',
 }
 
 function TypingDots() {
@@ -131,7 +131,7 @@ export function ChatWidget() {
       prev.map((m) => (m.generalConfirm ? { ...m, generalConfirm: undefined } : m)),
     )
     appendAssistant({
-      content: '알겠습니다. 전기차·충전, 자율주행, 또는 MINT 수집 자료 관련 질문을 해 주세요.',
+      content: '알겠습니다. 전기차·충전, 자율주행, 또는 MOTREXEV 수집 자료 관련 질문을 해 주세요.',
     })
   }
 
@@ -147,14 +147,14 @@ export function ChatWidget() {
   return (
     <div className={`chat-widget${open ? ' is-open' : ''}`} aria-live="polite">
       {open && (
-        <div className="chat-widget-panel" role="dialog" aria-label="MINT AI 챗봇">
+        <div className="chat-widget-panel" role="dialog" aria-label="MOTREXEV AI 챗봇">
           <div className="chat-widget-hero">
             <div className="chat-widget-hero-inner">
               <div className="chat-ai-avatar chat-ai-avatar--hero" aria-hidden>
                 ✦
               </div>
               <div className="chat-widget-hero-copy">
-                <strong>MINT AI</strong>
+                <strong>MOTREXEV AI</strong>
                 <span>전기차·충전 · 자율주행 어시스턴트</span>
               </div>
               <span className="chat-widget-status">
@@ -184,12 +184,12 @@ export function ChatWidget() {
                   )}
                   <div className="chat-bubble-content">
                     <div className="chat-bubble-label">
-                      {m.role === 'user' ? 'You' : 'MINT AI'}
+                      {m.role === 'user' ? 'You' : 'MOTREXEV AI'}
                       {m.source === 'general' && (
                         <span className="chat-source-tag">일반 지식</span>
                       )}
                       {m.source === 'mint' && m.citations && m.citations.length > 0 && (
-                        <span className="chat-source-tag mint">MINT 자료</span>
+                        <span className="chat-source-tag mint">MOTREXEV 자료</span>
                       )}
                     </div>
                     <div className="chat-bubble-body">{m.content}</div>
@@ -225,7 +225,7 @@ export function ChatWidget() {
                     ✦
                   </div>
                   <div className="chat-bubble-content">
-                    <div className="chat-bubble-label">MINT AI</div>
+                    <div className="chat-bubble-label">MOTREXEV AI</div>
                     <div className="chat-bubble-body chat-loading">
                       답변 생성 중 <TypingDots />
                     </div>
@@ -279,8 +279,8 @@ export function ChatWidget() {
         <button
           type="button"
           className="chat-widget-fab"
-          title="MINT AI 열기"
-          aria-label="MINT AI 챗봇 열기"
+          title="MOTREXEV AI 열기"
+          aria-label="MOTREXEV AI 챗봇 열기"
           aria-expanded={false}
           onClick={() => setOpen(true)}
         >
@@ -288,7 +288,7 @@ export function ChatWidget() {
             ✦
           </span>
           <span className="chat-widget-fab-copy">
-            <strong>MINT AI</strong>
+            <strong>MOTREXEV AI</strong>
             <span>무엇이든 물어보세요</span>
           </span>
           <span className="chat-widget-fab-arrow" aria-hidden>

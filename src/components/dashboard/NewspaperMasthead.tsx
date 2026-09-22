@@ -8,7 +8,7 @@ interface NewspaperMastheadProps {
 }
 
 export function NewspaperMasthead({
-  brand = 'MINT',
+  brand = 'MOTREXEV',
   edition,
   headline,
   dek,

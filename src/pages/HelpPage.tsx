@@ -52,7 +52,7 @@ const SECTIONS = [
 const FAQ = [
   {
     q: '게시글 본문이 안 보여요.',
-    a: 'MINT는 원문 링크 + AI 요약 중심으로 표시합니다. 상세 페이지에서「원문 보기」링크로 기사를 확인하세요.',
+    a: 'MOTREXEV는 원문 링크 + AI 요약 중심으로 표시합니다. 상세 페이지에서「원문 보기」링크로 기사를 확인하세요.',
   },
   {
     q: '조직 리포트는 어떻게 만들어지나요?',
@@ -68,7 +68,7 @@ const FAQ = [
   },
   {
     q: 'AI 챗봇은 무엇을 도와주나요?',
-    a: '우하단 MINT AI 버튼을 누르면 수집된 자료를 바탕으로 전기차·충전·자율주행 관련 질문에 답합니다. MINT에 없는 내용은 일반 지식 답변 여부를 먼저 물어봅니다.',
+    a: '우하단 MOTREXEV AI 버튼을 누르면 수집된 자료를 바탕으로 전기차·충전·자율주행 관련 질문에 답합니다. MOTREXEV에 없는 내용은 일반 지식 답변 여부를 먼저 물어봅니다.',
   },
   {
     q: '자동 수집·리포트 스케줄은?',
@@ -89,14 +89,14 @@ export function HelpPage() {
     <PageShell
       section="안내"
       title="도움말"
-      lead="MINT(MotrexEV Intelligence & News Tracker) 사용 방법을 안내합니다."
+      lead="MOTREXEV Intelligence News & Trend 사용 방법을 안내합니다."
     >
       <section className="help-hero card card-pad">
         <div className="help-hero-icon" aria-hidden>
           <Icon name="help" />
         </div>
         <div>
-          <h3>MINT란?</h3>
+          <h3>MOTREXEV란?</h3>
           <p>
             EV·충전·자율주행 관련 뉴스를 관련성 게이트로 걸러 수집하고, AI가 요약·중요도를
             분석해 조직 1면·데일리 리포트·Webhook 알림까지 제공하는 사내 인텔리전스 도구입니다.

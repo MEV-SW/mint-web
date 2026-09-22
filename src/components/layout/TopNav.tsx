@@ -18,38 +18,6 @@ import {
 } from './navItems'
 import { JobStatusPanel } from '../jobs/JobStatusPanel'
 
-const PATH_LABELS: Record<string, string> = {
-  '/': '1면',
-  '/news': '뉴스',
-  '/reports': '리포트',
-  '/admin': '관리',
-  '/admin/settings': '설정',
-  '/admin/accounts': '계정',
-  '/admin/inquiries': '문의',
-  '/admin/sources': '소스',
-  '/admin/webhooks': '웹훅',
-  '/inquiries': '문의',
-  '/help': '도움말',
-}
-
-function resolveSectionLabel(pathname: string, state: unknown): string {
-  const exact = PATH_LABELS[pathname]
-  if (exact) return exact
-
-  const from = (state as { from?: string } | null)?.from
-  if (from) {
-    const fromLabel = PATH_LABELS[from.split('?')[0]]
-    if (fromLabel) return fromLabel
-  }
-
-  if (pathname.startsWith('/posts/')) return '기사'
-  if (pathname.startsWith('/reports/')) return '리포트'
-  if (pathname.startsWith('/personal-reports/')) return '내 리포트'
-  if (pathname.startsWith('/admin/')) return '관리'
-
-  return 'MINT'
-}
-
 function NavSeparator() {
   return <span className="topnav-link-sep" aria-hidden />
 }
@@ -101,14 +69,6 @@ export function TopNav() {
   }, [])
 
   const now = new Date()
-  const dateFull = now.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  })
-  const sectionLabel = resolveSectionLabel(location.pathname, location.state)
-
   const renderNavLink = (item: NavItem, badgeOverride?: number) => {
     const badge = badgeOverride ?? adminNavBadgeCount(item, counts)
     return (
@@ -131,25 +91,16 @@ export function TopNav() {
 
   return (
     <header className="topnav">
-      <div className="topnav-dateline">
-        <span className="topnav-edition">MotrexEV Intelligence · Daily Edition</span>
-        <span className="topnav-dateline-date">{dateFull}</span>
-        <span className="topnav-dateline-topic">전기차 · 충전 · 자율주행</span>
-      </div>
-
-      <div className="topnav-rule" aria-hidden />
-
       <div className="topnav-bar">
         <Link to="/" className="topnav-brand" onClick={() => setMenuOpen(false)}>
           <div className="topnav-brand-mark" aria-hidden>
             M
           </div>
           <div className="topnav-brand-text">
-            <span className="topnav-brand-name">MINT Daily</span>
-            <span className="topnav-brand-sub">
-              Vol. {now.getFullYear()} · MotrexEV Intelligence
-            </span>
+            <span className="topnav-brand-name">MOTREXEV</span>
+            <span className="topnav-brand-sub">Intelligence News &amp; Trend</span>
           </div>
+          <span className="topnav-volume">VOL. {String(now.getMonth() + 1).padStart(2, '0')} / {now.getFullYear()}</span>
         </Link>
 
         <nav className="topnav-links" aria-label="주 메뉴">
@@ -239,11 +190,6 @@ export function TopNav() {
         </div>
       </div>
 
-      <div className={cx('topnav-section-bar', location.pathname === '/' && 'is-home')}>
-        <span>현재 섹션</span>
-        <span aria-hidden style={{ width: 1, height: 11, background: 'var(--line)' }} />
-        <strong>{sectionLabel}</strong>
-      </div>
       {menuOpen && (
         <nav className="topnav-mobile" aria-label="모바일 메뉴">
           {mobileNav.map((item) => {

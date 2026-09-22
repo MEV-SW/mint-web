@@ -1,5 +1,5 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { listEditions } from '../api/editionApi'
 import { listIssueChanges } from '../api/issueApi'
@@ -7,8 +7,8 @@ import { getEditorialFeed, listKeywords } from '../api/personalizationApi'
 import { getLatestReport } from '../api/reportApi'
 import type { DashboardPostPreview, DashboardStats } from '../api/statsApi'
 import { FrontKiosk } from '../components/display/FrontKiosk'
-import { FrontPageSpread, type SpreadSheet } from '../components/dashboard/FrontPageSpread'
 import { MintFrontPage } from '../components/dashboard/MintFrontPage'
+import { TrendDashboard } from '../components/trend/TrendDashboard'
 import { FrontPageSkeleton } from '../components/common/Skeletons'
 import { useToast } from '../components/common/Toast'
 import { useDashboardStatsQuery } from '../hooks/useDashboardStatsQuery'
@@ -72,7 +72,6 @@ export function DashboardPage() {
   const { busy: crawlBusy } = useActiveJobs(canEditAny)
   const stats = useDashboardStatsQuery(crawlBusy)
   const seenFrontSignature = useRef<string | undefined>(undefined)
-  const [spreadPage, setSpreadPage] = useState<string>('')
   const [searchParams, setSearchParams] = useSearchParams()
   const kioskOn = searchParams.get('kiosk') === '1'
 
@@ -100,15 +99,19 @@ export function DashboardPage() {
     queryKey: ['issue-changes'],
     queryFn: () => listIssueChanges(),
   })
-  const issueChanges = issueChangesQuery.data?.items ?? []
+  const issueChanges = useMemo(
+    () => issueChangesQuery.data?.items ?? [],
+    [issueChangesQuery.data?.items],
+  )
 
-  const editions = editionsQuery.data ?? []
+  const editions = useMemo(() => editionsQuery.data ?? [], [editionsQuery.data])
   const editorialQueries = useQueries({
     queries: editions.map((edition) => ({
       queryKey: ['editorial-feed', edition.id],
       queryFn: () => getEditorialFeed(edition.id),
       refetchInterval: pollMs,
       refetchIntervalInBackground: false,
+      enabled: edition.display_mode !== 'trend',
     })),
   })
   const reportQueries = useQueries({
@@ -117,15 +120,14 @@ export function DashboardPage() {
       queryFn: () => getLatestReport(edition.id),
       refetchInterval: pollMs,
       refetchIntervalInBackground: false,
+      enabled: edition.display_mode !== 'trend',
     })),
   })
 
-  useEffect(() => {
-    if (spreadPage) return
-    if (editions[0]) setSpreadPage(editions[0].id)
-  }, [editions, spreadPage])
+  const selectedSlug = searchParams.get('edition')
+  const selectedEdition = editions.find((edition) => edition.slug === selectedSlug) ?? editions[0]
 
-  const keywords = keywordsQuery.data ?? []
+  const keywords = useMemo(() => keywordsQuery.data ?? [], [keywordsQuery.data])
   const frontSignature = useMemo(() => {
     const reportSignature = editions
       .map((edition, index) => `${edition.id}:${reportQueries[index]?.data?.id ?? 'none'}`)
@@ -155,7 +157,7 @@ export function DashboardPage() {
     if (frontSignature !== seenFrontSignature.current) {
       seenFrontSignature.current = frontSignature
       invalidateFrontPageQueries(qc)
-      toast('오늘의 MINT Daily가 갱신되었습니다.')
+      toast('오늘의 MOTREXEV 뉴스가 갱신되었습니다.')
     }
   }, [frontReady, frontSignature, qc, toast])
 
@@ -174,8 +176,8 @@ export function DashboardPage() {
     }).format(now),
   )
 
-  const sheets = useMemo<SpreadSheet[]>(() => {
-    const editionSheets: SpreadSheet[] = editions.map((edition, index) => {
+  const sheets = useMemo(() => {
+    const editionSheets = editions.map((edition, index) => {
       const feed = editorialQueries[index]?.data
       const report = toOrgReport(reportQueries[index]?.data)
       const featured = keywords.filter(
@@ -218,11 +220,9 @@ export function DashboardPage() {
     setKiosk,
   ])
 
-  const currentPage =
-    sheets.some((sheet) => sheet.key === spreadPage) ? spreadPage : sheets[0]?.key ?? ''
   const currentEditionIndex = Math.max(
     0,
-    editions.findIndex((edition) => edition.id === currentPage),
+    editions.findIndex((edition) => edition.id === selectedEdition?.id),
   )
   const currentEdition = editions[currentEditionIndex]
   const kioskDeck = sliceFrontPageStories(
@@ -266,18 +266,19 @@ export function DashboardPage() {
     )
   }
 
-  if (sheets.length === 1) {
+  if (currentEdition?.display_mode === 'trend') {
     return (
       <div className="content-inner np-page page-fade">
-        {sheets[0].node}
+        <TrendDashboard edition={currentEdition} />
         {kioskOverlay}
       </div>
     )
   }
 
+  const currentSheet = sheets.find((sheet) => sheet.key === currentEdition?.id) ?? sheets[0]
   return (
     <div className="content-inner np-page page-fade">
-      <FrontPageSpread page={currentPage} onPageChange={setSpreadPage} sheets={sheets} />
+      {currentSheet.node}
       {kioskOverlay}
     </div>
   )

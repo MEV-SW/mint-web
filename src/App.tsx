@@ -1,5 +1,5 @@
 /**
- * MINT app shell: public auth routes, member layout, admin-only section.
+ * MOTREXEV app shell: public auth routes, member layout, admin-only section.
  * See README.md for the full route map.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
