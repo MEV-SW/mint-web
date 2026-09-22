@@ -124,7 +124,7 @@ function SketchFallback({ seed, className }: { seed: string; className?: string 
           fontSize="9"
           letterSpacing="1.2"
         >
-          MINT SKETCH
+          MOTREXEV SKETCH
         </text>
       </svg>
     </div>

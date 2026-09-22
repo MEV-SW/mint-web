@@ -237,34 +237,20 @@ export function SourceFormFields({
 
       {editions.length > 0 && (
         <div className="field">
-          <label>관련 분야</label>
+          <label>소속 주제</label>
           <p className="source-form-field-note">
-            비우면 전 분야 일반 소스입니다. 여러 분야를 고를 수 있으며, 수집 파이프라인은
-            하나입니다.
+            소스는 하나의 주제에만 속하며 해당 주제의 관련성 키워드로 수집됩니다.
           </p>
-          <div className="pick-list">
-            {editions.map((edition) => {
-              const selected = (form.edition_ids ?? []).includes(edition.id)
-              return (
-                <label key={edition.id} className={`pick-row${selected ? ' is-on' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={() => {
-                      const current = form.edition_ids ?? []
-                      onChange({
-                        ...form,
-                        edition_ids: selected
-                          ? current.filter((id) => id !== edition.id)
-                          : [...current, edition.id],
-                      })
-                    }}
-                  />
-                  <span>{edition.name}</span>
-                </label>
-              )
-            })}
-          </div>
+          <select
+            className="input"
+            value={form.edition_id}
+            onChange={(event) => onChange({ ...form, edition_id: event.target.value })}
+          >
+            <option value="" disabled>주제를 선택하세요</option>
+            {editions.map((edition) => (
+              <option key={edition.id} value={edition.id}>{edition.name}</option>
+            ))}
+          </select>
         </div>
       )}
     </>

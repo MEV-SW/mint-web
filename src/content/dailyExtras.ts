@@ -297,13 +297,13 @@ const DESKS: Record<DailyDesk, { facts: DailyFact[]; terms: DailyTerm[]; quizzes
     facts: DAILY_FACTS,
     terms: DAILY_TERMS,
     quizzes: DAILY_QUIZZES,
-    foot: '매일 바뀌는 MINT 휴식판 · 전기차·충전 업무 속 잠깐 숨',
+    foot: '매일 바뀌는 MOTREXEV 휴식판 · 전기차·충전 업무 속 잠깐 숨',
   },
   autonomous: {
     facts: AV_FACTS,
     terms: AV_TERMS,
     quizzes: AV_QUIZZES,
-    foot: '매일 바뀌는 MINT 휴식판 · 자율주행 업무 속 잠깐 숨',
+    foot: '매일 바뀌는 MOTREXEV 휴식판 · 자율주행 업무 속 잠깐 숨',
   },
 }
 

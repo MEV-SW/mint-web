@@ -38,6 +38,6 @@ export async function deleteWebhook(id: string): Promise<void> {
 }
 
 export async function testSlack(message?: string): Promise<{ success: boolean; message: string }> {
-  const { data } = await apiClient.post('/api/v1/slack/test', { message: message || 'MINT 테스트 메시지' })
+  const { data } = await apiClient.post('/api/v1/slack/test', { message: message || 'MOTREXEV 테스트 메시지' })
   return data
 }

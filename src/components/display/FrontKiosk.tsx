@@ -246,8 +246,8 @@ export function FrontKiosk({
     >
       <header className="front-kiosk-mast">
         <div className="front-kiosk-mast-brand">
-          <span className="front-kiosk-wordmark">MINT</span>
-          <span className="front-kiosk-wordmark-sub">MotrexEV · {year}</span>
+          <span className="front-kiosk-wordmark">MOTREXEV</span>
+          <span className="front-kiosk-wordmark-sub">MOTREXEV · {year}</span>
         </div>
         <div className="front-kiosk-mast-center">
           <span className="front-kiosk-edition">{editionName || '1면'}</span>

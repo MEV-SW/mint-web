@@ -14,7 +14,7 @@ export function LoginSsoLayout({ children, host, online, checking = false }: Log
     <div className="login-sso page-fade">
       <div className="login-sso-grain" aria-hidden />
       <div className="login-sso-watermark" aria-hidden>
-        MINT
+        MOTREXEV
       </div>
 
       <div className="login-sso-masthead">
@@ -22,7 +22,7 @@ export function LoginSsoLayout({ children, host, online, checking = false }: Log
           M
         </div>
         <div>
-          <div className="login-sso-wordmark">MINT DAILY</div>
+          <div className="login-sso-wordmark">MOTREXEV DAILY</div>
           <div className="login-sso-tagline">Intelligence &amp; News Tracker</div>
         </div>
       </div>

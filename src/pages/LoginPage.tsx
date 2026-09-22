@@ -77,7 +77,7 @@ export function LoginPage() {
         <span className="login-sso-cta-mark" aria-hidden>
           K
         </span>
-        {busy ? '연결 중…' : 'MotrexEV 계정으로 계속하기'}
+        {busy ? '연결 중…' : 'MOTREXEV 계정으로 계속하기'}
       </button>
 
       <div className="login-sso-session">
@@ -106,7 +106,7 @@ export function LoginPage() {
       </dl>
 
       <div className="login-sso-foot">
-        <span className="login-sso-foot-note">MotrexEV 사내 전용</span>
+        <span className="login-sso-foot-note">MOTREXEV 사내 전용</span>
         <span className="login-sso-foot-date">{todayLong()}</span>
       </div>
     </LoginSsoLayout>

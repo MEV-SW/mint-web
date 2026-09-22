@@ -1,3 +1,5 @@
+export type EditionDisplayMode = 'news' | 'trend'
+
 export interface Edition {
   id: string
   organization_id: string
@@ -5,6 +7,7 @@ export interface Edition {
   name: string
   sort_order: number
   is_active: boolean
+  display_mode: EditionDisplayMode
   topic_terms: string[]
   tagged_source_count: number
   featured_keyword_count: number
@@ -19,6 +22,7 @@ export interface EditionCreate {
   topic_terms?: string[]
   sort_order?: number
   is_active?: boolean
+  display_mode?: EditionDisplayMode
 }
 
 export interface EditionUpdate {
@@ -26,4 +30,5 @@ export interface EditionUpdate {
   topic_terms?: string[]
   sort_order?: number
   is_active?: boolean
+  display_mode?: EditionDisplayMode
 }

@@ -36,9 +36,18 @@ body {
   margin: 0;
   box-shadow: none;
 }
+@media (min-width: 1444px) {
+  .app.app-topnav > .topnav,
+  .app.app-topnav > .main {
+    width: calc(100% - 4px);
+    margin-right: 4px;
+    box-sizing: border-box;
+  }
+}
 .app-topnav .content {
   background: var(--paper);
   overflow-x: clip;
+  scrollbar-gutter: stable both-edges;
 }
 
 /* Full-width chrome strip; inner rails carry the design width */
@@ -52,6 +61,7 @@ body {
 .app-topnav .topnav-bar,
 .app-topnav .topnav-section-bar,
 .app-topnav .topnav-mobile,
+.app-topnav .topics-bar-inner,
 .content-inner,
 .content-inner.np-page,
 .content-inner.np-sheet {

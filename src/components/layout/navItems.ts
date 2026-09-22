@@ -25,12 +25,27 @@ export const APP_NAV_ADMIN_HUB: NavItem = {
 }
 
 export const APP_NAV_ADMIN_SUB: NavItem[] = [
-  { path: SETTINGS_PATH, label: '설정', icon: 'settings' },
+  { path: SETTINGS_PATH, label: '주제 관리', icon: 'settings' },
   {
     path: '/admin/accounts',
-    label: '계정',
+    label: '계정 관리',
     icon: 'shield',
     countKey: 'pendingUsers',
+    adminOnly: true,
+    superAdminOnly: true,
+  },
+  { path: '/admin/sources', label: '소스', icon: 'feed', adminOnly: true },
+  {
+    path: '/admin/webhooks',
+    label: '웹훅',
+    icon: 'slack',
+    adminOnly: true,
+    superAdminOnly: true,
+  },
+  {
+    path: '/admin/issues',
+    label: '이슈 정리',
+    icon: 'inbox',
     adminOnly: true,
     superAdminOnly: true,
   },
@@ -42,25 +57,10 @@ export const APP_NAV_ADMIN_SUB: NavItem[] = [
     sourceReviewOnly: true,
   },
   {
-    path: '/admin/issues',
-    label: '이슈 정리',
-    icon: 'inbox',
-    adminOnly: true,
-    superAdminOnly: true,
-  },
-  {
     path: '/admin/inquiries',
     label: '문의',
     icon: 'message',
     countKey: 'openInquiries',
-    adminOnly: true,
-    superAdminOnly: true,
-  },
-  { path: '/admin/sources', label: '소스', icon: 'feed', adminOnly: true },
-  {
-    path: '/admin/webhooks',
-    label: '웹훅',
-    icon: 'slack',
     adminOnly: true,
     superAdminOnly: true,
   },
