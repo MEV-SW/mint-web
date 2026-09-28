@@ -98,7 +98,8 @@ export function TrendDashboard({ edition }: { edition: Edition }) {
 
       <div className="trend-meta">
         <span>집계 기준 <strong>중복 제거 포스트 수</strong></span>
-        <span>집계 주기 <strong>{data.refresh_interval}</strong></span>
+        <span>트렌드 갱신 <strong>{data.refresh_interval === '1h' ? '1시간' : data.refresh_interval}</strong></span>
+        <span>자동 수집 <strong>매일 06:00</strong></span>
         <span>최근 갱신 <strong>{new Date(data.generated_at).toLocaleString('ko-KR')}</strong></span>
         <span>소스 <strong>{data.source_count.toLocaleString()}곳</strong></span>
         <span>수집 <strong>{data.post_count.toLocaleString()}건</strong></span>
