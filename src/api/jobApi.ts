@@ -14,6 +14,11 @@ export async function getJob(id: string): Promise<BackgroundJob> {
   return data
 }
 
+export async function runDailySequence(): Promise<BackgroundJob> {
+  const { data } = await apiClient.post<BackgroundJob>('/api/v1/jobs/daily-sequence')
+  return data
+}
+
 export async function cancelJob(id: string): Promise<BackgroundJob> {
   const { data } = await apiClient.post<BackgroundJob>(`/api/v1/jobs/${id}/cancel`)
   return data
