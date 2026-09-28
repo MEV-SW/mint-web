@@ -109,6 +109,7 @@ export async function getEditorialFeed(
 }
 
 export async function getNews(params: {
+  edition_id?: string
   q?: string
   keyword_ids?: string[]
   importance?: string
@@ -118,6 +119,7 @@ export async function getNews(params: {
   size?: number
 }): Promise<NewsPage> {
   const query = new URLSearchParams()
+  if (params.edition_id) query.set('edition_id', params.edition_id)
   if (params.q) query.set('q', params.q)
   params.keyword_ids?.forEach((id) => query.append('keyword_ids', id))
   if (params.importance) query.set('importance', params.importance)
