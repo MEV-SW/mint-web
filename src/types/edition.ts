@@ -9,6 +9,8 @@ export interface Edition {
   is_active: boolean
   display_mode: EditionDisplayMode
   topic_terms: string[]
+  exclude_terms: string[]
+  relevance_criteria: string | null
   tagged_source_count: number
   featured_keyword_count: number
   missing_sources: boolean
@@ -20,6 +22,8 @@ export interface EditionCreate {
   name: string
   slug?: string
   topic_terms?: string[]
+  exclude_terms?: string[]
+  relevance_criteria?: string | null
   sort_order?: number
   is_active?: boolean
   display_mode?: EditionDisplayMode
@@ -28,6 +32,8 @@ export interface EditionCreate {
 export interface EditionUpdate {
   name?: string
   topic_terms?: string[]
+  exclude_terms?: string[]
+  relevance_criteria?: string | null
   sort_order?: number
   is_active?: boolean
   display_mode?: EditionDisplayMode

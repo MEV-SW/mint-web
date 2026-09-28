@@ -4764,6 +4764,9 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .topic-term-editor-large { min-height: 40px; align-items: center; padding: 8px; border: 1px solid rgba(26, 23, 18, .16); }
 .topic-term-editor-large input { border-bottom: 0; }
 .topic-detail-note { margin: 9px 0 0; color: var(--text-faint); font-size: 10.5px; }
+.topic-criteria-editor { display: grid; gap: 8px; justify-items: end; }
+.topic-criteria-editor textarea { width: 100%; min-height: 150px; resize: vertical; font: 12px/1.6 var(--sans); white-space: pre-wrap; }
+.topic-create-criteria { grid-column: 1 / -1; min-height: 64px; resize: vertical; font: 12px/1.5 var(--sans); }
 .topic-source-search { width: min(260px, 45%); }
 .topic-source-list { max-height: 320px; }
 .topic-detail-empty { margin: 0; padding: 20px 0; color: var(--text-muted); font-size: 12px; }

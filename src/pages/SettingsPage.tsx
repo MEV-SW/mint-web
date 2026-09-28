@@ -60,6 +60,9 @@ export function SettingsPage() {
   const [newEditionMode, setNewEditionMode] = useState<EditionDisplayMode>('news')
   const [newKeywordByEdition, setNewKeywordByEdition] = useState<Record<string, string>>({})
   const [newTopicTermByEdition, setNewTopicTermByEdition] = useState<Record<string, string>>({})
+  const [newExcludeTermByEdition, setNewExcludeTermByEdition] = useState<Record<string, string>>({})
+  const [criteriaDraftByEdition, setCriteriaDraftByEdition] = useState<Record<string, string>>({})
+  const [newEditionCriteria, setNewEditionCriteria] = useState('')
   const [sourceSearchByEdition, setSourceSearchByEdition] = useState<Record<string, string>>({})
   const [selectedEditionId, setSelectedEditionId] = useState('')
   const [showTopicCreate, setShowTopicCreate] = useState(false)
@@ -102,10 +105,12 @@ export function SettingsPage() {
           .split(/[,/\n]/)
           .map((term) => term.trim())
           .filter(Boolean),
+        relevance_criteria: newEditionCriteria.trim() || null,
       }),
     onSuccess: () => {
       setNewEditionName('')
       setNewEditionTerms('')
+      setNewEditionCriteria('')
       setNewEditionMode('news')
       void qc.invalidateQueries({ queryKey: ['editions'] })
       toast('사업 분야를 추가했습니다. 키워드와 소스를 이어서 등록하세요.')
@@ -166,12 +171,23 @@ export function SettingsPage() {
       id,
       display_mode,
       topic_terms,
+      exclude_terms,
+      relevance_criteria,
     }: {
       id: string
       display_mode?: EditionDisplayMode
       topic_terms?: string[]
-    }) => updateEdition(id, { display_mode, topic_terms }),
-    onSuccess: () => {
+      exclude_terms?: string[]
+      relevance_criteria?: string | null
+    }) => updateEdition(id, { display_mode, topic_terms, exclude_terms, relevance_criteria }),
+    onSuccess: (_edition, variables) => {
+      if (variables.relevance_criteria !== undefined) {
+        setCriteriaDraftByEdition((current) => {
+          const next = { ...current }
+          delete next[variables.id]
+          return next
+        })
+      }
       void qc.invalidateQueries({ queryKey: ['editions'] })
       toast('주제 설정을 저장했습니다.')
     },
@@ -307,6 +323,14 @@ export function SettingsPage() {
             <div className="topic-create-panel">
               <input className="input" value={newEditionName} onChange={(event) => setNewEditionName(event.target.value)} placeholder="주제명 (예: 수소)" />
               <input className="input" value={newEditionTerms} onChange={(event) => setNewEditionTerms(event.target.value)} placeholder="관련성 키워드, 쉼표로 구분" />
+              <textarea
+                className="input topic-create-criteria"
+                value={newEditionCriteria}
+                onChange={(event) => setNewEditionCriteria(event.target.value)}
+                placeholder="판정 기준 (선택) — 관련 있음: … / 관련 없음: …"
+                rows={3}
+                maxLength={4000}
+              />
               <div className="edition-mode-create" role="radiogroup" aria-label="새 주제 표시 방식">
                 {(['news', 'trend'] as const).map((mode) => (
                   <label key={mode}>
@@ -380,7 +404,7 @@ export function SettingsPage() {
                 <section className="topic-detail-section">
                   <div className="topic-detail-section-head">
                     <h3>관련성 키워드</h3>
-                    <p>크롤러가 이 주제와 관련된 문서를 판별할 때 사용합니다.</p>
+                    <p>수집·표시에서 이 주제의 글인지 판별하는 신호입니다. 영문 약어는 단어 단위로 비교합니다.</p>
                   </div>
                   <div className="topic-term-editor topic-term-editor-large">
                     {(selectedEdition.topic_terms ?? []).map((term) => (
@@ -402,6 +426,66 @@ export function SettingsPage() {
                     />
                   </div>
                   <p className="topic-detail-note">소스는 한 주제에만 속합니다. 여러 주제에서 쓰는 범용 소스는 주제별로 중복 등록합니다.</p>
+                </section>
+
+                <section className="topic-detail-section">
+                  <div className="topic-detail-section-head">
+                    <h3>판정 기준</h3>
+                    <p>AI가 수집 후보를 이 주제로 볼지 판단할 때 그대로 읽는 기준입니다. 비우면 주제 이름과 관련성 키워드만으로 판단합니다.</p>
+                  </div>
+                  <div className="topic-criteria-editor">
+                    <textarea
+                      className="input"
+                      rows={8}
+                      maxLength={4000}
+                      value={criteriaDraftByEdition[selectedEdition.id] ?? selectedEdition.relevance_criteria ?? ''}
+                      placeholder="예) 관련 있음: … / 관련 없음: …"
+                      onChange={(event) => setCriteriaDraftByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
+                    />
+                    <Btn
+                      variant="primary"
+                      size="sm"
+                      disabled={
+                        saveEditionMeta.isPending ||
+                        (criteriaDraftByEdition[selectedEdition.id] ?? selectedEdition.relevance_criteria ?? '') ===
+                          (selectedEdition.relevance_criteria ?? '')
+                      }
+                      onClick={() =>
+                        saveEditionMeta.mutate({
+                          id: selectedEdition.id,
+                          relevance_criteria: (criteriaDraftByEdition[selectedEdition.id] ?? '').trim() || null,
+                        })
+                      }
+                    >
+                      기준 저장
+                    </Btn>
+                  </div>
+                </section>
+
+                <section className="topic-detail-section">
+                  <div className="topic-detail-section-head">
+                    <h3>제목 제외어</h3>
+                    <p>제목에 이 단어가 있고 관련성 키워드가 없으면 수집하지 않습니다. 이미 저장된 글은 숨기지 않습니다.</p>
+                  </div>
+                  <div className="topic-term-editor topic-term-editor-large">
+                    {(selectedEdition.exclude_terms ?? []).map((term) => (
+                      <button type="button" className="topic-term-chip" key={term} onClick={() => saveEditionMeta.mutate({ id: selectedEdition.id, exclude_terms: (selectedEdition.exclude_terms ?? []).filter((item) => item !== term) })} aria-label={`${term} 삭제`}>
+                        {term} ×
+                      </button>
+                    ))}
+                    <input
+                      value={newExcludeTermByEdition[selectedEdition.id] ?? ''}
+                      placeholder="제외어 입력 후 Enter"
+                      onChange={(event) => setNewExcludeTermByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
+                      onKeyDown={(event) => {
+                        const term = (newExcludeTermByEdition[selectedEdition.id] ?? '').trim()
+                        if (event.key !== 'Enter' || !term) return
+                        event.preventDefault()
+                        saveEditionMeta.mutate({ id: selectedEdition.id, exclude_terms: [...new Set([...(selectedEdition.exclude_terms ?? []), term])] })
+                        setNewExcludeTermByEdition((current) => ({ ...current, [selectedEdition.id]: '' }))
+                      }}
+                    />
+                  </div>
                 </section>
 
                 <section className="topic-detail-section">
