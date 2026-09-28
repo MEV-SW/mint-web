@@ -27,6 +27,7 @@ import {
   COMMUNITY_SOURCE_PRESET,
   COMMUNITY_SOURCE_TYPES,
 } from '../types/source'
+import { runDailySequence } from '../api/jobApi'
 import { useActiveJobs } from '../hooks/useJobsQuery'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
@@ -102,6 +103,7 @@ export function SourcesPage() {
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
   const [runningCrawlAll, setRunningCrawlAll] = useState(false)
+  const [runningSequence, setRunningSequence] = useState(false)
   const [runningPipeline, setRunningPipeline] = useState(false)
   const [runningCommunityPipeline, setRunningCommunityPipeline] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
@@ -259,6 +261,24 @@ export function SourcesPage() {
     }
   }
 
+  async function runDailySequenceNow() {
+    if (
+      !window.confirm(
+        '일일 작업 전체를 지금 실행할까요?\n정리 단계에서 보존 기간이 지난 미승인 후보와 만료 기사가 삭제됩니다. Slack은 전송하지 않습니다.',
+      )
+    ) return
+    setRunningSequence(true)
+    try {
+      await runDailySequence()
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('일일 전체 시퀀스를 백그라운드에서 시작했습니다. 작업 패널에서 단계별 진행을 확인하세요.', 'info')
+    } catch (e) {
+      toast(apiErrorDetail(e) || '일일 전체 시퀀스 요청 실패', 'err')
+    } finally {
+      setRunningSequence(false)
+    }
+  }
+
   async function runDailyDiscoveryPipeline() {
     setRunningPipeline(true)
     try {
@@ -285,6 +305,7 @@ export function SourcesPage() {
     }
   }
 
+  const opsBusy = busy || runningCrawlAll || runningSequence
   const crawlBlockedTitle = busy
     ? `진행 중인 작업: ${activeLabel ?? '백그라운드 작업'}`
     : undefined
@@ -342,9 +363,9 @@ export function SourcesPage() {
                   <Icon name="refresh" />
                 </div>
                 <div className="sources-op-card-text">
-                  <h3 className="sources-op-card-title">전체 소스 수집</h3>
+                  <h3 className="sources-op-card-title">일일 수집 시퀀스</h3>
                   <p className="sources-op-card-desc">
-                    공식·중요 게시판 소스 전체 크롤링 · 매일 06:00(KST)
+                    매일 05:30~08:10(KST) 자동 · 정리 → 전체 수집 → AI 발견 → 커뮤니티 탐문 → 리포트 (Slack 제외)
                   </p>
                 </div>
               </div>
@@ -354,10 +375,20 @@ export function SourcesPage() {
                   size="sm"
                   icon="refresh"
                   onClick={runCrawlAllSources}
-                  disabled={!isAdmin || busy || runningCrawlAll}
+                  disabled={!isAdmin || opsBusy}
                   title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
                 >
-                  {busy || runningCrawlAll ? '…' : '지금 수집'}
+                  {opsBusy ? '…' : '수집만'}
+                </Btn>
+                <Btn
+                  variant="primary"
+                  size="sm"
+                  icon="sparkles"
+                  onClick={runDailySequenceNow}
+                  disabled={!isAdmin || opsBusy}
+                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
+                >
+                  {opsBusy ? '…' : '전체 실행'}
                 </Btn>
               </div>
             </article>

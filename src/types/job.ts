@@ -12,6 +12,7 @@ export type JobType =
   | 'purge_stale_published'
   | 'classify_posts'
   | 'generate_personal_reports'
+  | 'daily_sequence'
 
 export type JobStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
 
