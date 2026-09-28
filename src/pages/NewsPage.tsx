@@ -105,9 +105,10 @@ export function NewsPage() {
   const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
   const keywords = useQuery({ queryKey: ['keywords'], queryFn: () => listKeywords() })
   const news = useQuery({
-    queryKey: ['news', query, category, keywordId, importance, contentKind, page],
+    queryKey: ['news', editionId, query, category, keywordId, importance, contentKind, page],
     queryFn: () =>
       getNews({
+        edition_id: editionId || undefined,
         q: query || undefined,
         category: category || undefined,
         keyword_ids: keywordId ? [keywordId] : undefined,
