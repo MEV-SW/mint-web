@@ -1780,7 +1780,7 @@ select.input { appearance: none; cursor: pointer;
 
 .sources-ops-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
 }
@@ -1826,6 +1826,11 @@ select.input { appearance: none; cursor: pointer;
   background: var(--mint-soft);
   color: var(--mint-deep);
   border: 1px solid oklch(0.9 0.04 168);
+}
+.sources-op-card-icon-crawl {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid rgba(26, 23, 18, .16);
 }
 .sources-op-card-icon-community {
   background: var(--info-soft);

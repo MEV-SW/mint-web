@@ -28,6 +28,11 @@ export async function crawlSource(id: string): Promise<BackgroundJob> {
   return data
 }
 
+export async function crawlAllSources(): Promise<BackgroundJob> {
+  const { data } = await apiClient.post<BackgroundJob>(`/api/v1/sources/crawl-all`)
+  return data
+}
+
 export async function crawlSourceToDiscovery(id: string): Promise<BackgroundJob> {
   const { data } = await apiClient.post<BackgroundJob>(`/api/v1/sources/${id}/crawl-to-discovery`)
   return data

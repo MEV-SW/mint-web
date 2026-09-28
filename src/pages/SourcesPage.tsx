@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
+  crawlAllSources,
   crawlAllToDiscovery,
   crawlSource,
   crawlSourceToDiscovery,
@@ -27,6 +28,7 @@ import {
   COMMUNITY_SOURCE_TYPES,
 } from '../types/source'
 import { useActiveJobs } from '../hooks/useJobsQuery'
+import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
 import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
@@ -99,6 +101,7 @@ export function SourcesPage() {
   const [editing, setEditing] = useState<Source | null>(null)
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
+  const [runningCrawlAll, setRunningCrawlAll] = useState(false)
   const [runningPipeline, setRunningPipeline] = useState(false)
   const [runningCommunityPipeline, setRunningCommunityPipeline] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
@@ -106,6 +109,7 @@ export function SourcesPage() {
   const [retentionDraft, setRetentionDraft] = useState<string | null>(null)
 
   const { busy, activeLabel, activeProgress } = useActiveJobs()
+  const { isAdmin } = usePermissions()
 
   const { data: sources = [] } = useQuery({
     queryKey: ['sources'],
@@ -242,6 +246,19 @@ export function SourcesPage() {
     }
   }
 
+  async function runCrawlAllSources() {
+    setRunningCrawlAll(true)
+    try {
+      await crawlAllSources()
+      qc.invalidateQueries({ queryKey: ['jobs'] })
+      toast('전체 소스 수집을 백그라운드에서 시작했습니다. 상단 작업 패널에서 진행 상태를 확인하세요.', 'info')
+    } catch (e) {
+      toast(apiErrorDetail(e) || '전체 소스 수집 요청 실패', 'err')
+    } finally {
+      setRunningCrawlAll(false)
+    }
+  }
+
   async function runDailyDiscoveryPipeline() {
     setRunningPipeline(true)
     try {
@@ -319,6 +336,32 @@ export function SourcesPage() {
       <div className="sources-page">
         <section className="sources-block" aria-label="수집 운영">
           <div className="sources-ops-grid">
+            <article className="sources-op-card">
+              <div className="sources-op-card-top">
+                <div className="sources-op-card-icon sources-op-card-icon-crawl" aria-hidden>
+                  <Icon name="refresh" />
+                </div>
+                <div className="sources-op-card-text">
+                  <h3 className="sources-op-card-title">전체 소스 수집</h3>
+                  <p className="sources-op-card-desc">
+                    공식·중요 게시판 소스 전체 크롤링 · 매일 06:00(KST)
+                  </p>
+                </div>
+              </div>
+              <div className="sources-op-card-controls">
+                <Btn
+                  variant="soft"
+                  size="sm"
+                  icon="refresh"
+                  onClick={runCrawlAllSources}
+                  disabled={!isAdmin || busy || runningCrawlAll}
+                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
+                >
+                  {busy || runningCrawlAll ? '…' : '지금 수집'}
+                </Btn>
+              </div>
+            </article>
+
             <article className="sources-op-card">
               <div className="sources-op-card-top">
                 <div className="sources-op-card-icon sources-op-card-icon-pipeline" aria-hidden>
