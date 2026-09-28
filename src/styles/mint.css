@@ -2010,6 +2010,16 @@ select.input { appearance: none; cursor: pointer;
   flex: 1 1 360px;
   min-width: 0;
 }
+
+.sources-topic-filter select {
+  min-width: 140px;
+  height: 36px;
+}
+
+.sources-table .sources-direct-actions {
+  opacity: 1;
+  align-items: center;
+}
 .sources-list-search {
   position: relative;
   display: block;

@@ -102,6 +102,7 @@ export function SourcesPage() {
   const [runningPipeline, setRunningPipeline] = useState(false)
   const [runningCommunityPipeline, setRunningCommunityPipeline] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [editionFilter, setEditionFilter] = useState('all')
   const [retentionDraft, setRetentionDraft] = useState<string | null>(null)
 
   const { busy, activeLabel, activeProgress } = useActiveJobs()
@@ -128,6 +129,7 @@ export function SourcesPage() {
     const isCommunity = COMMUNITY_SOURCE_TYPES.includes(s.source_type)
     if (sourceFilter === 'community' && !isCommunity) return false
     if (sourceFilter === 'official' && isCommunity) return false
+    if (editionFilter !== 'all' && s.edition_id !== editionFilter) return false
     if (
       qLower &&
       !s.name.toLowerCase().includes(qLower) &&
@@ -182,9 +184,16 @@ export function SourcesPage() {
     mutationFn: (id: string) => deleteSource(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sources'] })
+      qc.invalidateQueries({ queryKey: ['editions'] })
       toast('소스를 삭제했습니다.')
     },
+    onError: (error) => toast(apiErrorDetail(error) ?? '소스 삭제에 실패했습니다.', 'err'),
   })
+
+  function confirmRemove(source: Source) {
+    if (!window.confirm(`「${source.name}」 소스를 삭제할까요? 기존 기사 이력은 유지됩니다.`)) return
+    remove.mutate(source.id)
+  }
 
   const saveRetention = useMutation({
     mutationFn: () => updateCollectionSettings(Number(retentionDays)),
@@ -447,6 +456,20 @@ export function SourcesPage() {
                   </button>
                 ))}
               </div>
+              <label className="sources-topic-filter">
+                <span className="sr-only">주제별 필터</span>
+                <select
+                  className="input"
+                  value={editionFilter}
+                  onChange={(event) => setEditionFilter(event.target.value)}
+                  aria-label="주제별 필터"
+                >
+                  <option value="all">전체 주제</option>
+                  {editions.map((edition) => (
+                    <option key={edition.id} value={edition.id}>{edition.name}</option>
+                  ))}
+                </select>
+              </label>
               <label className="sources-list-search">
                 <Icon name="search" />
                 <input
@@ -471,14 +494,16 @@ export function SourcesPage() {
                   <th style={{ width: 90 }}>자동 게시</th>
                   <th className="num" style={{ width: 130 }}>마지막 크롤링</th>
                   <th style={{ width: 76 }}>활성</th>
-                  <th style={{ width: 48 }} />
+                  <th style={{ width: 118 }}>관리</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 && (
                   <tr>
                     <td colSpan={9} className="sources-empty-cell">
-                      {qLower ? '검색 결과가 없습니다.' : '등록된 소스가 없습니다. 소스를 추가해 주세요.'}
+                      {qLower || editionFilter !== 'all'
+                        ? '선택한 조건에 맞는 소스가 없습니다.'
+                        : '등록된 소스가 없습니다. 소스를 추가해 주세요.'}
                     </td>
                   </tr>
                 )}
@@ -543,7 +568,7 @@ export function SourcesPage() {
                         }}
                       />
                     </td>
-                    <td className="row-actions">
+                    <td className="row-actions sources-direct-actions">
                       <OverflowMenu
                         items={[
                           {
@@ -563,17 +588,17 @@ export function SourcesPage() {
                             disabled: busy || crawling === s.id || !s.is_active,
                             onClick: () => crawlDiscoveryPipeline(s),
                           },
-                          {
-                            key: 'delete',
-                            label: '삭제',
-                            danger: true,
-                            onClick: () => {
-                              if (!window.confirm(`「${s.name}」 소스를 삭제할까요?`)) return
-                              remove.mutate(s.id)
-                            },
-                          },
                         ]}
                       />
+                      <Btn
+                        variant="danger"
+                        size="sm"
+                        onClick={() => confirmRemove(s)}
+                        disabled={remove.isPending}
+                        aria-label={`${s.name} 삭제`}
+                      >
+                        삭제
+                      </Btn>
                     </td>
                   </tr>
                 ))}
