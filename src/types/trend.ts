@@ -11,12 +11,21 @@ export interface TrendCategoryShare {
   change_percent: number | null
 }
 
+export interface TrendRepresentativePost {
+  post_id: string
+  title: string
+  url: string | null
+  published_at: string | null
+}
+
 export interface TrendRankingItem {
   rank: number
   name: string
   mention_count: number
   change_percent: number | null
   is_new: boolean
+  representative_posts: TrendRepresentativePost[]
+  highlight: string | null
 }
 
 export interface TrendNewItem {

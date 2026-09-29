@@ -151,6 +151,20 @@ export function TrendDashboard({ edition }: { edition: Edition }) {
                       <Delta value={item.change_percent} />
                     </div>
                     <i><span style={{ width: `${item.mention_count / maxRank * 100}%` }} /></i>
+                    {item.highlight && <p className="trend-rank-highlight">{item.highlight}</p>}
+                    {item.representative_posts.length > 0 && (
+                      <div className="trend-rank-sources">
+                        {item.representative_posts.map((post) => (
+                          post.url ? (
+                            <a key={post.post_id} href={post.url} target="_blank" rel="noreferrer">
+                              {post.title}
+                            </a>
+                          ) : (
+                            <span key={post.post_id}>{post.title}</span>
+                          )
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -170,6 +184,7 @@ export function TrendDashboard({ edition }: { edition: Edition }) {
                   <div className="trend-new-card-top"><span>NEW {String(index + 1).padStart(2, '0')}</span><time>{new Date(item.first_seen_at).toLocaleDateString('ko-KR')}</time></div>
                   <h3>{item.name}</h3>
                   <p>{item.headline}</p>
+                  {item.description && <p className="trend-new-description">{item.description}</p>}
                   <footer>언급 {item.mention_count}건 · 소스 {item.source_count}곳</footer>
                 </article>
               ))}
