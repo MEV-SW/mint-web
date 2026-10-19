@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Navigate } from 'react-router-dom'
 import { fetchOidcConfig } from '../api/authApi'
 import { LoginSsoLayout } from '../components/auth/LoginSsoLayout'
+import { useAuthStore } from '../store/authStore'
 import { oidcHost, oidcRealmName, startKeycloakLogin } from '../utils/keycloakLogin'
 
 function todayLong() {
@@ -14,6 +16,7 @@ function todayLong() {
 }
 
 export function LoginPage() {
+  const token = useAuthStore((s) => s.token)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
   const configQuery = useQuery({
@@ -49,6 +52,9 @@ export function LoginPage() {
       : configQuery.isSuccess && !configured
         ? '사내 로그인이 아직 준비되지 않았습니다. 총관에게 문의해 주세요.'
         : '')
+
+  // Already signed in: ProtectedRoute re-validates the token and logs out if it is stale.
+  if (token) return <Navigate to="/" replace />
 
   return (
     <LoginSsoLayout host={host} online={configured} checking={configQuery.isLoading}>
