@@ -5,15 +5,22 @@ import { formatDate } from '../../utils/date'
 const SOURCE_TYPE_LABEL: Record<string, string> = {
   reddit: 'Reddit',
   community_forum: '포럼',
+  community_api: '커뮤니티',
+  community_feed: '커뮤니티',
 }
+const DEFAULT_SOURCE_KIND = '커뮤니티'
+
+// The LLM may wrap the required prefix in 「」 or follow it with ":" instead of "—".
+const UNVERIFIED_PREFIX = /^[「『[(]?\s*커뮤니티\s*의견\s*[·・]\s*미검증\s*[」』\])]?\s*[—–\-:：]?\s*/u
+const LEADING_COLON = /^[\s:：]+/u
 
 function voiceBody(post: DashboardPostPreview): string {
   const raw = (post.ai_summary || post.title || '').trim()
-  return raw.replace(/^커뮤니티\s*의견·미검증\s*[—–-]?\s*/u, '')
+  return raw.replace(UNVERIFIED_PREFIX, '').replace(LEADING_COLON, '')
 }
 
 function sourceLabel(post: DashboardPostPreview): string {
-  const kind = post.source_type ? SOURCE_TYPE_LABEL[post.source_type] : '커뮤니티'
+  const kind = (post.source_type && SOURCE_TYPE_LABEL[post.source_type]) || DEFAULT_SOURCE_KIND
   if (post.source_name) return `${kind} · ${post.source_name}`
   return kind
 }
