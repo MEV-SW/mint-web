@@ -55,6 +55,8 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   manual: '수동',
   reddit: 'Reddit (수집 불가)',
   community_forum: '커뮤니티',
+  community_api: '커뮤니티 API',
+  community_feed: '커뮤니티 피드',
 }
 
 type SourceFilter = 'all' | 'official' | 'community'
