@@ -4447,3 +4447,19 @@ a.report-cal-entry:hover strong {
     display: none;
   }
 }
+
+/* Issue detail evidence rows: title gets its own line on phones instead of
+   being squeezed between the fixed-width source and date columns. */
+.issue-evidence-title {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .issue-evidence-row {
+    flex-wrap: wrap;
+  }
+  .issue-evidence-title {
+    flex: 1 1 100%;
+    order: -1;
+  }
+}
