@@ -3014,6 +3014,28 @@ a.report-cal-entry:hover strong {
   background: rgba(27, 85, 64, 0.025);
 }
 
+/* Mobile admin: the overflow: visible above outranks mint.css's mobile
+   .tbl-wrap scroll rule, so wide tables were clipped instead of scrolling. */
+@media (max-width: 900px) {
+  .admin-layout .tbl-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-subnav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 0 20px;
+  }
+  .admin-subnav::-webkit-scrollbar {
+    display: none;
+  }
+  .admin-subnav-link {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+
 .inquiry-layout {
   gap: 0;
   border: 1px solid var(--line);
