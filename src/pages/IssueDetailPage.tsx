@@ -110,6 +110,7 @@ export function IssueDetailPage() {
         {issue.members.map((member) => (
           <div
             key={member.post_id}
+            className="issue-evidence-row"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -122,11 +123,11 @@ export function IssueDetailPage() {
               {member.source_name}
             </span>
             {member.original_url ? (
-              <a href={member.original_url} target="_blank" rel="noreferrer" style={{ flex: 1 }}>
+              <a href={member.original_url} target="_blank" rel="noreferrer" className="issue-evidence-title">
                 {member.title}
               </a>
             ) : (
-              <span style={{ flex: 1 }}>{member.title}</span>
+              <span className="issue-evidence-title">{member.title}</span>
             )}
             {member.unverified && <span className="pill">미검증</span>}
             <span style={{ flex: 'none', fontSize: 12, color: 'var(--ink3, #999)' }}>
