@@ -416,8 +416,8 @@ export function SourcesPage() {
                   size="sm"
                   icon="sparkles"
                   onClick={runDailyDiscoveryPipeline}
-                  disabled={busy || runningPipeline}
-                  title={crawlBlockedTitle}
+                  disabled={!isAdmin || busy || runningPipeline}
+                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
                 >
                   {busy ? '…' : runningPipeline ? '…' : '지금 실행'}
                 </Btn>
@@ -445,8 +445,8 @@ export function SourcesPage() {
                   size="sm"
                   icon="sparkles"
                   onClick={runCommunityDiscoveryPipeline}
-                  disabled={busy || runningCommunityPipeline}
-                  title={crawlBlockedTitle}
+                  disabled={!isAdmin || busy || runningCommunityPipeline}
+                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
                 >
                   {busy ? '…' : runningCommunityPipeline ? '…' : '지금 실행'}
                 </Btn>
