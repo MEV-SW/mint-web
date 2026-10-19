@@ -75,11 +75,12 @@ export default function App() {
                   <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<AdminIndexRedirect />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    {/* Managers review sources without being edition editors, so this sits outside AdminRoute. */}
+                    <Route element={<SourceReviewRoute />}>
+                      <Route path="categories" element={<AdminCategoriesPage />} />
+                    </Route>
                     <Route element={<AdminRoute />}>
                       <Route path="sources" element={<SourcesPage />} />
-                      <Route element={<SourceReviewRoute />}>
-                        <Route path="categories" element={<AdminCategoriesPage />} />
-                      </Route>
                       <Route element={<SuperAdminRoute />}>
                         <Route path="issues" element={<AdminIssuesPage />} />
                         <Route path="accounts" element={<AdminAccountsPage />} />
