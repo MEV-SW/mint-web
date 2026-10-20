@@ -4394,6 +4394,103 @@ a.report-cal-entry:hover strong {
   }
 }
 
+/* ===== Job log (R5-7, mint-web#94) ===== */
+.job-log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.job-log-label {
+  font-weight: 650;
+}
+.job-log-failure {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--red);
+}
+.job-log-failure-hint {
+  color: var(--ink2);
+}
+.job-log-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+.job-log-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--red);
+  border-radius: 2px;
+  color: var(--red);
+  font-size: 13px;
+}
+.job-log-empty {
+  margin: 0;
+  padding: 18px 0;
+  font-size: 13.5px;
+  color: var(--ink2);
+}
+.job-log-skeleton-row {
+  height: 40px;
+  margin-bottom: 6px;
+  border-radius: 2px;
+  background: rgba(26, 23, 18, 0.06);
+}
+.sources-ops-moved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sources-ops-moved-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink2);
+}
+.sources-ops-moved-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+@media (max-width: 767px) {
+  .job-log-table thead {
+    display: none;
+  }
+  .job-log-table,
+  .job-log-table tbody,
+  .job-log-table tr,
+  .job-log-table td {
+    display: block;
+    width: 100%;
+  }
+  .admin-layout .job-log-table {
+    min-width: 0;
+  }
+  .job-log-table tr {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line2);
+  }
+  .admin-layout .job-log-table tbody td {
+    padding: 2px 0;
+    border: none;
+    text-align: left;
+  }
+  .job-log-table td[data-label]::before {
+    content: attr(data-label) " · ";
+    color: var(--ink3);
+    font-size: 11.5px;
+  }
+  .job-log-actions {
+    text-align: left;
+  }
+}
+
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
 .admin-layout {
   display: grid;

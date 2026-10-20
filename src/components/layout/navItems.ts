@@ -31,9 +31,18 @@ export const APP_NAV_ADMIN_HUB: NavItem = {
   icon: 'shield',
 }
 
-// R5 order. 01 관리 홈 (#96), 02 작업 로그 (#94) and 05 탐문 후보 (phase 2) are
-// added together with their screens so the sidebar never links to an empty page.
+// R5 order. 01 관리 홈 (#96) and 05 탐문 후보 (phase 2) are added together with
+// their screens so the sidebar never links to an empty page.
 export const APP_NAV_ADMIN_SUB: NavItem[] = [
+  {
+    path: '/admin/jobs',
+    label: '작업 로그',
+    icon: 'refresh',
+    adminOnly: true,
+    superAdminOnly: true,
+    no: '02',
+    group: '운영',
+  },
   { path: SETTINGS_PATH, label: '주제', icon: 'settings', no: '03', group: '콘텐츠' },
   { path: '/admin/sources', label: '소스', icon: 'feed', adminOnly: true, no: '04', group: '콘텐츠' },
   {
