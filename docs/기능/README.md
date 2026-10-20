@@ -14,3 +14,7 @@
 | [#72](https://github.com/MEV-SW/mint-web/issues/72) | 일일시퀀스수동실행 | 미정 | 스펙 완료 | [화면정의서](72-일일시퀀스수동실행/화면정의서_일일시퀀스수동실행.md) · [기술스펙](72-일일시퀀스수동실행/기술스펙_일일시퀀스수동실행.md) |
 | [#76](https://github.com/MEV-SW/mint-web/issues/76) | 주제판정기준편집 | 미정 | 스펙 완료 | [화면정의서](76-주제판정기준편집/화면정의서_주제판정기준편집.md) · [기술스펙](76-주제판정기준편집/기술스펙_주제판정기준편집.md) |
 | [#91](https://github.com/MEV-SW/mint-web/issues/91) | 기사편집권한분야제한 | 미정 | 스펙 작성 중 | [기술스펙](91-기사편집권한분야제한/기술스펙_기사편집권한분야제한.md) (인터페이스정의는 [mint-server API스펙](https://github.com/MEV-SW/mint-server/blob/main/docs/기능/170-기사편집권한분야제한/API스펙_기사편집권한분야제한.md)이 겸함) |
+| [#93](https://github.com/MEV-SW/mint-web/issues/93) | 관리사이드바 | 미정 | 스펙 작성 중 | [기술스펙](93-관리사이드바/기술스펙_관리사이드바.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
+| [#94](https://github.com/MEV-SW/mint-web/issues/94) | 작업로그화면 | 미정 | 스펙 작성 중 | [기술스펙](94-작업로그화면/기술스펙_작업로그화면.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
+| [#95](https://github.com/MEV-SW/mint-web/issues/95) | 이슈병합확인 | 미정 | 스펙 작성 중 | [기술스펙](95-이슈병합확인/기술스펙_이슈병합확인.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
+| [#96](https://github.com/MEV-SW/mint-web/issues/96) | 관리홈화면 | 미정 | 스펙 작성 중 | [기술스펙](96-관리홈화면/기술스펙_관리홈화면.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
