@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { listEditions } from '../api/editionApi'
-import { approvePost, hidePost, listPosts, promotePost } from '../api/postApi'
+import { approvePost, deletePost, hidePost, listPosts, promotePost } from '../api/postApi'
 import type { PostListParams } from '../api/postApi'
 import { getCollectionSettings } from '../api/sourceApi'
 import { Btn } from '../components/common/Btn'
+import { OverflowMenu } from '../components/common/OverflowMenu'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
 import { PageShell } from '../components/layout/PageShell'
@@ -15,7 +16,7 @@ import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
 
 type ColumnKey = 'pending' | 'published' | 'promoted' | 'hidden'
-type CardAction = 'approve' | 'promote' | 'hide'
+type CardAction = 'approve' | 'promote' | 'hide' | 'delete'
 
 const PAGE_STEP = 20
 const MAX_SIZE = 100 // GET /posts size limit
@@ -31,7 +32,7 @@ const COLUMNS: { key: ColumnKey; label: string; params: PostListParams; actions:
   { key: 'hidden', label: '숨김', params: { status: 'hidden' }, actions: ['approve'] },
 ]
 
-const ACTION_LABELS: Record<CardAction, string> = { approve: '게시', promote: '승격', hide: '숨김' }
+const ACTION_LABELS: Record<CardAction, string> = { approve: '게시', promote: '승격', hide: '숨김', delete: '삭제' }
 
 // Columns collapse only when stacked (≤640px); wider, the header is plain text, not a button.
 const NARROW_QUERY = '(max-width: 640px)'
@@ -77,6 +78,7 @@ export function AdminDiscoveryPage() {
     mutationFn: ({ type, id }: { type: CardAction; id: string }) => {
       if (type === 'approve') return approvePost(id)
       if (type === 'promote') return promotePost(id)
+      if (type === 'delete') return deletePost(id)
       return hidePost(id)
     },
     onSuccess: (_post, { type }) => {
@@ -84,12 +86,30 @@ export function AdminDiscoveryPage() {
         qc.invalidateQueries({ queryKey: ['posts'] }),
         qc.invalidateQueries({ queryKey: ['admin-summary'] }),
       ])
-      toast(type === 'hide' ? '후보를 숨겼습니다.' : type === 'promote' ? '중요 게시판으로 승격했습니다.' : '후보를 게시했습니다.')
+      toast(
+        type === 'delete'
+          ? '후보를 삭제했습니다.'
+          : type === 'hide'
+            ? '후보를 숨겼습니다.'
+            : type === 'promote'
+              ? '중요 게시판으로 승격했습니다.'
+              : '후보를 게시했습니다.',
+      )
     },
     onError: (error) => toast(apiErrorDetail(error) ?? '처리에 실패했습니다.', 'err'),
   })
 
   async function runAction(type: CardAction, post: Post) {
+    // #119: delete cannot be undone from any screen — red confirm.
+    if (
+      type === 'delete' &&
+      !(await confirm({
+        title: `‘${post.title}’ 후보를 삭제할까요?`,
+        body: '삭제한 후보는 어느 열에서도 되돌릴 수 없습니다.',
+        confirmLabel: '삭제',
+        danger: true,
+      }))
+    ) return
     // Hide is reversible but the card leaves the column, so it asks first; the others run at once.
     if (
       type === 'hide' &&
@@ -240,6 +260,17 @@ function DiscoveryColumn({
                     {ACTION_LABELS[type]}
                   </Btn>
                 ))}
+                {/* #119: delete is a visible button only in 숨김; elsewhere it sits in the ⋯ menu. */}
+                {column.key === 'hidden' ? (
+                  <Btn size="sm" variant="danger" disabled={busy} onClick={() => onAction('delete', post)}>
+                    {ACTION_LABELS.delete}
+                  </Btn>
+                ) : (
+                  <OverflowMenu
+                    label={`${post.title} 메뉴`}
+                    items={[{ key: 'delete', label: '삭제', danger: true, disabled: busy, onClick: () => onAction('delete', post) }]}
+                  />
+                )}
               </div>
             )}
           </article>
