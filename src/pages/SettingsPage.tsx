@@ -21,7 +21,7 @@ import { MyEditionsSection } from '../components/onboarding/MyEditionsSection'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import { isHiddenNewsCategory } from '../utils/newsTaxonomy'
-import { createSource, listSources, updateSource } from '../api/sourceApi'
+import { listSources, updateSource } from '../api/sourceApi'
 import type { EditionDisplayMode } from '../types/edition'
 import { SETTINGS_PATH } from '../components/layout/navItems'
 import { useUnsavedStore } from '../store/unsavedStore'
@@ -236,35 +236,6 @@ export function SettingsPage() {
     if (!(await confirm({ title: `‘${source.name}’ 소스를 다른 주제로 이동할까요?`, confirmLabel: '이동' }))) return
     moveSource.mutate({ sourceId: source.id, editionId })
   }
-
-  const duplicateSharedSource = useMutation({
-    mutationFn: ({ sourceId, editionId, editionName }: { sourceId: string; editionId: string; editionName: string }) => {
-      const source = sources.find((item) => item.id === sourceId)
-      if (!source) throw new Error('Source not found')
-      return createSource({
-        name: `${source.name} · ${editionName}`,
-        url: source.url,
-        source_type: source.source_type,
-        industry: source.industry,
-        category: source.category,
-        category_id: source.category_id,
-        trust_level: source.trust_level,
-        reliability_score: source.reliability_score,
-        auto_publish: source.auto_publish,
-        crawl_frequency: source.crawl_frequency,
-        is_active: source.is_active,
-        edition_id: editionId,
-      })
-    },
-    onSuccess: () => {
-      void Promise.all([
-        qc.invalidateQueries({ queryKey: ['sources'] }),
-        qc.invalidateQueries({ queryKey: ['editions'] }),
-      ])
-      toast('소스를 다른 주제에도 중복 등록했습니다.')
-    },
-    onError: (error) => toast(apiErrorDetail(error) ?? '소스 중복 등록에 실패했습니다.', 'err'),
-  })
 
   const savedFeaturedKeywordIds = (editionId: string) =>
     keywords
@@ -1020,52 +991,6 @@ export function SettingsPage() {
               )
             })}
       </section>
-      )}
-
-      {isAdmin && (
-        <section className="settings-section source-policy-section">
-          <header className="settings-section-head"><div><h3>소스 정책 확인</h3><p>중복 소스 마이그레이션과 지원 타입을 확인합니다.</p></div></header>
-          <div className="source-policy-grid">
-            <div>
-              <h4>주제별 중복 등록</h4>
-              {['전자신문 RSS', '모터그래프', '오토헤럴드', '연합뉴스 산업', '지디넷코리아'].map((name) => {
-                const matches = sources.filter((source) => source.name.startsWith(name))
-                const topicIds = new Set(matches.map((source) => source.edition_id))
-                const target = editions.find(
-                  (edition) => ['ev', 'autonomous'].includes(edition.slug) && !topicIds.has(edition.id),
-                )
-                return (
-                  <p key={name}>
-                    <span>{name}</span>
-                    {matches.length >= 2 || !matches[0] || !target ? (
-                      <b>{matches.length >= 2 ? '중복 등록 확인' : '원본 확인 필요'}</b>
-                    ) : (
-                      <button
-                        type="button"
-                        className="source-policy-action"
-                        disabled={duplicateSharedSource.isPending}
-                        onClick={() => duplicateSharedSource.mutate({
-                          sourceId: matches[0].id,
-                          editionId: target.id,
-                          editionName: target.name,
-                        })}
-                      >
-                        {target.name}에 중복 등록
-                      </button>
-                    )}
-                  </p>
-                )
-              })}
-            </div>
-            <div>
-              <h4>소스 타입</h4>
-              <p><span>RSS</span><b>사용 중</b></p>
-              <p><span>COMMUNITY</span><b>사용 중</b></p>
-              <p><span>REDDIT</span><b>사용 중</b></p>
-              <p className="is-disabled"><span>SNS (X·스레드)</span><b>신규·조사 필요</b></p>
-            </div>
-          </div>
-        </section>
       )}
 
     </PageShell>
