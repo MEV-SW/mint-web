@@ -41,6 +41,7 @@ export function JobStatusPanel() {
     if (prevActiveRef.current > 0 && activeCount === 0) {
       invalidateFrontPageQueries(qc)
       qc.invalidateQueries({ queryKey: ['sources'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       qc.invalidateQueries({ queryKey: ['posts'] })
       qc.invalidateQueries({ queryKey: ['reports'] })
       qc.invalidateQueries({ queryKey: ['keywords'] })

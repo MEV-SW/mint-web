@@ -65,6 +65,7 @@ export function AdminAccountsPage() {
       updateUserEditions(userId, next),
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: ['users'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       setDrafts((current) => {
         const next = { ...current }
         delete next[vars.userId]
@@ -80,6 +81,7 @@ export function AdminAccountsPage() {
       setUserActive(userId, isActive),
     onSuccess: (row) => {
       qc.invalidateQueries({ queryKey: ['users'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       toast(row.is_active ? '계정을 활성화했습니다.' : '계정을 비활성화했습니다.')
     },
     onError: (e) => toast(apiErrorDetail(e) || '상태 변경 실패', 'err'),
@@ -90,6 +92,7 @@ export function AdminAccountsPage() {
       updateUserRole(userId, role),
     onSuccess: (row) => {
       qc.invalidateQueries({ queryKey: ['users'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       toast(row.role === 'admin' ? '총관으로 지정했습니다.' : '총관을 해제했습니다.')
     },
     onError: (e) => toast(apiErrorDetail(e) || '역할 변경 실패', 'err'),

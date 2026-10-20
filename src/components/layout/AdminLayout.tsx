@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { getOpenInquiryCount } from '../../api/inquiryApi'
 import { listUsers } from '../../api/usersApi'
+import { useAdminSummaryQuery } from '../../hooks/useAdminSummaryQuery'
 import { useJobsQuery } from '../../hooks/useJobsQuery'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { BackgroundJob } from '../../types/job'
@@ -11,8 +12,8 @@ import { jobProgressSummary, pickPrimaryActiveJob } from '../../utils/jobProgres
 import { Icon } from '../common/Icon'
 import {
   ADMIN_NAV_GROUPS,
-  SETTINGS_PATH,
   adminNavBadgeCount,
+  currentAdminNavItem,
   formatNavBadge,
   visibleAdminNav,
   type NavItem,
@@ -53,14 +54,16 @@ export function AdminLayout() {
     enabled: isAdmin,
   })
   const { data: jobs = [] } = useJobsQuery(isAdmin || canEditAny)
+  const summaryQuery = useAdminSummaryQuery()
 
   const items = visibleAdminNav(isAdmin, canEditAny, canReviewSources)
   const counts = {
     openInquiries: inquiriesQuery.data ?? 0,
     pendingUsers: (usersQuery.data ?? []).filter((user) => user.approval_status === 'pending').length,
+    failedSources: summaryQuery.data?.failed_sources ?? 0,
   }
   const countsLoading = isAdmin && (inquiriesQuery.isLoading || usersQuery.isLoading)
-  const current = items.find((item) => location.pathname.startsWith(item.path)) ?? items[0]
+  const current = currentAdminNavItem(items, location.pathname) ?? items[0]
   const pipeline = isAdmin || canEditAny ? pipelineState(jobs) : null
 
   useEffect(() => {
@@ -74,7 +77,8 @@ export function AdminLayout() {
 
   function badgeFor(item: NavItem) {
     if (!item.countKey) return null
-    if (countsLoading) return <span className="admin-nav-badge is-loading" aria-hidden>·</span>
+    const loading = item.countKey === 'failedSources' ? summaryQuery.isLoading : countsLoading
+    if (loading) return <span className="admin-nav-badge is-loading" aria-hidden>·</span>
     const text = formatNavBadge(adminNavBadgeCount(item, counts))
     if (!text) return null
     return (
@@ -96,7 +100,7 @@ export function AdminLayout() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                end={item.path === '/admin'}
+                end={item.end}
                 className={({ isActive }) => cx('admin-nav-link', isActive && 'active')}
                 onClick={onNavigate}
               >
@@ -175,9 +179,5 @@ export function AdminLayout() {
       </div>
     </div>
   )
-}
-
-export function AdminIndexRedirect() {
-  return <Navigate to={SETTINGS_PATH} replace />
 }
 
