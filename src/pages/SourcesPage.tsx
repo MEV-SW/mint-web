@@ -20,6 +20,7 @@ import { OverflowMenu } from '../components/common/OverflowMenu'
 import { Modal } from '../components/common/Modal'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { useConfirm } from '../components/common/useConfirm'
 import { SourceFormFields } from '../components/sources/SourceFormFields'
 import { listEditions } from '../api/editionApi'
 import type { Source, SourceCreate } from '../types/source'
@@ -96,6 +97,7 @@ function normalizeFormForSave(form: SourceCreate, mode: AddMode): SourceCreate {
 
 export function SourcesPage() {
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [searchParams] = useSearchParams()
   const [q, setQ] = useState(() => searchParams.get('q') ?? '')
@@ -198,8 +200,15 @@ export function SourcesPage() {
     onError: (error) => toast(apiErrorDetail(error) ?? '소스 삭제에 실패했습니다.', 'err'),
   })
 
-  function confirmRemove(source: Source) {
-    if (!window.confirm(`「${source.name}」 소스를 삭제할까요? 기존 기사 이력은 유지됩니다.`)) return
+  async function confirmRemove(source: Source) {
+    if (
+      !(await confirm({
+        title: `「${source.name}」 소스를 삭제할까요?`,
+        body: '기존 기사 이력은 유지됩니다.',
+        confirmLabel: '삭제',
+        danger: true,
+      }))
+    ) return
     remove.mutate(source.id)
   }
 
@@ -263,11 +272,28 @@ export function SourcesPage() {
     }
   }
 
+  // Turning a source off asks first; turning it on is immediate (handoff R5 §4).
+  async function requestToggleActive(source: Source) {
+    if (
+      source.is_active &&
+      !(await confirm({
+        title: `‘${source.name}’ 수집을 끌까요?`,
+        body: '다시 켤 때까지 수집하지 않습니다.',
+        confirmLabel: '끄기',
+        danger: true,
+      }))
+    ) return
+    toggleActive.mutate(source)
+  }
+
   async function runDailySequenceNow() {
     if (
-      !window.confirm(
-        '일일 작업 전체를 지금 실행할까요?\n정리 단계에서 보존 기간이 지난 미승인 후보와 만료 기사가 삭제됩니다. Slack은 전송하지 않습니다.',
-      )
+      !(await confirm({
+        title: '일일 작업 전체를 지금 실행할까요?',
+        body: '정리 단계에서 보존 기간이 지난 미승인 후보와 만료 기사가 삭제됩니다. Slack은 전송하지 않습니다.',
+        confirmLabel: '전체 실행',
+        danger: true,
+      }))
     ) return
     setRunningSequence(true)
     try {
@@ -628,7 +654,7 @@ export function SourcesPage() {
                             toast('Reddit 소스는 서버에서 수집이 막혀 활성으로 둘 수 없습니다.', 'info')
                             return
                           }
-                          toggleActive.mutate(s)
+                          void requestToggleActive(s)
                         }}
                         role="button"
                         tabIndex={0}
@@ -640,7 +666,7 @@ export function SourcesPage() {
                         onKeyDown={(e) => {
                           if (e.key !== 'Enter') return
                           if (s.source_type === 'reddit' && !s.is_active) return
-                          toggleActive.mutate(s)
+                          void requestToggleActive(s)
                         }}
                       />
                     </td>

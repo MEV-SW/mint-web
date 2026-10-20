@@ -11,6 +11,7 @@ import {
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { useConfirm } from '../components/common/useConfirm'
 import { formatDateTime } from '../utils/date'
 import { apiErrorDetail } from '../utils/apiError'
 
@@ -22,6 +23,7 @@ const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
 
 export function AdminInquiriesPage() {
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | 'all'>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -174,7 +176,17 @@ export function AdminInquiriesPage() {
                       variant="outline"
                       type="button"
                       disabled={close.isPending}
-                      onClick={() => close.mutate()}
+                      onClick={async () => {
+                        if (
+                          !(await confirm({
+                            title: '이 문의를 종료할까요?',
+                            body: '종료 후에는 답변할 수 없습니다.',
+                            confirmLabel: '문의 종료',
+                            danger: true,
+                          }))
+                        ) return
+                        close.mutate()
+                      }}
                     >
                       문의 종료
                     </Btn>

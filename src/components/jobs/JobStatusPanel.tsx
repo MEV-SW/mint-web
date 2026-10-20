@@ -10,6 +10,7 @@ import { formatDate } from '../../utils/date'
 import { invalidateFrontPageQueries } from '../../utils/frontPageQueries'
 import { isActiveJobStatus, jobProgressPercent, jobProgressSummary, pickPrimaryActiveJob } from '../../utils/jobProgress'
 import { useToast } from '../common/Toast'
+import { useConfirm } from '../common/useConfirm'
 import { Icon } from '../common/Icon'
 
 function isActive(status: JobStatus) {
@@ -27,6 +28,7 @@ function progressPct(job: BackgroundJob) {
 export function JobStatusPanel() {
   const qc = useQueryClient()
   const toast = useToast()
+  const confirm = useConfirm()
   const { canWrite } = usePermissions()
   const [open, setOpen] = useState(false)
   const prevActiveRef = useRef(0)
@@ -87,19 +89,19 @@ export function JobStatusPanel() {
     if (activeCount > 0) setOpen(true)
   }, [activeCount])
 
-  const handleCancel = (job: BackgroundJob) => {
-    if (!window.confirm(`「${job.label}」 작업을 취소할까요?`)) return
+  const handleCancel = async (job: BackgroundJob) => {
+    if (!(await confirm({ title: `「${job.label}」 작업을 취소할까요?`, confirmLabel: '작업 취소', danger: true }))) return
     cancelMut.mutate(job.id)
   }
 
-  const handleDelete = (job: BackgroundJob) => {
-    if (!window.confirm(`「${job.label}」 작업 내역을 삭제할까요?`)) return
+  const handleDelete = async (job: BackgroundJob) => {
+    if (!(await confirm({ title: `「${job.label}」 작업 내역을 삭제할까요?`, confirmLabel: '삭제', danger: true }))) return
     deleteMut.mutate(job.id)
   }
 
-  const handleClearFinished = () => {
+  const handleClearFinished = async () => {
     if (!finishedCount) return
-    if (!window.confirm('완료·실패·취소된 모든 작업 내역을 목록에서 정리할까요?')) return
+    if (!(await confirm({ title: '완료·실패·취소된 모든 작업 내역을 목록에서 정리할까요?', confirmLabel: '완료 정리', danger: true }))) return
     clearMut.mutate()
   }
 

@@ -11,6 +11,7 @@ import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { useConfirm } from '../components/common/useConfirm'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import type { NewsCategory } from '../types/personalization'
@@ -37,6 +38,7 @@ function formFor(category: NewsCategory): CategoryForm {
 export function AdminCategoriesPage() {
   const { isAdmin } = usePermissions()
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<NewsCategory | null>(null)
@@ -135,8 +137,8 @@ export function AdminCategoriesPage() {
     setForm(emptyForm)
   }
 
-  function confirmDeactivate(category: NewsCategory) {
-    if (!window.confirm(`"${category.name}" 카테고리를 비활성화할까요?`)) return
+  async function confirmDeactivate(category: NewsCategory) {
+    if (!(await confirm({ title: `"${category.name}" 카테고리를 비활성화할까요?`, confirmLabel: '비활성화', danger: true }))) return
     deactivate.mutate(category.id)
   }
 
