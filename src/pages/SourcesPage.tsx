@@ -1,16 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
-  crawlAllSources,
-  crawlAllToDiscovery,
   crawlSource,
   crawlSourceToDiscovery,
   createSource,
   deleteSource,
-  getCollectionSettings,
   listSources,
-  updateCollectionSettings,
   updateSource,
 } from '../api/sourceApi'
 import { TrustBadge } from '../components/common/Badges'
@@ -28,12 +24,11 @@ import {
   COMMUNITY_SOURCE_PRESET,
   COMMUNITY_SOURCE_TYPES,
 } from '../types/source'
-import { runDailySequence } from '../api/jobApi'
 import { useActiveJobs } from '../hooks/useJobsQuery'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
-import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
+import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
 
 const emptyForm: SourceCreate = {
   name: '',
@@ -106,13 +101,8 @@ export function SourcesPage() {
   const [editing, setEditing] = useState<Source | null>(null)
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
-  const [runningCrawlAll, setRunningCrawlAll] = useState(false)
-  const [runningSequence, setRunningSequence] = useState(false)
-  const [runningPipeline, setRunningPipeline] = useState(false)
-  const [runningCommunityPipeline, setRunningCommunityPipeline] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [editionFilter, setEditionFilter] = useState('all')
-  const [retentionDraft, setRetentionDraft] = useState<string | null>(null)
 
   const { busy, activeLabel, activeProgress } = useActiveJobs()
   const { isAdmin } = usePermissions()
@@ -125,14 +115,6 @@ export function SourcesPage() {
     queryKey: ['editions', 'all'],
     queryFn: () => listEditions(false),
   })
-
-  const { data: collectionSettings } = useQuery({
-    queryKey: ['collection-settings'],
-    queryFn: getCollectionSettings,
-  })
-
-  const retentionDays = retentionDraft
-    ?? String(collectionSettings?.discovery_pending_retention_days ?? 14)
 
   const qLower = q.trim().toLowerCase()
   const rows = sources.filter((s) => {
@@ -212,27 +194,6 @@ export function SourcesPage() {
     remove.mutate(source.id)
   }
 
-  const saveRetention = useMutation({
-    mutationFn: () => updateCollectionSettings(Number(retentionDays)),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['collection-settings'] })
-      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
-      setRetentionDraft(null)
-      toast('탐문 후보 삭제 기한을 저장했습니다.')
-    },
-    onError: (e) => toast(apiErrorDetail(e) || '저장 실패', 'err'),
-  })
-
-  const retentionValid =
-    retentionDays.trim() !== '' &&
-    Number.isInteger(Number(retentionDays)) &&
-    Number(retentionDays) >= 0 &&
-    Number(retentionDays) <= 365
-  const retentionDirty =
-    collectionSettings != null &&
-    retentionValid &&
-    Number(retentionDays) !== collectionSettings.discovery_pending_retention_days
-
   async function crawl(s: Source) {
     setCrawling(s.id)
     try {
@@ -259,19 +220,6 @@ export function SourcesPage() {
     }
   }
 
-  async function runCrawlAllSources() {
-    setRunningCrawlAll(true)
-    try {
-      await crawlAllSources()
-      qc.invalidateQueries({ queryKey: ['jobs'] })
-      toast('전체 소스 수집을 백그라운드에서 시작했습니다. 상단 작업 패널에서 진행 상태를 확인하세요.', 'info')
-    } catch (e) {
-      toast(apiErrorDetail(e) || '전체 소스 수집 요청 실패', 'err')
-    } finally {
-      setRunningCrawlAll(false)
-    }
-  }
-
   // Turning a source off asks first; turning it on is immediate (handoff R5 §4).
   async function requestToggleActive(source: Source) {
     if (
@@ -285,58 +233,6 @@ export function SourcesPage() {
     ) return
     toggleActive.mutate(source)
   }
-
-  async function runDailySequenceNow() {
-    if (
-      !(await confirm({
-        title: '일일 작업 전체를 지금 실행할까요?',
-        body: '정리 단계에서 보존 기간이 지난 미승인 후보와 만료 기사가 삭제됩니다. Slack은 전송하지 않습니다.',
-        confirmLabel: '전체 실행',
-        danger: true,
-      }))
-    ) return
-    setRunningSequence(true)
-    try {
-      await runDailySequence()
-      qc.invalidateQueries({ queryKey: ['jobs'] })
-      toast('일일 전체 시퀀스를 백그라운드에서 시작했습니다. 작업 패널에서 단계별 진행을 확인하세요.', 'info')
-    } catch (e) {
-      toast(apiErrorDetail(e) || '일일 전체 시퀀스 요청 실패', 'err')
-    } finally {
-      setRunningSequence(false)
-    }
-  }
-
-  async function runDailyDiscoveryPipeline() {
-    setRunningPipeline(true)
-    try {
-      await crawlAllToDiscovery({ trusted_only: true })
-      qc.invalidateQueries({ queryKey: ['jobs'] })
-      toast('탐문 파이프라인을 백그라운드에서 시작했습니다.', 'info')
-    } catch (e) {
-      toast(apiErrorDetail(e) || '탐문 파이프라인 요청 실패', 'err')
-    } finally {
-      setRunningPipeline(false)
-    }
-  }
-
-  async function runCommunityDiscoveryPipeline() {
-    setRunningCommunityPipeline(true)
-    try {
-      await crawlAllToDiscovery({ trusted_only: false, community_only: true })
-      qc.invalidateQueries({ queryKey: ['jobs'] })
-      toast('커뮤니티 탐문 파이프라인을 백그라운드에서 시작했습니다.', 'info')
-    } catch (e) {
-      toast(apiErrorDetail(e) || '커뮤니티 파이프라인 요청 실패', 'err')
-    } finally {
-      setRunningCommunityPipeline(false)
-    }
-  }
-
-  const opsBusy = busy || runningCrawlAll || runningSequence
-  const crawlBlockedTitle = busy
-    ? `진행 중인 작업: ${activeLabel ?? '백그라운드 작업'}`
-    : undefined
 
   function openAdd() {
     setForm({ ...emptyForm, edition_id: editions[0]?.id ?? '' })
@@ -383,141 +279,19 @@ export function SourcesPage() {
       )}
 
       <div className="sources-page">
-        <section className="sources-block" aria-label="수집 운영">
-          <div className="sources-ops-grid">
-            <article className="sources-op-card">
-              <div className="sources-op-card-top">
-                <div className="sources-op-card-icon sources-op-card-icon-crawl" aria-hidden>
-                  <Icon name="refresh" />
-                </div>
-                <div className="sources-op-card-text">
-                  <h3 className="sources-op-card-title">일일 수집 시퀀스</h3>
-                  <p className="sources-op-card-desc">
-                    매일 05:30~08:10(KST) 자동 · 정리 → 전체 수집 → AI 발견 → 커뮤니티 탐문 → 리포트 (Slack 제외)
-                  </p>
-                </div>
-              </div>
-              <div className="sources-op-card-controls">
-                <Btn
-                  variant="soft"
-                  size="sm"
-                  icon="refresh"
-                  onClick={runCrawlAllSources}
-                  disabled={!isAdmin || opsBusy}
-                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
-                >
-                  {opsBusy ? '…' : '수집만'}
-                </Btn>
-                <Btn
-                  variant="primary"
-                  size="sm"
-                  icon="sparkles"
-                  onClick={runDailySequenceNow}
-                  disabled={!isAdmin || opsBusy}
-                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
-                >
-                  {opsBusy ? '…' : '전체 실행'}
-                </Btn>
-              </div>
-            </article>
-
-            <article className="sources-op-card">
-              <div className="sources-op-card-top">
-                <div className="sources-op-card-icon sources-op-card-icon-pipeline" aria-hidden>
-                  <Icon name="sparkles" />
-                </div>
-                <div className="sources-op-card-text">
-                  <h3 className="sources-op-card-title">{DISCOVERY_PIPELINE_LABEL}</h3>
-                  <p className="sources-op-card-desc">
-                    신뢰 소스 전체 크롤링 · {DISCOVERY_BOARD_LABEL} 후보 수집 · 매일 06:00(KST)
-                  </p>
-                </div>
-              </div>
-              <div className="sources-op-card-controls">
-                <Btn variant="primary" size="sm" icon="plus" onClick={openAdd}>
-                  소스 추가
-                </Btn>
-                <Btn
-                  variant="soft"
-                  size="sm"
-                  icon="sparkles"
-                  onClick={runDailyDiscoveryPipeline}
-                  disabled={!isAdmin || busy || runningPipeline}
-                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
-                >
-                  {busy ? '…' : runningPipeline ? '…' : '지금 실행'}
-                </Btn>
-              </div>
-            </article>
-
-            <article className="sources-op-card">
-              <div className="sources-op-card-top">
-                <div className="sources-op-card-icon sources-op-card-icon-community" aria-hidden>
-                  <Icon name="feed" />
-                </div>
-                <div className="sources-op-card-text">
-                  <h3 className="sources-op-card-title">커뮤니티 탐문</h3>
-                  <p className="sources-op-card-desc">
-                    국내 포럼·커뮤니티 소스 {communityCount}개 · 탐문 데스크 전용 · 매일 06:30(KST)
-                  </p>
-                </div>
-              </div>
-              <div className="sources-op-card-controls">
-                <Btn variant="primary" size="sm" icon="plus" onClick={openAddCommunity}>
-                  소스 추가
-                </Btn>
-                <Btn
-                  variant="soft"
-                  size="sm"
-                  icon="sparkles"
-                  onClick={runCommunityDiscoveryPipeline}
-                  disabled={!isAdmin || busy || runningCommunityPipeline}
-                  title={isAdmin ? crawlBlockedTitle : '총관만 실행할 수 있습니다.'}
-                >
-                  {busy ? '…' : runningCommunityPipeline ? '…' : '지금 실행'}
-                </Btn>
-              </div>
-            </article>
-
-            <article className="sources-op-card">
-              <div className="sources-op-card-top">
-                <div className="sources-op-card-icon sources-op-card-icon-policy" aria-hidden>
-                  <Icon name="clock" />
-                </div>
-                <div className="sources-op-card-text">
-                  <h3 className="sources-op-card-title">탐문 후보 삭제 기한</h3>
-                  <p className="sources-op-card-desc">
-                    검토 대기 {retentionDays}일 경과 시 05:30(KST) 자동 삭제
-                  </p>
-                </div>
-              </div>
-              <div className="sources-op-card-controls">
-                <label className="sources-retention-inline" htmlFor="discovery-retention-days">
-                  <span className="sources-retention-label">기한</span>
-                  <input
-                    id="discovery-retention-days"
-                    className="input"
-                    type="number"
-                    min={0}
-                    max={365}
-                    step={1}
-                    inputMode="numeric"
-                    value={retentionDays}
-                    onChange={(e) => setRetentionDraft(e.target.value)}
-                    aria-label="탐문 후보 삭제 기한(일)"
-                  />
-                  <span className="sources-retention-unit">일</span>
-                </label>
-                <Btn
-                  variant="primary"
-                  size="sm"
-                  onClick={() => saveRetention.mutate()}
-                  disabled={!retentionDirty || !retentionValid || saveRetention.isPending}
-                >
-                  {saveRetention.isPending ? '…' : '저장'}
-                </Btn>
-              </div>
-            </article>
+        <section className="sources-block sources-ops-moved" aria-label="소스 추가">
+          {isAdmin && (
+            <p className="sources-ops-moved-note">
+              수집 실행과 탐문 후보 삭제 기한은 <Link to="/admin/jobs">02 작업 로그</Link>에서 관리합니다.
+            </p>
+          )}
+          <div className="sources-ops-moved-actions">
+            <Btn variant="primary" size="sm" icon="plus" onClick={openAdd}>
+              공식 소스 추가
+            </Btn>
+            <Btn variant="outline" size="sm" icon="plus" onClick={openAddCommunity}>
+              커뮤니티 소스 추가
+            </Btn>
           </div>
         </section>
 

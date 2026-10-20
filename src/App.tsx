@@ -22,6 +22,7 @@ import { AdminAccountsPage } from './pages/AdminAccountsPage'
 import { AdminCategoriesPage } from './pages/AdminCategoriesPage'
 import { AdminInquiriesPage } from './pages/AdminInquiriesPage'
 import { AdminIssuesPage } from './pages/AdminIssuesPage'
+import { AdminJobsPage } from './pages/AdminJobsPage'
 import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { OnboardingGate } from './routes/OnboardingGate'
@@ -84,6 +85,7 @@ export default function App() {
                     <Route element={<AdminRoute />}>
                       <Route path="sources" element={<SourcesPage />} />
                       <Route element={<SuperAdminRoute />}>
+                        <Route path="jobs" element={<AdminJobsPage />} />
                         <Route path="issues" element={<AdminIssuesPage />} />
                         <Route path="accounts" element={<AdminAccountsPage />} />
                         <Route path="accounts/users" element={<Navigate to="/admin/accounts" replace />} />
