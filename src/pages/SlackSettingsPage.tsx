@@ -5,6 +5,7 @@ import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { useConfirm } from '../components/common/useConfirm'
 
 const PURPOSE_OPTIONS = [
   { value: 'all', label: '전체 알림' },
@@ -19,6 +20,7 @@ const PURPOSE_LABEL: Record<string, string> = Object.fromEntries(
 
 export function SlackSettingsPage() {
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
   const [url, setUrl] = useState('')
@@ -90,8 +92,8 @@ export function SlackSettingsPage() {
               variant="outline"
               size="sm"
               icon="trash"
-              onClick={() => {
-                if (!window.confirm(`「${w.channel_name}」 웹훅을 삭제할까요?`)) return
+              onClick={async () => {
+                if (!(await confirm({ title: `「${w.channel_name}」 웹훅을 삭제할까요?`, confirmLabel: '삭제', danger: true }))) return
                 remove.mutate(w.id)
               }}
             >

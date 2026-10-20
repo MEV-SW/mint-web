@@ -12,6 +12,7 @@ import {
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { useConfirm } from '../components/common/useConfirm'
 import { useAuthStore } from '../store/authStore'
 import { formatDateTime } from '../utils/date'
 import { apiErrorDetail } from '../utils/apiError'
@@ -42,6 +43,7 @@ function draftFor(user: UserAdmin, drafts: Record<string, UserEditionAssignment[
 
 export function AdminAccountsPage() {
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const me = useAuthStore((s) => s.user)
   const [query, setQuery] = useState('')
@@ -132,21 +134,41 @@ export function AdminAccountsPage() {
     setDraft(user, assignmentsFrom(current))
   }
 
-  function confirmAdmin(user: UserAdmin, makeAdmin: boolean) {
+  async function confirmAdmin(user: UserAdmin, makeAdmin: boolean) {
     if (makeAdmin) {
-      if (!window.confirm(`${user.name}님을 총관으로 지정할까요? 모든 지면과 계정·문의 관리를 볼 수 있습니다.`)) {
+      if (
+        !(await confirm({
+          title: `${user.name}님을 총관으로 지정할까요?`,
+          body: '모든 지면과 계정·문의 관리를 볼 수 있습니다.',
+          confirmLabel: '총관 지정',
+        }))
+      ) {
         return
       }
       saveRole.mutate({ userId: user.id, role: 'admin' })
       return
     }
-    if (!window.confirm(`${user.name}님의 총관을 해제할까요? 지정된 분야만 보게 됩니다.`)) return
+    if (
+      !(await confirm({
+        title: `${user.name}님의 총관을 해제할까요?`,
+        body: '지정된 분야만 보게 됩니다.',
+        confirmLabel: '총관 해제',
+        danger: true,
+      }))
+    ) return
     saveRole.mutate({ userId: user.id, role: 'viewer' })
   }
 
-  function confirmActive(user: UserAdmin, nextActive: boolean) {
+  async function confirmActive(user: UserAdmin, nextActive: boolean) {
     if (!nextActive) {
-      if (!window.confirm(`${user.name}님 계정을 비활성화할까요? 로그인이 막힙니다.`)) return
+      if (
+        !(await confirm({
+          title: `${user.name}님 계정을 비활성화할까요?`,
+          body: '로그인이 막힙니다.',
+          confirmLabel: '비활성화',
+          danger: true,
+        }))
+      ) return
     }
     toggleActive.mutate({ userId: user.id, isActive: nextActive })
   }

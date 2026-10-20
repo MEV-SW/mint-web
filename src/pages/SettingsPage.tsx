@@ -16,6 +16,7 @@ import {
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
+import { useConfirm } from '../components/common/useConfirm'
 import { MyEditionsSection } from '../components/onboarding/MyEditionsSection'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
@@ -29,6 +30,7 @@ function sameIds(a: string[], b: string[]) {
 
 export function SettingsPage() {
   const toast = useToast()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const location = useLocation()
   const { isAdmin, canEditAny, canEditEdition } = usePermissions()
@@ -206,6 +208,11 @@ export function SettingsPage() {
     },
     onError: (error) => toast(apiErrorDetail(error) ?? '소스 이동에 실패했습니다.', 'err'),
   })
+
+  async function confirmMoveSource(source: { id: string; name: string }, editionId: string) {
+    if (!(await confirm({ title: `‘${source.name}’ 소스를 다른 주제로 이동할까요?`, confirmLabel: '이동' }))) return
+    moveSource.mutate({ sourceId: source.id, editionId })
+  }
 
   const duplicateSharedSource = useMutation({
     mutationFn: ({ sourceId, editionId, editionName }: { sourceId: string; editionId: string; editionName: string }) => {
@@ -512,11 +519,7 @@ export function SettingsPage() {
                             aria-label={`${source.name} 주제 변경`}
                             value={source.edition_id}
                             disabled={moveSource.isPending}
-                            onChange={(event) => {
-                              if (window.confirm(`‘${source.name}’ 소스를 다른 주제로 이동할까요?`)) {
-                                moveSource.mutate({ sourceId: source.id, editionId: event.target.value })
-                              }
-                            }}
+                            onChange={(event) => void confirmMoveSource(source, event.target.value)}
                           >
                             {editableEditions.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}
                           </select>
@@ -693,11 +696,7 @@ export function SettingsPage() {
                                   aria-label={`${source.name} 주제 변경`}
                                   value={source.edition_id}
                                   disabled={moveSource.isPending}
-                                  onChange={(event) => {
-                                    if (window.confirm(`‘${source.name}’ 소스를 다른 주제로 이동할까요?`)) {
-                                      moveSource.mutate({ sourceId: source.id, editionId: event.target.value })
-                                    }
-                                  }}
+                                  onChange={(event) => void confirmMoveSource(source, event.target.value)}
                                 >
                                   {editions.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}
                                 </select>
