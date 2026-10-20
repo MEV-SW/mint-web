@@ -1285,6 +1285,7 @@ a.login-sso-cta:hover {
 
 /* S2 — left rail: numbers/actions right, empty/pager left */
 .tbl td.mono,
+.tbl td.num,
 .tbl th.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -4876,14 +4877,29 @@ a.report-cal-entry:hover strong {
 }
 
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
+/* Same rail as the fixed top nav (#114): sidebar starts at the nav's left
+   content edge and the body ends at its right content edge. */
 .admin-layout {
   display: grid;
   grid-template-columns: 244px minmax(0, 1fr);
   align-items: start;
   min-height: 100%;
+  width: 100%;
+  max-width: var(--design-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--page-pad);
+  padding-right: var(--page-pad);
+  box-sizing: border-box;
 }
 .admin-body {
   min-width: 0;
+}
+@media (min-width: 768px) {
+  .admin-layout .admin-body .content-inner {
+    max-width: none;
+    padding-right: 0;
+  }
 }
 .admin-sidebar {
   position: sticky;
@@ -5001,6 +5017,8 @@ a.report-cal-entry:hover strong {
 @media (max-width: 767px) {
   .admin-layout {
     display: block;
+    padding-left: 0;
+    padding-right: 0;
   }
   .admin-sidebar {
     display: none;
@@ -5384,4 +5402,16 @@ a.report-cal-entry:hover strong {
   .sources-list-head .sources-list-toolbar {
     flex: none;
   }
+}
+/* Visually hidden, still read by screen readers (was undefined, so 04 소스 filter labels showed). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
