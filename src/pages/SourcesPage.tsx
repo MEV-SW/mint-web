@@ -9,7 +9,6 @@ import {
   listSources,
   updateSource,
 } from '../api/sourceApi'
-import { TrustBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { OverflowMenu } from '../components/common/OverflowMenu'
@@ -18,6 +17,7 @@ import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
 import { SourceFormFields } from '../components/sources/SourceFormFields'
+import { SourcePolicySection } from '../components/sources/SourcePolicySection'
 import { listEditions } from '../api/editionApi'
 import type { Source, SourceCreate } from '../types/source'
 import {
@@ -28,7 +28,6 @@ import { useActiveJobs } from '../hooks/useJobsQuery'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
-import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
 
 const emptyForm: SourceCreate = {
   name: '',
@@ -55,7 +54,36 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   community_feed: '커뮤니티 피드',
 }
 
-type SourceFilter = 'all' | 'official' | 'community'
+type SourceKind = 'all' | 'official' | 'community'
+type StatusChip = 'all' | 'failed' | 'off' | 'manual'
+type SourceStatus = 'off' | 'failed' | 'ok'
+
+const STATUS_CHIPS: [StatusChip, string][] = [
+  ['all', '전체'],
+  ['failed', '실패'],
+  ['off', '꺼짐'],
+  ['manual', '자동 게시 꺼짐'],
+]
+
+// One status per row: 꺼짐 > 실패 > 정상 (#107). Failure uses the #174/#178 server rule.
+function sourceStatus(s: Source): SourceStatus {
+  if (!s.is_active) return 'off'
+  if (s.collection_failed) return 'failed'
+  return 'ok'
+}
+
+function matchesChip(s: Source, chip: StatusChip): boolean {
+  if (chip === 'failed') return s.is_active && Boolean(s.collection_failed)
+  if (chip === 'off') return !s.is_active
+  if (chip === 'manual') return !s.auto_publish
+  return true
+}
+
+function failureDetail(s: Source): string {
+  return [s.last_error_code, s.last_attempted_at ? `${relativeCrawl(s.last_attempted_at)} 시도` : null]
+    .filter(Boolean)
+    .join(' · ')
+}
 type AddMode = 'official' | 'community'
 
 function sourceToForm(s: Source): SourceCreate {
@@ -101,8 +129,10 @@ export function SourcesPage() {
   const [editing, setEditing] = useState<Source | null>(null)
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
-  const [editionFilter, setEditionFilter] = useState('all')
+  const [sourceKind, setSourceKind] = useState<SourceKind>('all')
+  const [statusChip, setStatusChip] = useState<StatusChip>('all')
+  // 03 주제 › 소스 tab links here with ?edition={id} (#106).
+  const [editionFilter, setEditionFilter] = useState(() => searchParams.get('edition') ?? 'all')
 
   const { busy, activeLabel, activeProgress } = useActiveJobs()
   const { isAdmin } = usePermissions()
@@ -117,10 +147,11 @@ export function SourcesPage() {
   })
 
   const qLower = q.trim().toLowerCase()
-  const rows = sources.filter((s) => {
+  // Kind, topic and search narrow the list first; chip counts are taken from that set.
+  const scoped = sources.filter((s) => {
     const isCommunity = COMMUNITY_SOURCE_TYPES.includes(s.source_type)
-    if (sourceFilter === 'community' && !isCommunity) return false
-    if (sourceFilter === 'official' && isCommunity) return false
+    if (sourceKind === 'community' && !isCommunity) return false
+    if (sourceKind === 'official' && isCommunity) return false
     if (editionFilter !== 'all' && s.edition_id !== editionFilter) return false
     if (
       qLower &&
@@ -132,6 +163,12 @@ export function SourcesPage() {
     }
     return true
   })
+  const chipCounts = Object.fromEntries(
+    STATUS_CHIPS.map(([chip]) => [chip, scoped.filter((s) => matchesChip(s, chip)).length]),
+  ) as Record<StatusChip, number>
+  const rows = scoped.filter((s) => matchesChip(s, statusChip))
+  const editionName = (s: Source) =>
+    editions.find((edition) => edition.id === s.edition_id)?.name ?? '알 수 없음'
   const activeCount = sources.filter((s) => s.is_active).length
   const communityCount = sources.filter((s) => COMMUNITY_SOURCE_TYPES.includes(s.source_type)).length
   const editingIsCommunity =
@@ -168,8 +205,10 @@ export function SourcesPage() {
     mutationFn: (s: Source) => updateSource(s.id, { is_active: !s.is_active }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sources'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       toast('소스 상태를 변경했습니다.')
     },
+    onError: (error) => toast(apiErrorDetail(error) ?? '소스 상태 변경에 실패했습니다.', 'err'),
   })
 
   const remove = useMutation({
@@ -177,6 +216,7 @@ export function SourcesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sources'] })
       qc.invalidateQueries({ queryKey: ['editions'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       toast('소스를 삭제했습니다.')
     },
     onError: (error) => toast(apiErrorDetail(error) ?? '소스 삭제에 실패했습니다.', 'err'),
@@ -195,6 +235,13 @@ export function SourcesPage() {
   }
 
   async function crawl(s: Source) {
+    if (
+      !(await confirm({
+        title: `‘${s.name}’ 지금 수집할까요?`,
+        body: '중요 게시판으로 수집합니다. 진행 상태는 작업 패널에서 확인합니다.',
+        confirmLabel: '지금 수집',
+      }))
+    ) return
     setCrawling(s.id)
     try {
       await crawlSource(s.id)
@@ -208,6 +255,13 @@ export function SourcesPage() {
   }
 
   async function crawlDiscoveryPipeline(s: Source) {
+    if (
+      !(await confirm({
+        title: `‘${s.name}’ 탐문으로 수집할까요?`,
+        body: '수집한 글은 탐문 후보로 들어갑니다. 진행 상태는 작업 패널에서 확인합니다.',
+        confirmLabel: '탐문으로 수집',
+      }))
+    ) return
     setCrawling(s.id)
     try {
       await crawlSourceToDiscovery(s.id)
@@ -220,18 +274,72 @@ export function SourcesPage() {
     }
   }
 
-  // Turning a source off asks first; turning it on is immediate (handoff R5 §4).
+  // #107: both directions ask; turning off is the red confirm.
   async function requestToggleActive(source: Source) {
-    if (
-      source.is_active &&
-      !(await confirm({
-        title: `‘${source.name}’ 수집을 끌까요?`,
-        body: '다시 켤 때까지 수집하지 않습니다.',
-        confirmLabel: '끄기',
-        danger: true,
-      }))
-    ) return
-    toggleActive.mutate(source)
+    const ok = source.is_active
+      ? await confirm({
+          title: `‘${source.name}’ 수집을 끌까요?`,
+          body: '다시 켤 때까지 수집하지 않습니다.',
+          confirmLabel: '끄기',
+          danger: true,
+        })
+      : await confirm({
+          title: `‘${source.name}’ 수집을 켤까요?`,
+          body: '다음 수집부터 이 소스를 포함합니다.',
+          confirmLabel: '켜기',
+        })
+    if (ok) toggleActive.mutate(source)
+  }
+
+  function rowMenu(s: Source) {
+    const crawlDisabled = busy || crawling === s.id || !s.is_active
+    const redditLocked = s.source_type === 'reddit' && !s.is_active
+    return (
+      <OverflowMenu
+        label={`${s.name} 메뉴`}
+        items={[
+          { key: 'edit', label: '편집', onClick: () => openEdit(s) },
+          { key: 'trusted', label: '지금 수집', disabled: crawlDisabled, onClick: () => void crawl(s) },
+          { key: 'discovery', label: '탐문으로 수집', disabled: crawlDisabled, onClick: () => void crawlDiscoveryPipeline(s) },
+          {
+            key: 'toggle',
+            label: s.is_active ? '끄기' : redditLocked ? '켜기 (Reddit 수집 불가)' : '켜기',
+            disabled: redditLocked || toggleActive.isPending,
+            danger: s.is_active,
+            onClick: () => void requestToggleActive(s),
+          },
+          { key: 'delete', label: '삭제', danger: true, disabled: remove.isPending, onClick: () => void confirmRemove(s) },
+        ]}
+      />
+    )
+  }
+
+  function statusCell(s: Source) {
+    const status = sourceStatus(s)
+    if (status === 'off') return <span className="badge badge-unknown">꺼짐</span>
+    if (status === 'failed') {
+      const detail = failureDetail(s)
+      return (
+        <span className="source-status-failed" title={detail || undefined}>
+          <span className="badge badge-failed">실패</span>
+          {detail && <small>{detail}</small>}
+        </span>
+      )
+    }
+    return (
+      <span className="badge badge-mint">
+        <span className="dot" />
+        정상
+      </span>
+    )
+  }
+
+  function autoPublishCell(s: Source) {
+    return s.auto_publish ? (
+      <span className="badge badge-mint">자동</span>
+    ) : (
+      <span className="badge badge-unknown">검토</span>
+    )
   }
 
   function openAdd() {
@@ -312,26 +420,6 @@ export function SourcesPage() {
               </p>
             </div>
             <div className="sources-list-toolbar">
-              <div className="sources-filter-tabs" role="tablist" aria-label="소스 필터">
-                {(
-                  [
-                    ['all', '전체'],
-                    ['official', '공식'],
-                    ['community', '커뮤니티'],
-                  ] as const
-                ).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={sourceFilter === value}
-                    className={`sources-filter-tab ${sourceFilter === value ? 'active' : ''}`}
-                    onClick={() => setSourceFilter(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
               <label className="sources-topic-filter">
                 <span className="sr-only">주제별 필터</span>
                 <select
@@ -346,6 +434,19 @@ export function SourcesPage() {
                   ))}
                 </select>
               </label>
+              <label className="sources-topic-filter">
+                <span className="sr-only">종류</span>
+                <select
+                  className="input"
+                  value={sourceKind}
+                  onChange={(event) => setSourceKind(event.target.value as SourceKind)}
+                  aria-label="종류"
+                >
+                  <option value="all">전체 종류</option>
+                  <option value="official">공식</option>
+                  <option value="community">커뮤니티</option>
+                </select>
+              </label>
               <label className="sources-list-search">
                 <Icon name="search" />
                 <input
@@ -358,139 +459,94 @@ export function SourcesPage() {
             </div>
           </header>
 
-          <div className="sources-table-wrap tbl-wrap">
-            <table className="tbl sources-table">
-              <thead>
-                <tr>
-                  <th>소스</th>
-                  <th style={{ width: 100 }}>유형</th>
-                  <th style={{ width: 130 }}>주제 (1:1)</th>
-                  <th style={{ width: 100 }}>카테고리</th>
-                  <th style={{ width: 130 }}>신뢰도</th>
-                  <th style={{ width: 90 }}>자동 게시</th>
-                  <th className="num" style={{ width: 130 }}>마지막 크롤링</th>
-                  <th style={{ width: 76 }}>활성</th>
-                  <th style={{ width: 118 }}>관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="sources-empty-cell">
-                      {qLower || editionFilter !== 'all'
-                        ? '선택한 조건에 맞는 소스가 없습니다.'
-                        : '등록된 소스가 없습니다. 소스를 추가해 주세요.'}
-                    </td>
-                  </tr>
-                )}
-                {rows.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <div className="nm">{s.name}</div>
-                      <div className="url" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
-                        {s.url}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="type-tag">
-                        {SOURCE_TYPE_LABELS[s.source_type] ?? s.source_type}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="ctag">
-                        {editions.find((edition) => edition.id === s.edition_id)?.name ?? '알 수 없음'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="ctag">{s.category}</span>
-                    </td>
-                    <td>
-                      <TrustBadge level={s.trust_level} score={s.reliability_score} />
-                    </td>
-                    <td>
-                      {s.auto_publish ? (
-                        <span className="badge badge-mint">
-                          <span className="dot" />
-                          자동
-                        </span>
-                      ) : (
-                        <span className="badge badge-unknown">검토</span>
-                      )}
-                    </td>
-                    <td className="mono" style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-                      {relativeCrawl(s.last_crawled_at)}
-                    </td>
-                    <td>
-                      <div
-                        className={`switch ${s.is_active ? 'on' : ''} ${s.source_type === 'reddit' ? 'is-locked' : ''}`}
-                        onClick={() => {
-                          if (s.source_type === 'reddit' && !s.is_active) {
-                            toast('Reddit 소스는 서버에서 수집이 막혀 활성으로 둘 수 없습니다.', 'info')
-                            return
-                          }
-                          void requestToggleActive(s)
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        title={
-                          s.source_type === 'reddit'
-                            ? 'Reddit은 서버에서 수집이 막혀 활성으로 둘 수 없습니다.'
-                            : undefined
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key !== 'Enter') return
-                          if (s.source_type === 'reddit' && !s.is_active) return
-                          void requestToggleActive(s)
-                        }}
-                      />
-                    </td>
-                    <td className="row-actions sources-direct-actions">
-                      <OverflowMenu
-                        items={[
-                          {
-                            key: 'edit',
-                            label: '수정',
-                            onClick: () => openEdit(s),
-                          },
-                          {
-                            key: 'trusted',
-                            label: '중요 수집',
-                            disabled: busy || crawling === s.id || !s.is_active,
-                            onClick: () => crawl(s),
-                          },
-                          {
-                            key: 'discovery',
-                            label: '탐문 수집',
-                            disabled: busy || crawling === s.id || !s.is_active,
-                            onClick: () => crawlDiscoveryPipeline(s),
-                          },
-                        ]}
-                      />
-                      <Btn
-                        variant="danger"
-                        size="sm"
-                        onClick={() => confirmRemove(s)}
-                        disabled={remove.isPending}
-                        aria-label={`${s.name} 삭제`}
-                      >
-                        삭제
-                      </Btn>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="sources-status-chips" role="group" aria-label="상태 필터">
+            {STATUS_CHIPS.map(([chip, label]) => (
+              <button
+                key={chip}
+                type="button"
+                aria-pressed={statusChip === chip}
+                className={`sources-status-chip ${statusChip === chip ? 'active' : ''} ${chip === 'failed' && chipCounts.failed > 0 ? 'is-alert' : ''}`}
+                onClick={() => setStatusChip(chip)}
+              >
+                {label} <b>{chipCounts[chip]}</b>
+              </button>
+            ))}
           </div>
 
-          <footer className="sources-table-legend">
-            <span>
-              <Icon name="refresh" /> 중요 게시판 수집
-            </span>
-            <span>
-              <Icon name="sparkles" /> {DISCOVERY_BOARD_LABEL} 수집
-            </span>
-          </footer>
+          {rows.length === 0 && (
+            <p className="sources-empty-cell sources-empty-note">
+              {sources.length > 0
+                ? '선택한 조건에 맞는 소스가 없습니다.'
+                : '등록된 소스가 없습니다. 소스를 추가해 주세요.'}
+            </p>
+          )}
+
+          {rows.length > 0 && (
+            <div className="sources-table-wrap tbl-wrap">
+              <table className="tbl sources-table">
+                <thead>
+                  <tr>
+                    <th>소스</th>
+                    <th style={{ width: 100 }}>유형</th>
+                    <th style={{ width: 130 }}>주제</th>
+                    <th style={{ width: 90 }}>자동 게시</th>
+                    <th style={{ width: 150 }}>상태</th>
+                    <th className="num" style={{ width: 120 }}>마지막 수집</th>
+                    <th style={{ width: 48 }}><span className="sr-only">메뉴</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((s) => (
+                    <tr key={s.id} className={sourceStatus(s) === 'off' ? 'is-off' : undefined}>
+                      <td>
+                        <div className="nm">{s.name}</div>
+                        <div className="url" style={{ fontSize: 12, color: 'var(--text-faint)' }}>
+                          {s.url}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="type-tag">
+                          {SOURCE_TYPE_LABELS[s.source_type] ?? s.source_type}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="ctag">{editionName(s)}</span>
+                      </td>
+                      <td>{autoPublishCell(s)}</td>
+                      <td>{statusCell(s)}</td>
+                      <td className="mono num" style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                        {relativeCrawl(s.last_crawled_at)}
+                      </td>
+                      <td className="row-actions">{rowMenu(s)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {rows.length > 0 && (
+            <ul className="sources-cards" aria-label="등록 소스">
+              {rows.map((s) => (
+                <li key={s.id} className={`sources-card ${sourceStatus(s) === 'off' ? 'is-off' : ''}`}>
+                  <div className="sources-card-main">
+                    <div className="nm">{s.name}</div>
+                    <div className="sources-card-badges">
+                      {statusCell(s)}
+                      {autoPublishCell(s)}
+                    </div>
+                    <small className="sources-card-meta">
+                      {SOURCE_TYPE_LABELS[s.source_type] ?? s.source_type} · {editionName(s)} · {relativeCrawl(s.last_crawled_at)}
+                    </small>
+                  </div>
+                  {rowMenu(s)}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
+
+        {isAdmin && <SourcePolicySection sources={sources} editions={editions} />}
       </div>
 
       {showAdd && (

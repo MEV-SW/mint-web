@@ -5106,3 +5106,118 @@ a.report-cal-entry:hover strong {
   opacity: 0.6;
 }
 
+/* ===== 04 소스 표 정리 (mint-web#107) ===== */
+.sources-status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+.sources-status-chip {
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--ink2);
+  padding: 5px 12px;
+  font: 600 11.5px var(--sans);
+  cursor: pointer;
+}
+.sources-status-chip b {
+  margin-left: 4px;
+  font-weight: 700;
+}
+.sources-status-chip.is-alert b {
+  color: var(--high);
+}
+.sources-status-chip.active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--panel);
+}
+.sources-status-chip.active.is-alert b {
+  color: inherit;
+}
+.source-status-failed {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+.source-status-failed small {
+  font-size: 11px;
+  color: var(--text-faint);
+  word-break: break-all;
+}
+.sources-table tr.is-off .nm,
+.sources-card.is-off .nm {
+  color: var(--text-faint);
+}
+.sources-empty-note {
+  padding: 24px 0;
+  text-align: center;
+}
+.sources-cards {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sources-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.sources-card-main {
+  min-width: 0;
+}
+.sources-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+.sources-card-meta {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.sources-policy-details {
+  margin-top: 24px;
+}
+.sources-policy-details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.sources-policy-details > summary::-webkit-details-marker {
+  display: none;
+}
+.sources-policy-details > summary h3::after {
+  content: ' ▸';
+  font-size: 0.8em;
+}
+.sources-policy-details[open] > summary h3::after {
+  content: ' ▾';
+}
+@media (max-width: 640px) {
+  .sources-table-wrap {
+    display: none;
+  }
+  .sources-cards {
+    display: block;
+  }
+}
+.sources-card-badges .source-status-failed {
+  display: contents;
+}
+.sources-card-badges .source-status-failed small {
+  order: 3;
+  flex-basis: 100%;
+}
+@media (max-width: 900px) {
+  /* The column toolbar kept its 360px row basis as height (pre-existing gap above the filters). */
+  .sources-list-head .sources-list-toolbar {
+    flex: none;
+  }
+}

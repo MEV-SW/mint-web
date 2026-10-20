@@ -27,6 +27,10 @@ export interface Source {
   edition_id: string
   created_at: string
   updated_at: string
+  // mint-server#178 — optional so an older backend still renders (all "정상").
+  collection_failed?: boolean
+  last_error_code?: string | null
+  last_attempted_at?: string | null
 }
 
 export interface SourceSuggestionCandidate {
