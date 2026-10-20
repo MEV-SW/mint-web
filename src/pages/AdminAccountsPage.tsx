@@ -15,7 +15,7 @@ import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
 import { useAuthStore } from '../store/authStore'
-import { formatDateTime } from '../utils/date'
+import { formatDateTime, formatShortDateTime } from '../utils/date'
 import { apiErrorDetail } from '../utils/apiError'
 import type { Edition } from '../types/edition'
 import { PERMISSION_MATRIX, PERMISSION_ROLES } from '../constants/permissionMatrix'
@@ -290,15 +290,15 @@ export function AdminAccountsPage() {
       </div>
 
       <div className="tbl-wrap">
-        <table className="tbl">
+        <table className="tbl account-table">
           <thead>
             <tr>
-              <th>이름</th>
-              <th>이메일</th>
+              <th className="account-col-name">이름</th>
+              <th className="account-col-email">이메일</th>
               <th>분야</th>
-              <th style={{ width: 88 }}>총관</th>
-              <th style={{ width: 100 }}>활성</th>
-              <th className="num" style={{ width: 168 }}>최근 로그인</th>
+              <th className="account-col-admin">총관</th>
+              <th className="account-col-active">활성</th>
+              <th className="num account-col-login">최근 로그인</th>
             </tr>
           </thead>
           <tbody>
@@ -325,19 +325,14 @@ export function AdminAccountsPage() {
               return (
                 <tr key={user.id} className={dirty ? 'admin-accounts-row-dirty' : undefined}>
                   <td>
-                    {user.name}
-                    {user.role === 'admin' && (
-                      <span className="pill" style={{ marginLeft: 8 }}>
-                        총관
-                      </span>
-                    )}
-                    {isSelf && (
-                      <span className="pill" style={{ marginLeft: 8 }}>
-                        나
-                      </span>
-                    )}
+                    <div className="account-name">
+                      <span className="account-ellipsis" title={user.name}>{user.name}</span>
+                      {isSelf && <span className="pill">나</span>}
+                    </div>
                   </td>
-                  <td>{user.email}</td>
+                  <td>
+                    <span className="account-ellipsis account-email" title={user.email}>{user.email}</span>
+                  </td>
                   <td>
                     {(() => {
                       const named = editions.filter((edition) => assigned.has(edition.id))
@@ -428,15 +423,17 @@ export function AdminAccountsPage() {
                     })()}
                   </td>
                   <td>
-                    <label className="edition-active-toggle">
+                    {/* #118: label only when on ("일반" next to an empty box read as a role); both directions confirm first. */}
+                    <label className={`edition-active-toggle account-admin-toggle${user.role === 'admin' ? ' is-on' : ''}`}>
                       <input
                         type="checkbox"
                         checked={user.role === 'admin'}
                         disabled={saveRole.isPending || isSelf}
-                        title={isSelf ? '자신의 총관 권한은 해제할 수 없습니다.' : '총관 지정'}
+                        title={isSelf ? '자신의 총관 권한은 해제할 수 없습니다.' : user.role === 'admin' ? '총관 해제' : '총관 지정'}
+                        aria-label={`${user.name} 총관`}
                         onChange={(e) => confirmAdmin(user, e.target.checked)}
                       />
-                      {user.role === 'admin' ? '총관' : '일반'}
+                      {user.role === 'admin' && '총관'}
                     </label>
                   </td>
                   <td>
@@ -455,9 +452,11 @@ export function AdminAccountsPage() {
                           : '비활성'}
                     </label>
                   </td>
-                  <td className="mono admin-accounts-login">
-                    <span>{formatDateTime(user.last_login_at)}</span>
-                    <small>가입 {formatDateTime(user.created_at)}</small>
+                  <td
+                    className="mono admin-accounts-login"
+                    title={`최근 로그인 ${user.last_login_at ? formatDateTime(user.last_login_at) : '없음'} · 가입 ${formatDateTime(user.created_at)}`}
+                  >
+                    {user.last_login_at ? formatShortDateTime(user.last_login_at) : '—'}
                   </td>
                 </tr>
               )
