@@ -4436,6 +4436,45 @@ a.report-cal-entry:hover strong {
   font-size: 13.5px;
   color: var(--ink2);
 }
+/* #115: one-line job / time cells on desktop, narrower progress (2 lines max, full text in title). */
+.job-log {
+  margin-top: 28px;
+}
+@media (min-width: 768px) {
+  .job-log-progress {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .job-log-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .job-log-col-status {
+    width: 84px;
+  }
+  .job-log-col-progress {
+    width: 30%;
+  }
+  .job-log-col-time {
+    width: 136px; /* fits "2025.12.31 23:50" in the mono face */
+  }
+  .job-log-col-actions {
+    width: 64px;
+  }
+  .job-log-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .job-log-table .job-status-badge,
+  .job-log-time {
+    white-space: nowrap;
+  }
+}
 .job-log-skeleton-row {
   height: 40px;
   margin-bottom: 6px;

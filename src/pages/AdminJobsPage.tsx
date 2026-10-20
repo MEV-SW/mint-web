@@ -19,7 +19,7 @@ import { useJobActions } from '../hooks/useJobActions'
 import { JOB_STATUS_LABEL, type BackgroundJob } from '../types/job'
 import { COMMUNITY_SOURCE_TYPES } from '../types/source'
 import { apiErrorDetail } from '../utils/apiError'
-import { formatDateTime } from '../utils/date'
+import { formatDateTime, formatShortDateTime } from '../utils/date'
 import { isActiveJobStatus, jobProgressSummary, pickPrimaryActiveJob } from '../utils/jobProgress'
 
 const LOG_LIMIT = 50
@@ -336,66 +336,76 @@ export function AdminJobsPage() {
             <table className="tbl job-log-table">
               <thead>
                 <tr>
-                  <th>작업</th>
-                  <th>상태</th>
-                  <th>진행</th>
-                  <th>시작</th>
-                  <th>종료</th>
-                  <th aria-label="동작" />
+                  <th className="job-log-col-label">작업</th>
+                  <th className="job-log-col-status">상태</th>
+                  <th className="job-log-col-progress">진행</th>
+                  <th className="job-log-col-time">시작</th>
+                  <th className="job-log-col-time">종료</th>
+                  <th className="job-log-col-actions" aria-label="동작" />
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((job) => (
-                  <tr key={job.id} className={`job-log-row status-${job.status}`}>
-                    <td data-label="작업">
-                      <div className="job-log-label">{job.label}</div>
-                      {job.status === 'failed' && (
-                        <div className="job-log-failure">
-                          {job.error || job.result_message || '실패'}
-                          <span className="job-log-failure-hint">
-                            {' '}
-                            실패한 소스는 <Link to="/admin/sources">소스 화면</Link>에서 ⋯ → 지금 수집으로 다시
-                            돌릴 수 있습니다.
-                          </span>
-                        </div>
-                      )}
-                    </td>
-                    <td data-label="상태">
-                      <span className={`job-status-badge badge-${job.status}`}>{JOB_STATUS_LABEL[job.status]}</span>
-                    </td>
-                    <td data-label="진행">
-                      {isActiveJobStatus(job.status) ? jobProgressSummary(job) ?? '진행 중' : job.result_message || '—'}
-                    </td>
-                    <td data-label="시작" className="mono">
-                      {formatDateTime(job.started_at ?? job.created_at)}
-                    </td>
-                    <td data-label="종료" className="mono">
-                      {job.finished_at ? formatDateTime(job.finished_at) : '—'}
-                    </td>
-                    <td className="job-log-actions">
-                      {isActiveJobStatus(job.status) && (
-                        <Btn
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void jobActions.cancel(job)}
-                          disabled={jobActions.busy}
-                        >
-                          취소
-                        </Btn>
-                      )}
-                      {isFinished(job) && (
-                        <Btn
-                          variant="ghost"
-                          size="sm"
-                          icon="trash"
-                          aria-label="작업 내역 삭제"
-                          onClick={() => void jobActions.remove(job)}
-                          disabled={jobActions.busy}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {jobs.map((job) => {
+                  const progress = isActiveJobStatus(job.status)
+                    ? jobProgressSummary(job) ?? '진행 중'
+                    : job.result_message || '—'
+                  const startedAt = job.started_at ?? job.created_at
+                  return (
+                    <tr key={job.id} className={`job-log-row status-${job.status}`}>
+                      <td data-label="작업">
+                        <div className="job-log-label" title={job.label}>{job.label}</div>
+                        {job.status === 'failed' && (
+                          <div className="job-log-failure">
+                            {job.error || job.result_message || '실패'}
+                            <span className="job-log-failure-hint">
+                              {' '}
+                              실패한 소스는 <Link to="/admin/sources">소스 화면</Link>에서 ⋯ → 지금 수집으로 다시
+                              돌릴 수 있습니다.
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td data-label="상태">
+                        <span className={`job-status-badge badge-${job.status}`}>{JOB_STATUS_LABEL[job.status]}</span>
+                      </td>
+                      <td data-label="진행">
+                        <span className="job-log-progress" title={progress}>{progress}</span>
+                      </td>
+                      <td data-label="시작" className="mono job-log-time">
+                        <time dateTime={startedAt} title={formatDateTime(startedAt)}>{formatShortDateTime(startedAt)}</time>
+                      </td>
+                      <td data-label="종료" className="mono job-log-time">
+                        {job.finished_at ? (
+                          <time dateTime={job.finished_at} title={formatDateTime(job.finished_at)}>
+                            {formatShortDateTime(job.finished_at)}
+                          </time>
+                        ) : '—'}
+                      </td>
+                      <td className="job-log-actions">
+                        {isActiveJobStatus(job.status) && (
+                          <Btn
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void jobActions.cancel(job)}
+                            disabled={jobActions.busy}
+                          >
+                            취소
+                          </Btn>
+                        )}
+                        {isFinished(job) && (
+                          <Btn
+                            variant="ghost"
+                            size="sm"
+                            icon="trash"
+                            aria-label="작업 내역 삭제"
+                            onClick={() => void jobActions.remove(job)}
+                            disabled={jobActions.busy}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
