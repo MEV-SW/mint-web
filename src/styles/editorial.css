@@ -2893,16 +2893,57 @@ a.report-cal-entry:hover strong {
 .admin-accounts-login {
   font-size: 12.5px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
-.admin-accounts-login span,
-.admin-accounts-login small {
+/* 08 구성원 표 (mint-web#118): name/email sized to content, room for 분야. */
+.account-table input[type='checkbox'] {
+  accent-color: var(--pine);
+}
+.account-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.account-ellipsis {
   display: block;
-  line-height: 1.35;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.admin-accounts-login small {
-  margin-top: 2px;
-  font-size: 11px;
-  opacity: 0.8;
+.account-email {
+  font-size: 13px;
+  color: var(--ink2);
+}
+.account-admin-toggle.is-on {
+  color: var(--pine);
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .account-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .account-col-name {
+    width: 140px;
+  }
+  .account-col-email {
+    width: 210px;
+  }
+  .account-col-admin {
+    width: 84px;
+  }
+  .account-col-active {
+    width: 104px;
+  }
+  .account-col-login {
+    width: 150px; /* "2025.11.30 18:02" + cell padding */
+  }
+  .admin-layout .account-table th + th,
+  .admin-layout .account-table td + td {
+    padding-left: 14px;
+  }
 }
 
 .admin-layout .seg {
