@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   addInquiryMessage,
   closeInquiry,
@@ -21,18 +21,43 @@ const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
   closed: '종료',
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+const STALE_OPEN_DAYS = 3
+
+/** Whole days since the inquiry arrived (local calendar days). */
+function daysSince(iso: string, now = new Date()): number {
+  const start = new Date(iso)
+  const a = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
+  const b = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.max(0, Math.round((b - a) / DAY_MS))
+}
+
+function elapsedLabel(days: number): string {
+  return days === 0 ? '오늘' : `${days}일 경과`
+}
+
+/** Unanswered first (oldest first), then the rest newest first — 09 문의 (mint-web#108). */
+function sortInquiries(items: Inquiry[]): Inquiry[] {
+  const open = items.filter((item) => item.status === 'open')
+  const rest = items.filter((item) => item.status !== 'open')
+  open.sort((a, b) => a.created_at.localeCompare(b.created_at))
+  rest.sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+  return [...open, ...rest]
+}
+
 export function AdminInquiriesPage() {
   const toast = useToast()
   const confirm = useConfirm()
   const qc = useQueryClient()
-  const [statusFilter, setStatusFilter] = useState<InquiryStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<InquiryStatus | 'all'>('open')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [reply, setReply] = useState('')
 
-  const { data: inquiries = [], isLoading } = useQuery({
+  const { data: rawInquiries = [], isLoading } = useQuery({
     queryKey: ['inquiries', 'admin', statusFilter],
     queryFn: () => listInquiries(statusFilter === 'all' ? undefined : statusFilter),
   })
+  const inquiries = useMemo(() => sortInquiries(rawInquiries), [rawInquiries])
 
   const { data: detail } = useQuery({
     queryKey: ['inquiry', selectedId],
@@ -119,7 +144,21 @@ export function AdminInquiriesPage() {
                   <span>
                     {item.user.name} · {INQUIRY_STATUS_LABELS[item.status]}
                   </span>
-                  <span className="mono">{formatDateTime(item.updated_at)}</span>
+                  <span className="inquiry-list-meta">
+                    {(() => {
+                      const days = daysSince(item.created_at)
+                      return (
+                        <span
+                          className={
+                            item.status === 'open' && days >= STALE_OPEN_DAYS ? 'inquiry-elapsed is-stale' : 'inquiry-elapsed'
+                          }
+                        >
+                          {elapsedLabel(days)}
+                        </span>
+                      )
+                    })()}
+                    <span className="mono">{formatDateTime(item.updated_at)}</span>
+                  </span>
                 </button>
               </li>
             ))}

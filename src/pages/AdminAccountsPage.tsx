@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { listEditions } from '../api/editionApi'
 import {
@@ -17,8 +18,16 @@ import { useAuthStore } from '../store/authStore'
 import { formatDateTime } from '../utils/date'
 import { apiErrorDetail } from '../utils/apiError'
 import type { Edition } from '../types/edition'
+import { PERMISSION_MATRIX, PERMISSION_ROLES } from '../constants/permissionMatrix'
+import { cx } from '../utils/cx'
 
-type Filter = 'all' | 'unassigned' | 'admin' | 'pending' | 'inactive'
+type Filter = 'all' | 'unassigned' | 'admin' | 'inactive'
+type AccountsTab = 'members' | 'pending' | 'roles'
+const ACCOUNT_TABS: Array<[AccountsTab, string]> = [
+  ['members', '구성원'],
+  ['pending', '승인 대기'],
+  ['roles', '역할·권한'],
+]
 
 function membershipsOf(user: UserAdmin) {
   return new Map((user.editions ?? []).map((item) => [item.id, item.is_editor]))
@@ -48,6 +57,15 @@ export function AdminAccountsPage() {
   const me = useAuthStore((s) => s.user)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const tab: AccountsTab = tabParam === 'pending' || tabParam === 'roles' ? tabParam : 'members'
+  function selectTab(next: AccountsTab) {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'members') params.delete('tab')
+    else params.set('tab', next)
+    setSearchParams(params, { replace: true })
+  }
   const [drafts, setDrafts] = useState<Record<string, UserEditionAssignment[]>>({})
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
 
@@ -105,13 +123,14 @@ export function AdminAccountsPage() {
         const hay = `${user.name} ${user.email}`.toLowerCase()
         if (!hay.includes(needle)) return false
       }
+      if (tab === 'pending') return user.approval_status === 'pending'
       if (filter === 'unassigned') return user.role !== 'admin' && (user.editions ?? []).length === 0
       if (filter === 'admin') return user.role === 'admin'
-      if (filter === 'pending') return user.approval_status === 'pending'
       if (filter === 'inactive') return !user.is_active
       return true
     })
-  }, [users, query, filter])
+  }, [users, query, filter, tab])
+  const pendingCount = users.filter((user) => user.approval_status === 'pending').length
 
   function setDraft(user: UserAdmin, next: UserEditionAssignment[]) {
     const saved = assignmentsFrom(membershipsOf(user))
@@ -179,10 +198,66 @@ export function AdminAccountsPage() {
   return (
     <PageShell
       section="관리 · 계정"
-      title="계정 관리"
+      title="계정"
       lead="SSO로 들어온 구성원에게 사업 분야를 배정하고 총관을 지정합니다."
       leadSingleLine
     >
+      <div className="admin-subtabs" role="tablist" aria-label="계정 화면">
+        {ACCOUNT_TABS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            className={cx('admin-subtab', tab === id && 'on')}
+            onClick={() => selectTab(id)}
+          >
+            {label}
+            {id === 'pending' && pendingCount > 0 && <span className="admin-subtab-count">{pendingCount}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'roles' ? (
+        <section className="permission-matrix" aria-label="역할·권한">
+          <p className="permission-matrix-note">
+            현재 권한 규칙을 그대로 보여 주는 읽기 전용 표입니다. 한 사람이 여러 역할이면(예: 매니저이면서 분야
+            편집장) 권한은 합쳐집니다.
+          </p>
+          <div className="tbl-wrap">
+            <table className="tbl permission-matrix-table">
+              <thead>
+                <tr>
+                  <th>기능</th>
+                  {PERMISSION_ROLES.map((role) => (
+                    <th key={role.key} className="permission-matrix-role">
+                      {role.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PERMISSION_MATRIX.map((row) => (
+                  <tr key={row.feature}>
+                    <td>{row.feature}</td>
+                    {PERMISSION_ROLES.map((role) => {
+                      const cell = row[role.key]
+                      return (
+                        <td key={role.key} className={cx('permission-matrix-cell', cell.on ? 'is-on' : 'is-off')}>
+                          <span aria-hidden>{cell.on ? '●' : '–'}</span>
+                          <span className="sr-text">{cell.on ? '가능' : '불가'}</span>
+                          {cell.note && <small>{cell.note}</small>}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : (
+      <>
       <div className="admin-accounts-toolbar">
         <input
           className="input"
@@ -191,13 +266,13 @@ export function AdminAccountsPage() {
           placeholder="이름 또는 이메일 검색"
           aria-label="이름 또는 이메일 검색"
         />
-        <div className="seg" role="tablist" aria-label="계정 필터">
+        {tab === 'members' && (
+        <div className="seg" role="group" aria-label="계정 필터">
           {(
             [
               ['all', '전체'],
               ['unassigned', '미배정'],
               ['admin', '총관'],
-              ['pending', '승인 대기'],
               ['inactive', '비활성'],
             ] as const
           ).map(([id, label]) => (
@@ -211,6 +286,7 @@ export function AdminAccountsPage() {
             </button>
           ))}
         </div>
+        )}
       </div>
 
       <div className="tbl-wrap">
@@ -236,7 +312,9 @@ export function AdminAccountsPage() {
                 <td colSpan={6} className="sources-empty-cell">
                   {users.length === 0
                     ? 'SSO로 로그인한 사용자가 아직 없습니다.'
-                    : '조건에 맞는 계정이 없습니다.'}
+                    : tab === 'pending'
+                      ? '승인을 기다리는 계정이 없습니다.'
+                      : '조건에 맞는 계정이 없습니다.'}
                 </td>
               </tr>
             )}
@@ -387,6 +465,8 @@ export function AdminAccountsPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </PageShell>
   )
 }
