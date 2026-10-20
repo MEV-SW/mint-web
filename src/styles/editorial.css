@@ -4711,6 +4711,170 @@ a.report-cal-entry:hover strong {
   flex-wrap: wrap;
 }
 
+/* ===== 05 탐문 후보 보드 (mint-web#105) ===== */
+.discovery-board-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+.discovery-edition-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.discovery-edition-chip {
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--ink2);
+  padding: 5px 12px;
+  font: 600 11.5px var(--sans);
+  cursor: pointer;
+}
+.discovery-edition-chip.active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--panel);
+}
+.discovery-retention {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.discovery-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.discovery-col {
+  min-width: 0;
+  border-top: 2px solid var(--text);
+}
+.discovery-col-head {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.discovery-col-title {
+  margin: 0;
+  font: 700 15px var(--serif);
+}
+.discovery-col-count {
+  font: 600 12px var(--mono, monospace);
+  color: var(--text-muted);
+}
+.discovery-col-body {
+  display: flex;
+  flex-direction: column;
+}
+.discovery-col-body[hidden] {
+  display: none;
+}
+.discovery-card {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.discovery-card-title {
+  display: block;
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text);
+  text-decoration: none;
+}
+.discovery-card-title:hover {
+  text-decoration: underline;
+}
+.discovery-card-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.discovery-card-summary {
+  display: -webkit-box;
+  margin: 6px 0 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.discovery-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.discovery-col-empty {
+  margin: 0;
+  padding: 16px 0;
+  font-size: 12px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+}
+.discovery-col-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--high);
+  color: var(--high);
+  font-size: 12px;
+}
+.discovery-col-more {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+.discovery-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+}
+.discovery-skeleton span {
+  height: 64px;
+  background: linear-gradient(90deg, var(--panel) 0%, var(--line2) 50%, var(--panel) 100%);
+  background-size: 200% 100%;
+  animation: mint-skel 1.2s ease-in-out infinite;
+}
+@media (max-width: 900px) {
+  .discovery-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .discovery-board {
+    grid-template-columns: 1fr;
+  }
+  .discovery-col-head.is-toggle {
+    cursor: pointer;
+  }
+  .discovery-col-head.is-toggle::after {
+    content: '▾';
+    margin-left: auto;
+    padding-left: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .discovery-col.is-collapsed .discovery-col-head.is-toggle::after {
+    content: '▸';
+  }
+}
+
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
 .admin-layout {
   display: grid;

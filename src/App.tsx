@@ -28,6 +28,7 @@ import { IssueDetailPage } from './pages/IssueDetailPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { OnboardingGate } from './routes/OnboardingGate'
 import { ProtectedRoute } from './routes/ProtectedRoute'
+import { AdminDiscoveryPage } from './pages/AdminDiscoveryPage'
 import { AdminRoute, SourceReviewRoute, SuperAdminRoute } from './routes/AdminRoute'
 import { NewsPage } from './pages/NewsPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -85,6 +86,7 @@ export default function App() {
                     </Route>
                     <Route element={<AdminRoute />}>
                       <Route path="sources" element={<SourcesPage />} />
+                      <Route path="discovery" element={<AdminDiscoveryPage />} />
                       <Route element={<SuperAdminRoute />}>
                         <Route path="jobs" element={<AdminJobsPage />} />
                         <Route path="issues" element={<AdminIssuesPage />} />

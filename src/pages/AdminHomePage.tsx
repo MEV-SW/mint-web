@@ -87,7 +87,7 @@ export function AdminHomePage() {
             <KpiCard label="승인 대기" value={data?.pending_users} to="/admin/accounts" tone="red" loading={loading} />
             <KpiCard label="미답변 문의" value={data?.open_inquiries} to="/admin/inquiries" tone="amber" loading={loading} />
             <KpiCard label="수집 실패 소스" value={data?.failed_sources} to="/admin/sources" tone="red" loading={loading} />
-            <KpiCard label="탐문 후보" value={data?.pending_candidates} to="/discovery" tone="amber" loading={loading} />
+            <KpiCard label="탐문 후보" value={data?.pending_candidates} to="/admin/discovery" tone="amber" loading={loading} />
           </div>
 
           <TodayPipeline />

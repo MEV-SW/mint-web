@@ -6,7 +6,7 @@ export interface NavItem {
   label: string
   icon: string
   end?: boolean
-  countKey?: 'openInquiries' | 'pendingUsers' | 'adminTotal' | 'failedSources'
+  countKey?: 'openInquiries' | 'pendingUsers' | 'adminTotal' | 'failedSources' | 'pendingCandidates'
   adminOnly?: boolean
   superAdminOnly?: boolean
   sourceReviewOnly?: boolean
@@ -31,8 +31,7 @@ export const APP_NAV_ADMIN_HUB: NavItem = {
   icon: 'shield',
 }
 
-// R5 order. 05 탐문 후보 (phase 2) is added together with its screen so the
-// sidebar never links to an empty page.
+// R5 order.
 export const APP_NAV_ADMIN_SUB: NavItem[] = [
   {
     path: '/admin',
@@ -65,6 +64,16 @@ export const APP_NAV_ADMIN_SUB: NavItem[] = [
     no: '04',
     group: '콘텐츠',
     badgeTone: 'red',
+  },
+  {
+    path: '/admin/discovery',
+    label: '탐문 후보',
+    icon: 'sparkles',
+    countKey: 'pendingCandidates',
+    adminOnly: true,
+    no: '05',
+    group: '콘텐츠',
+    badgeTone: 'amber',
   },
   {
     path: '/admin/categories',
@@ -138,13 +147,14 @@ export function visibleAdminNav(
 
 export function adminNavBadgeCount(
   item: NavItem,
-  counts: { openInquiries: number; pendingUsers: number; failedSources?: number },
+  counts: { openInquiries: number; pendingUsers: number; failedSources?: number; pendingCandidates?: number },
 ): number {
   if (item.countKey === 'openInquiries') return counts.openInquiries
   if (item.countKey === 'pendingUsers') return counts.pendingUsers
   // Same value as TopNav's adminBadgeTotal.
   if (item.countKey === 'adminTotal') return counts.openInquiries + counts.pendingUsers
   if (item.countKey === 'failedSources') return counts.failedSources ?? 0
+  if (item.countKey === 'pendingCandidates') return counts.pendingCandidates ?? 0
   return 0
 }
 
