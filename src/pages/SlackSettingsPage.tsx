@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { createWebhook, deleteWebhook, listWebhooks, testSlack } from '../api/slackApi'
+import { createWebhook, deleteWebhook, listWebhooks, testSlack, updateWebhook } from '../api/slackApi'
 import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
+import { OverflowMenu } from '../components/common/OverflowMenu'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
+import type { SlackWebhook } from '../api/slackApi'
+import { apiErrorDetail } from '../utils/apiError'
+import { cx } from '../utils/cx'
 
 const PURPOSE_OPTIONS = [
   { value: 'all', label: '전체 알림' },
@@ -58,7 +62,36 @@ export function SlackSettingsPage() {
       qc.invalidateQueries({ queryKey: ['slack-webhooks'] })
       toast('웹훅을 삭제했습니다.')
     },
+    onError: (e) => toast(apiErrorDetail(e) || '삭제 실패', 'err'),
   })
+
+  const toggle = useMutation({
+    mutationFn: (w: SlackWebhook) => updateWebhook(w.id, { is_active: !w.is_active }),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: ['slack-webhooks'] })
+      toast(updated.is_active ? '웹훅을 켰습니다.' : '웹훅을 껐습니다.', 'info')
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '변경 실패', 'err'),
+  })
+
+  async function requestToggle(w: SlackWebhook) {
+    // Turning off asks first; turning on is immediate.
+    if (
+      w.is_active &&
+      !(await confirm({
+        title: `「${w.channel_name}」 웹훅을 끌까요?`,
+        body: '다시 켤 때까지 이 채널로 알림을 보내지 않습니다.',
+        confirmLabel: '끄기',
+        danger: true,
+      }))
+    ) return
+    toggle.mutate(w)
+  }
+
+  async function requestRemove(w: SlackWebhook) {
+    if (!(await confirm({ title: `「${w.channel_name}」 웹훅을 삭제할까요?`, confirmLabel: '삭제', danger: true }))) return
+    remove.mutate(w.id)
+  }
 
   const canSave = Boolean(url.trim() && channel.trim())
 
@@ -71,7 +104,7 @@ export function SlackSettingsPage() {
       actions={
         <>
           <Btn variant="outline" onClick={() => test.mutate()} disabled={test.isPending || !webhooks.length}>
-            테스트 발송
+            테스트 메시지 보내기
           </Btn>
           <Btn variant="primary" icon="plus" onClick={() => setShowAdd(true)}>
             웹훅 추가
@@ -81,24 +114,36 @@ export function SlackSettingsPage() {
     >
       <div className="card card-pad webhook-list">
         {webhooks.map((w) => (
-          <div key={w.id} className="webhook-row">
-            <div>
+          <div key={w.id} className={cx('webhook-row', !w.is_active && 'is-off')}>
+            <div className="webhook-row-main">
               <strong>{w.channel_name}</strong>
               <div className="webhook-row-meta">
-                {PURPOSE_LABEL[w.purpose] ?? w.purpose} · {w.is_active ? '활성' : '비활성'}
+                <span className="webhook-purpose">{PURPOSE_LABEL[w.purpose] ?? w.purpose}</span>
+                {/* The API never returns the URL (stored only), so it is always shown masked. */}
+                <span className="webhook-url">저장된 URL (가려짐)</span>
               </div>
             </div>
-            <Btn
-              variant="outline"
-              size="sm"
-              icon="trash"
-              onClick={async () => {
-                if (!(await confirm({ title: `「${w.channel_name}」 웹훅을 삭제할까요?`, confirmLabel: '삭제', danger: true }))) return
-                remove.mutate(w.id)
-              }}
-            >
-              삭제
-            </Btn>
+            <span className={cx('webhook-status', w.is_active ? 'is-on' : 'is-off')}>
+              {w.is_active ? '활성' : '꺼짐'}
+            </span>
+            <OverflowMenu
+              label={`${w.channel_name} 메뉴`}
+              items={[
+                {
+                  key: 'toggle',
+                  label: w.is_active ? '끄기' : '켜기',
+                  disabled: toggle.isPending,
+                  onClick: () => void requestToggle(w),
+                },
+                {
+                  key: 'delete',
+                  label: '삭제…',
+                  danger: true,
+                  disabled: remove.isPending,
+                  onClick: () => void requestRemove(w),
+                },
+              ]}
+            />
           </div>
         ))}
         {!webhooks.length && (
@@ -143,14 +188,21 @@ export function SlackSettingsPage() {
             />
           </div>
           <div className="field">
-            <label>용도</label>
-            <select className="input" value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+            <label id="webhook-purpose-label">용도</label>
+            <div className="seg webhook-purpose-seg" role="radiogroup" aria-labelledby="webhook-purpose-label">
               {PURPOSE_OPTIONS.map((item) => (
-                <option key={item.value} value={item.value}>
+                <button
+                  key={item.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={purpose === item.value}
+                  className={purpose === item.value ? 'on' : undefined}
+                  onClick={() => setPurpose(item.value)}
+                >
                   {item.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         </Modal>
       )}

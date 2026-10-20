@@ -4590,6 +4590,127 @@ a.report-cal-entry:hover strong {
   }
 }
 
+/* ===== 08 계정 · 09 문의 · 10 웹훅 (mint-web#108) ===== */
+.admin-subtabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.admin-subtabs::-webkit-scrollbar {
+  display: none;
+}
+.admin-subtab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-bottom: -1px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink3);
+}
+.admin-subtab:hover {
+  color: var(--ink);
+}
+.admin-subtab.on {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.admin-subtab:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+}
+.admin-subtab-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 2px;
+  background: var(--red);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+.permission-matrix-note {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink2);
+}
+.permission-matrix-role,
+.permission-matrix-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+.permission-matrix-cell.is-on {
+  color: var(--pine);
+  font-weight: 700;
+}
+.permission-matrix-cell.is-off {
+  color: var(--ink3);
+}
+.permission-matrix-cell small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink2);
+  white-space: normal;
+}
+.sr-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.inquiry-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inquiry-elapsed {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink3);
+}
+.inquiry-elapsed.is-stale {
+  color: var(--amber);
+}
+.webhook-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.webhook-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.webhook-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--ink3);
+}
+.webhook-status {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+.webhook-status.is-on { color: var(--pine); }
+.webhook-status.is-off { color: var(--ink3); }
+.webhook-row.is-off strong { color: var(--ink2); }
+.webhook-purpose-seg {
+  display: flex;
+  flex-wrap: wrap;
+}
+
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
 .admin-layout {
   display: grid;
