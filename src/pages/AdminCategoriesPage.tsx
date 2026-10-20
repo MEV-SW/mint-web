@@ -163,7 +163,13 @@ export function AdminCategoriesPage() {
               <th>이름</th>
               <th className="num" style={{ width: 100 }}>정렬순서</th>
               <th style={{ width: 100 }}>상태</th>
-              <th className="num" style={{ width: 100 }}>사용 소스</th>
+              <th
+                className="num"
+                style={{ width: 120 }}
+                title="AI 소스 제안으로 이 카테고리에 연결된 활성 소스 수입니다. 기존 소스는 카테고리 연결 전이라 포함되지 않습니다."
+              >
+                AI 제안 연결 소스
+              </th>
               <th style={{ width: 140 }}>액션</th>
             </tr>
           </thead>
