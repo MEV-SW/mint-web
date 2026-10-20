@@ -47,6 +47,7 @@ export function AdminInquiriesPage() {
       qc.invalidateQueries({ queryKey: ['inquiry', selectedId] })
       qc.invalidateQueries({ queryKey: ['inquiries'] })
       qc.invalidateQueries({ queryKey: ['inquiries-open-count'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       toast('답변을 등록했습니다.')
     },
     onError: (e) => toast(apiErrorDetail(e) || '답변 등록 실패', 'err'),
@@ -58,6 +59,7 @@ export function AdminInquiriesPage() {
       qc.invalidateQueries({ queryKey: ['inquiry', selectedId] })
       qc.invalidateQueries({ queryKey: ['inquiries'] })
       qc.invalidateQueries({ queryKey: ['inquiries-open-count'] })
+      qc.invalidateQueries({ queryKey: ['admin-summary'] })
       toast('문의를 종료했습니다.', 'info')
     },
     onError: (e) => toast(apiErrorDetail(e) || '종료 실패', 'err'),

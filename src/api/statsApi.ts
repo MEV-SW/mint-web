@@ -89,3 +89,28 @@ export async function fetchTodayWeather(): Promise<WeatherInfo> {
   const { data } = await apiClient.get<WeatherInfo>('/api/v1/stats/weather')
   return data
 }
+
+// mint-server#174 — admin home KPIs / sidebar badges. Editors get their active editions only.
+export interface AdminSummaryEdition {
+  edition_id: string
+  name: string
+  source_count: number
+  failed_source_count: number
+  pending_candidate_count: number
+}
+
+export interface AdminSummary {
+  scope: 'organization' | 'editions'
+  pending_users: number | null
+  open_inquiries: number | null
+  failed_sources: number
+  pending_candidates: number
+  editions: AdminSummaryEdition[]
+  generated_at: string
+}
+
+export async function getAdminSummary(): Promise<AdminSummary> {
+  const { data } = await apiClient.get<AdminSummary>('/api/v1/stats/admin-summary')
+  return data
+}
+

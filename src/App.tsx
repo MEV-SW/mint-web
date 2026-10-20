@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import { ConfirmProvider } from './components/common/ConfirmDialog'
 import { ToastProvider } from './components/common/Toast'
-import { AdminIndexRedirect, AdminLayout } from './components/layout/AdminLayout'
+import { AdminLayout } from './components/layout/AdminLayout'
 import { AppLayout } from './components/layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
@@ -21,6 +21,7 @@ import { InquiriesPage } from './pages/InquiriesPage'
 import { AdminAccountsPage } from './pages/AdminAccountsPage'
 import { AdminCategoriesPage } from './pages/AdminCategoriesPage'
 import { AdminInquiriesPage } from './pages/AdminInquiriesPage'
+import { AdminIndexRoute } from './pages/AdminHomePage'
 import { AdminIssuesPage } from './pages/AdminIssuesPage'
 import { AdminJobsPage } from './pages/AdminJobsPage'
 import { IssueDetailPage } from './pages/IssueDetailPage'
@@ -76,7 +77,7 @@ export default function App() {
                   <Route path="/inquiries" element={<InquiriesPage />} />
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminIndexRedirect />} />
+                    <Route index element={<AdminIndexRoute />} />
                     <Route path="settings" element={<SettingsPage />} />
                     {/* Managers review sources without being edition editors, so this sits outside AdminRoute. */}
                     <Route element={<SourceReviewRoute />}>
