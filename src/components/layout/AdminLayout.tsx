@@ -6,6 +6,7 @@ import { listUsers } from '../../api/usersApi'
 import { useAdminSummaryQuery } from '../../hooks/useAdminSummaryQuery'
 import { useJobsQuery } from '../../hooks/useJobsQuery'
 import { usePermissions } from '../../hooks/usePermissions'
+import { useUnsavedStore } from '../../store/unsavedStore'
 import type { BackgroundJob } from '../../types/job'
 import { cx } from '../../utils/cx'
 import { jobProgressSummary, pickPrimaryActiveJob } from '../../utils/jobProgress'
@@ -41,6 +42,7 @@ export function AdminLayout() {
   const { isAdmin, canEditAny, canReviewSources } = usePermissions()
   const location = useLocation()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const dirtyPaths = useUnsavedStore((state) => state.dirtyPaths)
 
   // Same query keys as TopNav, so the sidebar adds no requests.
   const inquiriesQuery = useQuery({
@@ -108,6 +110,9 @@ export function AdminLayout() {
                   {item.no}
                 </span>
                 <span className="admin-nav-label">{item.label}</span>
+                {dirtyPaths.includes(item.path) && (
+                  <span className="admin-nav-unsaved" title="저장하지 않은 변경이 있습니다" aria-label="저장하지 않은 변경" />
+                )}
                 {badgeFor(item)}
               </NavLink>
             ))}

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   createStandardKeyword,
   listCategories,
@@ -23,9 +23,28 @@ import { apiErrorDetail } from '../utils/apiError'
 import { isHiddenNewsCategory } from '../utils/newsTaxonomy'
 import { createSource, listSources, updateSource } from '../api/sourceApi'
 import type { EditionDisplayMode } from '../types/edition'
+import { SETTINGS_PATH } from '../components/layout/navItems'
+import { useUnsavedStore } from '../store/unsavedStore'
+import { cx } from '../utils/cx'
 
 function sameIds(a: string[], b: string[]) {
   return [...a].sort().join('|') === [...b].sort().join('|')
+}
+
+// mint-web#106 — topic detail split into sub-tabs with per-tab drafts.
+type TopicTab = 'basic' | 'rules' | 'sources' | 'front'
+const TOPIC_TABS: Array<[TopicTab, string]> = [
+  ['basic', '기본·표시'],
+  ['rules', '수집 규칙'],
+  ['sources', '소스'],
+  ['front', '1면 구성'],
+]
+
+interface MetaDraft {
+  display_mode?: EditionDisplayMode
+  topic_terms?: string[]
+  exclude_terms?: string[]
+  relevance_criteria?: string
 }
 
 export function SettingsPage() {
@@ -63,7 +82,9 @@ export function SettingsPage() {
   const [newKeywordByEdition, setNewKeywordByEdition] = useState<Record<string, string>>({})
   const [newTopicTermByEdition, setNewTopicTermByEdition] = useState<Record<string, string>>({})
   const [newExcludeTermByEdition, setNewExcludeTermByEdition] = useState<Record<string, string>>({})
-  const [criteriaDraftByEdition, setCriteriaDraftByEdition] = useState<Record<string, string>>({})
+  const [metaDraft, setMetaDraft] = useState<MetaDraft>({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const setUnsaved = useUnsavedStore((state) => state.setDirty)
   const [newEditionCriteria, setNewEditionCriteria] = useState('')
   const [sourceSearchByEdition, setSourceSearchByEdition] = useState<Record<string, string>>({})
   const [selectedEditionId, setSelectedEditionId] = useState('')
@@ -183,13 +204,15 @@ export function SettingsPage() {
       relevance_criteria?: string | null
     }) => updateEdition(id, { display_mode, topic_terms, exclude_terms, relevance_criteria }),
     onSuccess: (_edition, variables) => {
-      if (variables.relevance_criteria !== undefined) {
-        setCriteriaDraftByEdition((current) => {
-          const next = { ...current }
-          delete next[variables.id]
-          return next
-        })
-      }
+      // Saved fields leave the draft; untouched fields keep their pending edits.
+      setMetaDraft((current) => {
+        const next = { ...current }
+        if (variables.display_mode !== undefined) delete next.display_mode
+        if (variables.topic_terms !== undefined) delete next.topic_terms
+        if (variables.exclude_terms !== undefined) delete next.exclude_terms
+        if (variables.relevance_criteria !== undefined) delete next.relevance_criteria
+        return next
+      })
       void qc.invalidateQueries({ queryKey: ['editions'] })
       toast('주제 설정을 저장했습니다.')
     },
@@ -303,6 +326,179 @@ export function SettingsPage() {
       )
     : []
 
+  const tabParam = searchParams.get('tab')
+  const tab: TopicTab = TOPIC_TABS.some(([id]) => id === tabParam) ? (tabParam as TopicTab) : 'basic'
+  const savedMode: EditionDisplayMode = selectedEdition?.display_mode ?? 'news'
+  const draftMode = metaDraft.display_mode ?? savedMode
+  const savedTerms = selectedEdition?.topic_terms ?? []
+  const draftTerms = metaDraft.topic_terms ?? savedTerms
+  const savedExclude = selectedEdition?.exclude_terms ?? []
+  const draftExclude = metaDraft.exclude_terms ?? savedExclude
+  const savedCriteria = selectedEdition?.relevance_criteria ?? ''
+  const draftCriteria = metaDraft.relevance_criteria ?? savedCriteria
+  const rulesChanged = {
+    topic_terms: !sameIds(draftTerms, savedTerms),
+    exclude_terms: !sameIds(draftExclude, savedExclude),
+    relevance_criteria: draftCriteria.trim() !== savedCriteria.trim(),
+  }
+  const tabChanges: Record<TopicTab, number> = {
+    basic: draftMode !== savedMode ? 1 : 0,
+    rules: Object.values(rulesChanged).filter(Boolean).length,
+    sources: 0,
+    front:
+      (selectedEdition && editionFeaturedDirty(selectedEdition.id) ? 1 : 0) + (isAdmin && featuredDirty ? 1 : 0),
+  }
+  const totalChanges = tabChanges.basic + tabChanges.rules + tabChanges.front
+
+  useEffect(() => {
+    setUnsaved(SETTINGS_PATH, totalChanges > 0)
+  }, [setUnsaved, totalChanges])
+  useEffect(() => () => setUnsaved(SETTINGS_PATH, false), [setUnsaved])
+  useEffect(() => {
+    if (totalChanges === 0) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [totalChanges])
+
+  function discardTab(target: TopicTab) {
+    if (target === 'basic') {
+      setMetaDraft((current) => {
+        const next = { ...current }
+        delete next.display_mode
+        return next
+      })
+    } else if (target === 'rules') {
+      setMetaDraft(({ display_mode }) => (display_mode === undefined ? {} : { display_mode }))
+      if (selectedEdition) {
+        setNewTopicTermByEdition((current) => ({ ...current, [selectedEdition.id]: '' }))
+        setNewExcludeTermByEdition((current) => ({ ...current, [selectedEdition.id]: '' }))
+      }
+    } else if (target === 'front') {
+      if (selectedEdition) {
+        setEditionFeaturedDraft((current) => {
+          if (!current) return current
+          const next = { ...current }
+          delete next[selectedEdition.id]
+          return Object.keys(next).length ? next : null
+        })
+      }
+      setFeaturedDraft(null)
+    }
+  }
+
+  async function confirmLeave(count: number) {
+    if (count === 0) return true
+    return confirm({
+      title: `저장하지 않은 변경 ${count}개가 있습니다. 저장하지 않고 이동할까요?`,
+      body: '이동하면 이 변경은 사라집니다.',
+      confirmLabel: '저장하지 않고 이동',
+      danger: true,
+    })
+  }
+
+  async function selectTab(next: TopicTab) {
+    if (next === tab) return
+    if (!(await confirmLeave(tabChanges[tab]))) return
+    discardTab(tab)
+    const params = new URLSearchParams(searchParams)
+    if (next === 'basic') params.delete('tab')
+    else params.set('tab', next)
+    setSearchParams(params, { replace: true })
+  }
+
+  async function selectEdition(id: string) {
+    if (id === selectedEdition?.id) return
+    if (!(await confirmLeave(totalChanges))) return
+    discardTab('basic')
+    discardTab('rules')
+    discardTab('front')
+    setMetaDraft({})
+    setSelectedEditionId(id)
+  }
+
+  function saveTab() {
+    if (!selectedEdition) return
+    if (tab === 'basic' && tabChanges.basic) {
+      saveEditionMeta.mutate({ id: selectedEdition.id, display_mode: draftMode })
+    } else if (tab === 'rules' && tabChanges.rules) {
+      saveEditionMeta.mutate({
+        id: selectedEdition.id,
+        ...(rulesChanged.topic_terms ? { topic_terms: draftTerms } : {}),
+        ...(rulesChanged.exclude_terms ? { exclude_terms: draftExclude } : {}),
+        ...(rulesChanged.relevance_criteria ? { relevance_criteria: draftCriteria.trim() || null } : {}),
+      })
+    } else if (tab === 'front') {
+      if (editionFeaturedDirty(selectedEdition.id)) {
+        saveEditionFeatured.mutate({ editionId: selectedEdition.id, keywordIds: featuredKeywordIds(selectedEdition.id) })
+      }
+      if (isAdmin && featuredDirty) saveFeatured.mutate()
+    }
+  }
+
+  const savingTab = saveEditionMeta.isPending || saveEditionFeatured.isPending || saveFeatured.isPending
+  const frontInvalid = isAdmin && featuredDirty && featuredCategories.length < 1
+
+  const featuredCategoriesBlock = (
+    <>
+        {editions.map((edition) => {
+          const cats = sortedCategories.filter(
+            (item) => item.edition_id === edition.id && !isHiddenNewsCategory(item),
+          )
+          const main = cats.filter((item) => !item.is_discovered)
+          const discovered = cats.filter((item) => item.is_discovered)
+          if (!cats.length) return null
+          return (
+            <div key={edition.id} className="keyword-section">
+              <div className="keyword-section-head">
+                <h4>{edition.name}</h4>
+              </div>
+              <div className="category-grid category-grid-compact">
+                {main.map((category) => {
+                  const featured = featuredCategories.includes(category.id)
+                  return (
+                    <button
+                      type="button"
+                      key={`featured-${category.id}`}
+                      className={`category-option category-option-compact ${featured ? 'featured' : ''}`}
+                      onClick={() => toggleFeatured(category.id)}
+                    >
+                      <span>{category.name}</span>
+                      <small>{featured ? '메인' : '탭하여 지정'}</small>
+                    </button>
+                  )
+                })}
+              </div>
+              {discovered.length > 0 && (
+                <>
+                  <p className="settings-discovered-label">발견 분류</p>
+                  <div className="category-grid category-grid-compact category-grid-discovered">
+                    {discovered.map((category) => {
+                      const featured = featuredCategories.includes(category.id)
+                      return (
+                        <button
+                          type="button"
+                          key={`featured-${category.id}`}
+                          className={`category-option category-option-compact category-option-discovered ${featured ? 'featured' : ''}`}
+                          onClick={() => toggleFeatured(category.id)}
+                        >
+                          <span>{category.name}</span>
+                          <small>{featured ? '메인' : '탭하여 지정'}</small>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })}
+    </>
+  )
+
   return (
     <PageShell
       section={canEditAny ? '관리 · TOPICS' : '설정'}
@@ -359,7 +555,7 @@ export function SettingsPage() {
                   type="button"
                   key={edition.id}
                   className={edition.id === selectedEdition?.id ? 'is-selected' : ''}
-                  onClick={() => setSelectedEditionId(edition.id)}
+                  onClick={() => void selectEdition(edition.id)}
                 >
                   <span>
                     <strong>{edition.name}</strong>
@@ -389,165 +585,201 @@ export function SettingsPage() {
                   )}
                 </header>
 
-                <section className="topic-detail-section">
-                  <div className="topic-detail-section-head">
-                    <h3>표시 방식</h3>
-                    <p>1면에서 이 주제를 열었을 때 사용할 화면입니다.</p>
-                  </div>
-                  <div className="topic-mode-cards" role="radiogroup" aria-label={`${selectedEdition.name} 표시 방식`}>
-                    {(['news', 'trend'] as const).map((mode) => (
-                      <label key={mode} className={(selectedEdition.display_mode ?? 'news') === mode ? 'is-selected' : ''}>
-                        <input
-                          type="radio"
-                          checked={(selectedEdition.display_mode ?? 'news') === mode}
-                          onChange={() => saveEditionMeta.mutate({ id: selectedEdition.id, display_mode: mode })}
-                        />
-                        <span><strong>{mode === 'news' ? '뉴스형' : '트렌드형'}</strong><small>{mode === 'news' ? '기사와 데일리 편집 지면' : '언급량·랭킹·신규 정보 대시보드'}</small></span>
-                      </label>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="topic-detail-section">
-                  <div className="topic-detail-section-head">
-                    <h3>관련성 키워드</h3>
-                    <p>수집·표시에서 이 주제의 글인지 판별하는 신호입니다. 영문 약어는 단어 단위로 비교합니다.</p>
-                  </div>
-                  <div className="topic-term-editor topic-term-editor-large">
-                    {(selectedEdition.topic_terms ?? []).map((term) => (
-                      <button type="button" className="topic-term-chip" key={term} onClick={() => saveEditionMeta.mutate({ id: selectedEdition.id, topic_terms: selectedEdition.topic_terms.filter((item) => item !== term) })} aria-label={`${term} 삭제`}>
-                        {term} ×
-                      </button>
-                    ))}
-                    <input
-                      value={newTopicTermByEdition[selectedEdition.id] ?? ''}
-                      placeholder="키워드 입력 후 Enter"
-                      onChange={(event) => setNewTopicTermByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
-                      onKeyDown={(event) => {
-                        const term = (newTopicTermByEdition[selectedEdition.id] ?? '').trim()
-                        if (event.key !== 'Enter' || !term) return
-                        event.preventDefault()
-                        saveEditionMeta.mutate({ id: selectedEdition.id, topic_terms: [...new Set([...(selectedEdition.topic_terms ?? []), term])] })
-                        setNewTopicTermByEdition((current) => ({ ...current, [selectedEdition.id]: '' }))
-                      }}
-                    />
-                  </div>
-                  <p className="topic-detail-note">소스는 한 주제에만 속합니다. 여러 주제에서 쓰는 범용 소스는 주제별로 중복 등록합니다.</p>
-                </section>
-
-                <section className="topic-detail-section">
-                  <div className="topic-detail-section-head">
-                    <h3>판정 기준</h3>
-                    <p>AI가 수집 후보를 이 주제로 볼지 판단할 때 그대로 읽는 기준입니다. 비우면 주제 이름과 관련성 키워드만으로 판단합니다.</p>
-                  </div>
-                  <div className="topic-criteria-editor">
-                    <textarea
-                      className="input"
-                      rows={8}
-                      maxLength={4000}
-                      value={criteriaDraftByEdition[selectedEdition.id] ?? selectedEdition.relevance_criteria ?? ''}
-                      placeholder="예) 관련 있음: … / 관련 없음: …"
-                      onChange={(event) => setCriteriaDraftByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
-                    />
-                    <Btn
-                      variant="primary"
-                      size="sm"
-                      disabled={
-                        saveEditionMeta.isPending ||
-                        (criteriaDraftByEdition[selectedEdition.id] ?? selectedEdition.relevance_criteria ?? '') ===
-                          (selectedEdition.relevance_criteria ?? '')
-                      }
-                      onClick={() =>
-                        saveEditionMeta.mutate({
-                          id: selectedEdition.id,
-                          relevance_criteria: (criteriaDraftByEdition[selectedEdition.id] ?? '').trim() || null,
-                        })
-                      }
+                <div className="admin-subtabs topic-subtabs" role="tablist" aria-label="주제 설정">
+                  {TOPIC_TABS.map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === id}
+                      className={cx('admin-subtab', tab === id && 'on')}
+                      onClick={() => void selectTab(id)}
                     >
-                      기준 저장
+                      {label}
+                      {tabChanges[id] > 0 && <span className="topic-subtab-dot" aria-label="저장하지 않은 변경" />}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Locked while saving so edits made mid-request are not dropped by onSuccess. */}
+                <fieldset className="topic-tab-fieldset" disabled={savingTab} aria-busy={savingTab}>
+                {tab === 'basic' && (
+                  <section className="topic-detail-section">
+                    <div className="topic-detail-section-head">
+                      <h3>표시 방식</h3>
+                      <p>1면에서 이 주제를 열었을 때 사용할 화면입니다.</p>
+                    </div>
+                    <div className="topic-mode-cards" role="radiogroup" aria-label={`${selectedEdition.name} 표시 방식`}>
+                      {(['news', 'trend'] as const).map((mode) => (
+                        <label key={mode} className={draftMode === mode ? 'is-selected' : ''}>
+                          <input
+                            type="radio"
+                            checked={draftMode === mode}
+                            onChange={() => setMetaDraft((current) => ({ ...current, display_mode: mode }))}
+                          />
+                          <span><strong>{mode === 'news' ? '뉴스형' : '트렌드형'}</strong><small>{mode === 'news' ? '기사와 데일리 편집 지면' : '언급량·랭킹·신규 정보 대시보드'}</small></span>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {tab === 'rules' && (
+                  <>
+                    <section className="topic-detail-section">
+                      <div className="topic-detail-section-head">
+                        <h3>관련성 키워드</h3>
+                        <p>수집·표시에서 이 주제의 글인지 판별하는 신호입니다. 영문 약어는 단어 단위로 비교합니다.</p>
+                      </div>
+                      <div className="topic-term-editor topic-term-editor-large">
+                        {draftTerms.map((term) => (
+                          <button type="button" className="topic-term-chip" key={term} onClick={() => setMetaDraft((current) => ({ ...current, topic_terms: draftTerms.filter((item) => item !== term) }))} aria-label={`${term} 삭제`}>
+                            {term} ×
+                          </button>
+                        ))}
+                        <input
+                          value={newTopicTermByEdition[selectedEdition.id] ?? ''}
+                          placeholder="키워드 입력 후 Enter"
+                          onChange={(event) => setNewTopicTermByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
+                          onKeyDown={(event) => {
+                            const term = (newTopicTermByEdition[selectedEdition.id] ?? '').trim()
+                            if (event.key !== 'Enter' || !term) return
+                            event.preventDefault()
+                            setMetaDraft((current) => ({ ...current, topic_terms: [...new Set([...draftTerms, term])] }))
+                            setNewTopicTermByEdition((current) => ({ ...current, [selectedEdition.id]: '' }))
+                          }}
+                        />
+                      </div>
+                      <p className="topic-detail-note">소스는 한 주제에만 속합니다. 여러 주제에서 쓰는 범용 소스는 주제별로 중복 등록합니다.</p>
+                    </section>
+
+                    <section className="topic-detail-section">
+                      <div className="topic-detail-section-head">
+                        <h3>판정 기준</h3>
+                        <p>AI가 수집 후보를 이 주제로 볼지 판단할 때 그대로 읽는 기준입니다. 비우면 주제 이름과 관련성 키워드만으로 판단합니다.</p>
+                      </div>
+                      <div className="topic-criteria-editor">
+                        <textarea
+                          className="input"
+                          rows={8}
+                          maxLength={4000}
+                          value={draftCriteria}
+                          placeholder="예) 관련 있음: … / 관련 없음: …"
+                          onChange={(event) => setMetaDraft((current) => ({ ...current, relevance_criteria: event.target.value }))}
+                        />
+                      </div>
+                    </section>
+
+                    <section className="topic-detail-section">
+                      <div className="topic-detail-section-head">
+                        <h3>제목 제외어</h3>
+                        <p>제목에 이 단어가 있고 관련성 키워드가 없으면 수집하지 않습니다. 이미 저장된 글은 숨기지 않습니다.</p>
+                      </div>
+                      <div className="topic-term-editor topic-term-editor-large">
+                        {draftExclude.map((term) => (
+                          <button type="button" className="topic-term-chip" key={term} onClick={() => setMetaDraft((current) => ({ ...current, exclude_terms: draftExclude.filter((item) => item !== term) }))} aria-label={`${term} 삭제`}>
+                            {term} ×
+                          </button>
+                        ))}
+                        <input
+                          value={newExcludeTermByEdition[selectedEdition.id] ?? ''}
+                          placeholder="제외어 입력 후 Enter"
+                          onChange={(event) => setNewExcludeTermByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
+                          onKeyDown={(event) => {
+                            const term = (newExcludeTermByEdition[selectedEdition.id] ?? '').trim()
+                            if (event.key !== 'Enter' || !term) return
+                            event.preventDefault()
+                            setMetaDraft((current) => ({ ...current, exclude_terms: [...new Set([...draftExclude, term])] }))
+                            setNewExcludeTermByEdition((current) => ({ ...current, [selectedEdition.id]: '' }))
+                          }}
+                        />
+                      </div>
+                    </section>
+                  </>
+                )}
+
+                {tab === 'sources' && (
+                  <section className="topic-detail-section">
+                    <div className="topic-detail-section-head topic-detail-section-head-row">
+                      <div>
+                        <h3>소스 배정</h3>
+                        <p>
+                          {selectedEditionSources.length}개 소스가 이 주제에 연결되어 있습니다. 배정 변경은{' '}
+                          <Link to={`/admin/sources?edition=${selectedEdition.id}`}>04 소스</Link>의 편집 창에서 합니다.
+                        </p>
+                      </div>
+                      <input
+                        className="input topic-source-search"
+                        value={sourceSearchByEdition[selectedEdition.id] ?? ''}
+                        placeholder="소스명 또는 URL 검색"
+                        onChange={(event) => setSourceSearchByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
+                      />
+                    </div>
+                    <div className="edition-source-list topic-source-list">
+                      {selectedEditionSources
+                        .filter((source) => {
+                          const query = (sourceSearchByEdition[selectedEdition.id] ?? '').trim().toLowerCase()
+                          return !query || source.name.toLowerCase().includes(query) || source.url.toLowerCase().includes(query)
+                        })
+                        .map((source) => (
+                          <div key={source.id} className="edition-source-row">
+                            <span><b>{source.name}</b><small>{source.source_type}</small></span>
+                            <span className={cx('topic-source-state', !source.is_active && 'is-off')}>{source.is_active ? '수집 중' : '꺼짐'}</span>
+                          </div>
+                        ))}
+                      {!selectedEditionSources.length && <p className="topic-detail-empty">배정된 소스가 없습니다.</p>}
+                    </div>
+                  </section>
+                )}
+
+                {tab === 'front' && (
+                  <>
+                    <section className="topic-detail-section">
+                      <div className="topic-detail-section-head">
+                        <h3>지면 메인 키워드</h3>
+                        <p>뉴스형 지면의 주요 분류로 노출할 키워드를 선택합니다. 키워드 추가는 바로 만들어지고, 메인 지정은 아래 저장으로 반영됩니다.</p>
+                      </div>
+                      <div className="pick-list pick-list-dense">
+                        {selectedEditionKeywords.map((keyword) => (
+                          <label key={keyword.id} className={`pick-row${featuredKeywordIds(selectedEdition.id).includes(keyword.id) ? ' is-on' : ''}`}>
+                            <input type="checkbox" checked={featuredKeywordIds(selectedEdition.id).includes(keyword.id)} onChange={() => toggleEditionKeyword(selectedEdition.id, keyword.id)} />
+                            <span>{keyword.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="keyword-create topic-keyword-create">
+                        <input className="input" value={newKeywordByEdition[selectedEdition.id] ?? ''} onChange={(event) => setNewKeywordByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))} placeholder={`${selectedEdition.name} 키워드 추가`} />
+                        <Btn variant="outline" size="sm" disabled={!(newKeywordByEdition[selectedEdition.id] ?? '').trim() || addEditionKeyword.isPending} onClick={() => addEditionKeyword.mutate({ editionId: selectedEdition.id, name: (newKeywordByEdition[selectedEdition.id] ?? '').trim() })}>키워드 추가</Btn>
+                      </div>
+                    </section>
+                    {isAdmin && (
+                      <section className="topic-detail-section">
+                        <div className="topic-detail-section-head">
+                          <h3>뉴스 탭 강조 분야 · 조직 전체</h3>
+                          <p>뉴스 필터에 노출하는 분류입니다. 지면별로 나누고, 일반·커뮤니티는 분류에서 빼 둡니다. 모든 주제에 함께 적용됩니다.</p>
+                        </div>
+                        {featuredCategoriesBlock}
+                      </section>
+                    )}
+                  </>
+                )}
+
+                </fieldset>
+
+                {tab !== 'sources' && (
+                  <div className="topic-tab-footer" aria-live="polite">
+                    <span className={cx('topic-tab-changes', tabChanges[tab] > 0 && 'is-dirty')}>
+                      {tabChanges[tab] > 0 ? `저장하지 않은 변경 ${tabChanges[tab]}` : '변경 없음'}
+                      {tab === 'front' && frontInvalid ? ' · 강조 분야를 하나 이상 고르세요' : ''}
+                    </span>
+                    <Btn variant="outline" size="sm" disabled={tabChanges[tab] === 0 || savingTab} onClick={() => discardTab(tab)}>
+                      되돌리기
+                    </Btn>
+                    <Btn variant="primary" size="sm" disabled={tabChanges[tab] === 0 || savingTab || (tab === 'front' && frontInvalid)} onClick={saveTab}>
+                      {savingTab ? '저장 중…' : '저장'}
                     </Btn>
                   </div>
-                </section>
-
-                <section className="topic-detail-section">
-                  <div className="topic-detail-section-head">
-                    <h3>제목 제외어</h3>
-                    <p>제목에 이 단어가 있고 관련성 키워드가 없으면 수집하지 않습니다. 이미 저장된 글은 숨기지 않습니다.</p>
-                  </div>
-                  <div className="topic-term-editor topic-term-editor-large">
-                    {(selectedEdition.exclude_terms ?? []).map((term) => (
-                      <button type="button" className="topic-term-chip" key={term} onClick={() => saveEditionMeta.mutate({ id: selectedEdition.id, exclude_terms: (selectedEdition.exclude_terms ?? []).filter((item) => item !== term) })} aria-label={`${term} 삭제`}>
-                        {term} ×
-                      </button>
-                    ))}
-                    <input
-                      value={newExcludeTermByEdition[selectedEdition.id] ?? ''}
-                      placeholder="제외어 입력 후 Enter"
-                      onChange={(event) => setNewExcludeTermByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
-                      onKeyDown={(event) => {
-                        const term = (newExcludeTermByEdition[selectedEdition.id] ?? '').trim()
-                        if (event.key !== 'Enter' || !term) return
-                        event.preventDefault()
-                        saveEditionMeta.mutate({ id: selectedEdition.id, exclude_terms: [...new Set([...(selectedEdition.exclude_terms ?? []), term])] })
-                        setNewExcludeTermByEdition((current) => ({ ...current, [selectedEdition.id]: '' }))
-                      }}
-                    />
-                  </div>
-                </section>
-
-                <section className="topic-detail-section">
-                  <div className="topic-detail-section-head topic-detail-section-head-row">
-                    <div><h3>소스 배정</h3><p>{selectedEditionSources.length}개 소스가 이 주제에 연결되어 있습니다.</p></div>
-                    <input
-                      className="input topic-source-search"
-                      value={sourceSearchByEdition[selectedEdition.id] ?? ''}
-                      placeholder="소스명 또는 URL 검색"
-                      onChange={(event) => setSourceSearchByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))}
-                    />
-                  </div>
-                  <div className="edition-source-list topic-source-list">
-                    {selectedEditionSources
-                      .filter((source) => {
-                        const query = (sourceSearchByEdition[selectedEdition.id] ?? '').trim().toLowerCase()
-                        return !query || source.name.toLowerCase().includes(query) || source.url.toLowerCase().includes(query)
-                      })
-                      .map((source) => (
-                        <div key={source.id} className="edition-source-row">
-                          <span><b>{source.name}</b><small>{source.source_type}</small></span>
-                          <select
-                            className="input"
-                            aria-label={`${source.name} 주제 변경`}
-                            value={source.edition_id}
-                            disabled={moveSource.isPending}
-                            onChange={(event) => void confirmMoveSource(source, event.target.value)}
-                          >
-                            {editableEditions.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}
-                          </select>
-                        </div>
-                      ))}
-                    {!selectedEditionSources.length && <p className="topic-detail-empty">배정된 소스가 없습니다.</p>}
-                  </div>
-                </section>
-
-                <section className="topic-detail-section">
-                  <div className="topic-detail-section-head">
-                    <h3>지면 메인 키워드</h3>
-                    <p>뉴스형 지면의 주요 분류로 노출할 키워드를 선택합니다.</p>
-                  </div>
-                  <div className="pick-list pick-list-dense">
-                    {selectedEditionKeywords.map((keyword) => (
-                      <label key={keyword.id} className={`pick-row${featuredKeywordIds(selectedEdition.id).includes(keyword.id) ? ' is-on' : ''}`}>
-                        <input type="checkbox" checked={featuredKeywordIds(selectedEdition.id).includes(keyword.id)} onChange={() => toggleEditionKeyword(selectedEdition.id, keyword.id)} />
-                        <span>{keyword.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="keyword-create topic-keyword-create">
-                    <input className="input" value={newKeywordByEdition[selectedEdition.id] ?? ''} onChange={(event) => setNewKeywordByEdition((current) => ({ ...current, [selectedEdition.id]: event.target.value }))} placeholder={`${selectedEdition.name} 키워드 추가`} />
-                    <Btn variant="outline" size="sm" disabled={!(newKeywordByEdition[selectedEdition.id] ?? '').trim() || addEditionKeyword.isPending} onClick={() => addEditionKeyword.mutate({ editionId: selectedEdition.id, name: (newKeywordByEdition[selectedEdition.id] ?? '').trim() })}>키워드 추가</Btn>
-                    <Btn variant={editionFeaturedDirty(selectedEdition.id) ? 'primary' : 'outline'} size="sm" disabled={!editionFeaturedDirty(selectedEdition.id) || saveEditionFeatured.isPending} onClick={() => saveEditionFeatured.mutate({ editionId: selectedEdition.id, keywordIds: featuredKeywordIds(selectedEdition.id) })}>메인 키워드 저장</Btn>
-                  </div>
-                </section>
+                )}
               </div>
             )}
           </div>
@@ -836,76 +1068,6 @@ export function SettingsPage() {
         </section>
       )}
 
-      {isAdmin && (
-      <section className="settings-section">
-        <header className="settings-section-head">
-          <div>
-            <h3>뉴스 탭 강조 분야</h3>
-            <p>뉴스 필터에 노출하는 분류입니다. 지면별로 나누고, 일반·커뮤니티는 분류에서 빼 둡니다.</p>
-          </div>
-            <Btn
-              variant={featuredDirty ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => saveFeatured.mutate()}
-              disabled={saveFeatured.isPending || !featuredDirty || featuredCategories.length < 1}
-            >
-              {featuredDirty ? '저장되지 않은 변경 · 저장' : '메인 분야 저장'}
-            </Btn>
-        </header>
-        {editions.map((edition) => {
-          const cats = sortedCategories.filter(
-            (item) => item.edition_id === edition.id && !isHiddenNewsCategory(item),
-          )
-          const main = cats.filter((item) => !item.is_discovered)
-          const discovered = cats.filter((item) => item.is_discovered)
-          if (!cats.length) return null
-          return (
-            <div key={edition.id} className="keyword-section">
-              <div className="keyword-section-head">
-                <h4>{edition.name}</h4>
-              </div>
-              <div className="category-grid category-grid-compact">
-                {main.map((category) => {
-                  const featured = featuredCategories.includes(category.id)
-                  return (
-                    <button
-                      type="button"
-                      key={`featured-${category.id}`}
-                      className={`category-option category-option-compact ${featured ? 'featured' : ''}`}
-                      onClick={() => toggleFeatured(category.id)}
-                    >
-                      <span>{category.name}</span>
-                      <small>{featured ? '메인' : '탭하여 지정'}</small>
-                    </button>
-                  )
-                })}
-              </div>
-              {discovered.length > 0 && (
-                <>
-                  <p className="settings-discovered-label">발견 분류</p>
-                  <div className="category-grid category-grid-compact category-grid-discovered">
-                    {discovered.map((category) => {
-                      const featured = featuredCategories.includes(category.id)
-                      return (
-                        <button
-                          type="button"
-                          key={`featured-${category.id}`}
-                          className={`category-option category-option-compact category-option-discovered ${featured ? 'featured' : ''}`}
-                          onClick={() => toggleFeatured(category.id)}
-                        >
-                          <span>{category.name}</span>
-                          <small>{featured ? '메인' : '탭하여 지정'}</small>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          )
-        })}
-      </section>
-      )}
     </PageShell>
   )
 }
