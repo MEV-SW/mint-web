@@ -4915,6 +4915,92 @@ a.report-cal-entry:hover strong {
   }
 }
 
+/* ===== 06 카테고리 표 (mint-web#117) ===== */
+.category-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+.category-table tr.is-inactive .category-name {
+  color: var(--text-faint);
+}
+@media (min-width: 768px) {
+  .category-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  /* Short names: cap the name column; the action column takes the rest (right-aligned). */
+  .category-col-name {
+    width: 32%;
+  }
+  .category-col-order,
+  .category-col-status {
+    width: 104px;
+  }
+  .category-col-linked {
+    width: 160px;
+  }
+  .category-col-actions {
+    width: auto;
+  }
+  .admin-layout .category-table th + th,
+  .admin-layout .category-table td + td {
+    padding-left: 16px;
+  }
+  .category-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .category-table .badge {
+    white-space: nowrap;
+  }
+}
+@media (max-width: 767px) {
+  .category-table thead {
+    display: none;
+  }
+  .category-table,
+  .category-table tbody,
+  .category-table tr {
+    display: block;
+    width: 100%;
+  }
+  .admin-layout .category-table {
+    min-width: 0;
+  }
+  .category-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line2);
+  }
+  .admin-layout .category-table tbody td {
+    padding: 0;
+    border: none;
+    text-align: left;
+  }
+  .category-table .category-name {
+    font-weight: 650;
+  }
+  .category-table .category-actions {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: center;
+  }
+  .category-table td[data-label] {
+    font-size: 12px;
+    color: var(--ink2);
+  }
+  .category-table td[data-label]::before {
+    content: attr(data-label) " · ";
+    color: var(--ink3);
+  }
+}
+
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
 /* Same rail as the fixed top nav (#114): sidebar starts at the nav's left
    content edge and the body ends at its right content edge. */

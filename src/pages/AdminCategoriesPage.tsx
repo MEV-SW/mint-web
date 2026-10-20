@@ -9,6 +9,7 @@ import {
 import { approveCategorySourceSuggestion, listSources, suggestCategorySources } from '../api/sourceApi'
 import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
+import { OverflowMenu } from '../components/common/OverflowMenu'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
@@ -84,6 +85,15 @@ export function AdminCategoriesPage() {
     onError: (e) => toast(apiErrorDetail(e) || '수정 실패', 'err'),
   })
 
+  const reactivate = useMutation({
+    mutationFn: (id: string) => updateCategory(id, { is_active: true }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] })
+      toast('카테고리를 활성화했습니다.')
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '활성화 실패', 'err'),
+  })
+
   const deactivate = useMutation({
     mutationFn: (id: string) => deleteCategory(id),
     onSuccess: () => {
@@ -142,6 +152,12 @@ export function AdminCategoriesPage() {
     deactivate.mutate(category.id)
   }
 
+  // GET /categories currently returns active rows only; this covers inactive rows once the list includes them.
+  async function confirmReactivate(category: NewsCategory) {
+    if (!(await confirm({ title: `"${category.name}" 카테고리를 다시 활성화할까요?`, confirmLabel: '활성화' }))) return
+    reactivate.mutate(category.id)
+  }
+
   const canSave = Boolean(form.name.trim())
 
   return (
@@ -159,20 +175,19 @@ export function AdminCategoriesPage() {
       }
     >
       <div className="tbl-wrap">
-        <table className="tbl">
+        <table className="tbl category-table">
           <thead>
             <tr>
-              <th>이름</th>
-              <th className="num" style={{ width: 100 }}>정렬순서</th>
-              <th style={{ width: 100 }}>상태</th>
+              <th className="category-col-name">이름</th>
+              <th className="num category-col-order">정렬순서</th>
+              <th className="category-col-status">상태</th>
               <th
-                className="num"
-                style={{ width: 120 }}
+                className="num category-col-linked"
                 title="AI 소스 제안으로 이 카테고리에 연결된 활성 소스 수입니다. 기존 소스는 카테고리 연결 전이라 포함되지 않습니다."
               >
                 AI 제안 연결 소스
               </th>
-              <th style={{ width: 140 }}>액션</th>
+              <th className="category-col-actions"><span className="sr-only">액션</span></th>
             </tr>
           </thead>
           <tbody>
@@ -188,37 +203,48 @@ export function AdminCategoriesPage() {
                 </td>
               </tr>
             )}
-            {categories.map((category) => (
-              <tr key={category.id}>
-                <td>{category.name}</td>
-                <td className="num">{category.sort_order}</td>
-                <td>
-                  <span className="pill">{category.is_active === false ? '비활성' : '활성'}</span>
-                </td>
-                <td className="num">{sourceCountByCategory.get(category.id) ?? 0}</td>
-                <td>
-                  <Btn variant="ghost" size="sm" icon="sparkles" onClick={() => openSuggest(category)}>
-                    AI 소스 제안
-                  </Btn>
-                  {isAdmin && (
-                    <>
-                      <Btn variant="ghost" size="sm" icon="settings" onClick={() => openEdit(category)}>
-                        수정
+            {categories.map((category) => {
+              const inactive = category.is_active === false
+              return (
+                <tr key={category.id} className={inactive ? 'is-inactive' : undefined}>
+                  <td className="category-name" title={category.name}>{category.name}</td>
+                  <td className="num" data-label="정렬순서">{inactive ? '—' : category.sort_order}</td>
+                  <td data-label="상태">
+                    <span className={`badge ${inactive ? 'badge-unknown' : 'badge-mint'}`}>{inactive ? '비활성' : '활성'}</span>
+                  </td>
+                  <td className="num" data-label="AI 제안 연결 소스">{sourceCountByCategory.get(category.id) ?? 0}</td>
+                  <td className="category-actions">
+                    {!inactive && (
+                      <Btn variant="soft" size="sm" onClick={() => openSuggest(category)}>
+                        AI 소스 제안
                       </Btn>
-                      <Btn
-                        variant="ghost"
-                        size="sm"
-                        icon="trash"
-                        onClick={() => confirmDeactivate(category)}
-                        disabled={deactivate.isPending}
-                      >
-                        비활성화
-                      </Btn>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    )}
+                    {isAdmin && (
+                      <OverflowMenu
+                        label={`${category.name} 메뉴`}
+                        items={[
+                          { key: 'edit', label: '수정', onClick: () => openEdit(category) },
+                          inactive
+                            ? {
+                                key: 'activate',
+                                label: '활성화',
+                                disabled: reactivate.isPending,
+                                onClick: () => void confirmReactivate(category),
+                              }
+                            : {
+                                key: 'deactivate',
+                                label: '비활성화',
+                                danger: true,
+                                disabled: deactivate.isPending,
+                                onClick: () => void confirmDeactivate(category),
+                              },
+                        ]}
+                      />
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
