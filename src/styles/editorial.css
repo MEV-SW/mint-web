@@ -4898,6 +4898,9 @@ a.report-cal-entry:hover strong {
   gap: 6px;
   margin-top: 8px;
 }
+.discovery-card-actions .row-overflow {
+  margin-left: auto;
+}
 .discovery-col-empty {
   margin: 0;
   padding: 16px 0;
