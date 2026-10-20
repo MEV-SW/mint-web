@@ -18,3 +18,7 @@
 | [#94](https://github.com/MEV-SW/mint-web/issues/94) | 작업로그화면 | 미정 | 스펙 작성 중 | [기술스펙](94-작업로그화면/기술스펙_작업로그화면.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
 | [#95](https://github.com/MEV-SW/mint-web/issues/95) | 이슈병합확인 | 미정 | 스펙 작성 중 | [기술스펙](95-이슈병합확인/기술스펙_이슈병합확인.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
 | [#96](https://github.com/MEV-SW/mint-web/issues/96) | 관리홈화면 | 미정 | 스펙 작성 중 | [기술스펙](96-관리홈화면/기술스펙_관리홈화면.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
+| [#105](https://github.com/MEV-SW/mint-web/issues/105) | 탐문후보보드 | 미정 | 스펙 작성 중 | [기술스펙](105-탐문후보보드/기술스펙_탐문후보보드.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
+| [#106](https://github.com/MEV-SW/mint-web/issues/106) | 주제하위탭 | 미정 | 스펙 작성 중 | [기술스펙](106-주제하위탭/기술스펙_주제하위탭.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
+| [#107](https://github.com/MEV-SW/mint-web/issues/107) | 소스표정리 | 미정 | 스펙 작성 중 | [기술스펙](107-소스표정리/기술스펙_소스표정리.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
+| [#108](https://github.com/MEV-SW/mint-web/issues/108) | 계정문의웹훅정리 | 미정 | 스펙 작성 중 | [기술스펙](108-계정문의웹훅정리/기술스펙_계정문의웹훅정리.md) (인터페이스정의는 Figma R5·핸드오프 문서가 겸함) |
