@@ -9,10 +9,17 @@ export interface PostListParams {
   keyword?: string
   page?: number
   size?: number
+  // mint-server#177: repeatable edition filter (union) and creator filter.
+  edition_id?: string[]
+  created_by?: 'admin' | 'crawler' | 'ai_discovery' | 'user_submitted' // mint-server CreatedBy
 }
 
 export async function listPosts(params: PostListParams): Promise<PaginatedPosts> {
-  const { data } = await apiClient.get<PaginatedPosts>('/api/v1/posts', { params })
+  // indexes: null → edition_id=a&edition_id=b (FastAPI list query), not edition_id[]=a.
+  const { data } = await apiClient.get<PaginatedPosts>('/api/v1/posts', {
+    params,
+    paramsSerializer: { indexes: null },
+  })
   return data
 }
 

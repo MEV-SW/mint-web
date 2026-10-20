@@ -63,6 +63,7 @@ export function AdminLayout() {
     openInquiries: inquiriesQuery.data ?? 0,
     pendingUsers: (usersQuery.data ?? []).filter((user) => user.approval_status === 'pending').length,
     failedSources: summaryQuery.data?.failed_sources ?? 0,
+    pendingCandidates: summaryQuery.data?.pending_candidates ?? 0,
   }
   const countsLoading = isAdmin && (inquiriesQuery.isLoading || usersQuery.isLoading)
   const current = currentAdminNavItem(items, location.pathname) ?? items[0]
@@ -79,7 +80,8 @@ export function AdminLayout() {
 
   function badgeFor(item: NavItem) {
     if (!item.countKey) return null
-    const loading = item.countKey === 'failedSources' ? summaryQuery.isLoading : countsLoading
+    const fromSummary = item.countKey === 'failedSources' || item.countKey === 'pendingCandidates'
+    const loading = fromSummary ? summaryQuery.isLoading : countsLoading
     if (loading) return <span className="admin-nav-badge is-loading" aria-hidden>·</span>
     const text = formatNavBadge(adminNavBadgeCount(item, counts))
     if (!text) return null
