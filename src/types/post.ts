@@ -36,6 +36,8 @@ export interface Post {
   created_at: string
   updated_at: string
   latest_ai?: AIOutput | null
+  // mint-server#170: current user may run article actions on this post (missing = false).
+  can_edit?: boolean
 }
 
 export interface PostDetail extends Post {

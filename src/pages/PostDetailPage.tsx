@@ -12,7 +12,6 @@ import { ImportanceBadge, StatusPill, TrustBadge } from '../components/common/Ba
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
 import { useToast } from '../components/common/Toast'
-import { usePermissions } from '../hooks/usePermissions'
 import { PostAiSummaryPanel } from '../components/posts/PostAiSummaryPanel'
 import { PostOriginalPane } from '../components/posts/PostOriginalPane'
 import { formatDateTime } from '../utils/date'
@@ -23,7 +22,6 @@ export function PostDetailPage() {
   const location = useLocation()
   const toast = useToast()
   const qc = useQueryClient()
-  const { canWrite } = usePermissions()
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post', id],
@@ -67,6 +65,8 @@ export function PostDetailPage() {
 
   const ai = post.ai_outputs[0] || post.latest_ai
   const isDiscovery = post.board_type === 'discovery'
+  // mint-server#170: the server decides per post (linked edition editors and admins).
+  const canEdit = post.can_edit === true
   const showSplit = Boolean(post.original_url || post.raw_content?.trim())
   const backTo =
     (location.state as { from?: string } | null)?.from ?? '/news'
@@ -99,12 +99,12 @@ export function PostDetailPage() {
               원문 보기
             </Btn>
           )}
-          {canWrite && ai && (
+          {canEdit && ai && (
             <Btn variant="soft" icon="sparkles" onClick={() => summarize.mutate()} disabled={summarize.isPending}>
               {summarize.isPending ? '요약 갱신 중…' : '요약 다시 생성'}
             </Btn>
           )}
-          {canWrite && isDiscovery && (
+          {canEdit && isDiscovery && (
             <>
               <Btn variant="soft" onClick={() => act.mutate('approve')}>
                 검토 완료
@@ -114,7 +114,7 @@ export function PostDetailPage() {
               </Btn>
             </>
           )}
-          {canWrite && (
+          {canEdit && (
             <>
               <Btn variant="outline" onClick={() => act.mutate('hide')}>
                 숨김
@@ -139,7 +139,7 @@ export function PostDetailPage() {
             ai={ai}
             isDiscovery={isDiscovery}
             summarizing={summarize.isPending}
-            onSummarize={canWrite ? () => summarize.mutate() : undefined}
+            onSummarize={canEdit ? () => summarize.mutate() : undefined}
           />
         </div>
       ) : (
@@ -147,7 +147,7 @@ export function PostDetailPage() {
           ai={ai}
           isDiscovery={isDiscovery}
           summarizing={summarize.isPending}
-          onSummarize={canWrite ? () => summarize.mutate() : undefined}
+          onSummarize={canEdit ? () => summarize.mutate() : undefined}
         />
       )}
     </div>

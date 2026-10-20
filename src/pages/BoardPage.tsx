@@ -357,6 +357,8 @@ export function BoardPage({ boardType }: BoardPageProps) {
                 </td>
                 {canWrite && (
                 <td onClick={(e) => e.stopPropagation()}>
+                  {/* mint-server#170: actions only for posts in an edition this user edits. */}
+                  {p.can_edit === true && (
                   <div className="board-row-actions">
                     {isDiscovery && discoverySection === 'pending' && p.status === 'pending' && (
                       <Btn
@@ -389,6 +391,7 @@ export function BoardPage({ boardType }: BoardPageProps) {
                       onClick={() => action.mutate({ id: p.id, type: 'delete' })}
                     />
                   </div>
+                  )}
                 </td>
                 )}
               </tr>
