@@ -10,6 +10,7 @@ import { FrontKiosk } from '../components/display/FrontKiosk'
 import { MintFrontPage } from '../components/dashboard/MintFrontPage'
 import { TrendDashboard } from '../components/trend/TrendDashboard'
 import { FrontPageSkeleton } from '../components/common/Skeletons'
+import { LoadErrorBanner } from '../components/common/PageStates'
 import { useToast } from '../components/common/Toast'
 import { useDashboardStatsQuery } from '../hooks/useDashboardStatsQuery'
 import { usePermissions } from '../hooks/usePermissions'
@@ -243,6 +244,21 @@ export function DashboardPage() {
     )
   }
 
+  // #128: a failed editions request is an error, not "아직 펼칠 지면이 없습니다".
+  if (editionsQuery.isError) {
+    return (
+      <div className="content-inner np-page page-fade">
+        <LoadErrorBanner
+          title="1면을 불러오지 못했습니다"
+          error={editionsQuery.error}
+          failedAt={editionsQuery.errorUpdatedAt}
+          onRetry={() => void editionsQuery.refetch()}
+          retrying={editionsQuery.isFetching}
+        />
+      </div>
+    )
+  }
+
   if (sheets.length === 0) {
     return (
       <div className="content-inner np-page page-fade">
@@ -274,8 +290,23 @@ export function DashboardPage() {
   }
 
   const currentSheet = sheets.find((sheet) => sheet.key === currentEdition?.id) ?? sheets[0]
+  // Only first-load failures (nothing on screen yet) get a banner; a failed background poll keeps the last page.
+  const failedFrontQueries = [
+    stats,
+    editorialQueries[currentEditionIndex],
+    reportQueries[currentEditionIndex],
+  ].filter((query) => query?.isError && query.data === undefined)
   return (
     <div className="content-inner np-page page-fade">
+      {failedFrontQueries.length > 0 && (
+        <LoadErrorBanner
+          title="1면 일부를 불러오지 못했습니다"
+          error={failedFrontQueries[0]?.error}
+          failedAt={failedFrontQueries[0]?.errorUpdatedAt}
+          onRetry={() => failedFrontQueries.forEach((query) => void query?.refetch())}
+          retrying={failedFrontQueries.some((query) => query?.isFetching)}
+        />
+      )}
       {currentSheet.node}
       {kioskOverlay}
     </div>

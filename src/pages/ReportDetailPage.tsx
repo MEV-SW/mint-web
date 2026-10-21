@@ -4,10 +4,12 @@ import { deleteReport, getReport, sendReportSlack } from '../api/reportApi'
 import { ImportanceBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
+import { LoadErrorBanner, NotFoundState } from '../components/common/PageStates'
+import { DetailSkeleton } from '../components/common/Skeletons'
 import { ListenButton, buildBriefingSpeech } from '../components/common/ListenButton'
 import { useToast } from '../components/common/Toast'
 import { usePermissions } from '../hooks/usePermissions'
-import { apiErrorDetail } from '../utils/apiError'
+import { apiErrorDetail, apiErrorStatus } from '../utils/apiError'
 import { mediaUrl } from '../utils/mediaUrl'
 import type { KeyChange } from '../types/report'
 
@@ -18,11 +20,12 @@ export function ReportDetailPage() {
   const qc = useQueryClient()
   const { canWrite } = usePermissions()
 
-  const { data: report, isLoading } = useQuery({
+  const reportQuery = useQuery({
     queryKey: ['report', id],
     queryFn: () => getReport(id!),
     enabled: !!id,
   })
+  const { data: report, isLoading } = reportQuery
 
   const sendSlack = useMutation({
     mutationFn: () => sendReportSlack(id!),
@@ -55,7 +58,36 @@ export function ReportDetailPage() {
     remove.mutate()
   }
 
-  if (isLoading || !report) return <div className="content-inner np-sheet">로딩 중…</div>
+  // #128: same states as the article page.
+  if (reportQuery.isError) {
+    return (
+      <div className="content-inner np-sheet">
+        {apiErrorStatus(reportQuery.error) === 404 ? (
+          <NotFoundState
+            title="리포트를 찾을 수 없습니다"
+            body="삭제됐거나 주소가 바뀐 리포트입니다."
+            backTo="/reports"
+            backLabel="리포트로 돌아가기"
+          />
+        ) : (
+          <LoadErrorBanner
+            title="리포트를 불러오지 못했습니다"
+            error={reportQuery.error}
+            failedAt={reportQuery.errorUpdatedAt}
+            onRetry={() => void reportQuery.refetch()}
+            retrying={reportQuery.isFetching}
+          />
+        )}
+      </div>
+    )
+  }
+  if (isLoading || !report) {
+    return (
+      <div className="content-inner np-sheet">
+        <DetailSkeleton label="리포트를 불러오는 중" />
+      </div>
+    )
+  }
 
   const keyChanges = (report.key_changes as KeyChange[] | null) || []
 

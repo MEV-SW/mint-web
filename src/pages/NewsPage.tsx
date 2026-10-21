@@ -6,6 +6,7 @@ import { getNews, listCategories, listKeywords } from '../api/personalizationApi
 import { Btn } from '../components/common/Btn'
 import { NewsListRow } from '../components/news/NewsListRow'
 import { NewsListSkeleton } from '../components/common/Skeletons'
+import { LoadErrorBanner } from '../components/common/PageStates'
 import { PageShell } from '../components/layout/PageShell'
 import type { Importance } from '../types/post'
 import {
@@ -382,12 +383,23 @@ export function NewsPage() {
 
         {news.isLoading && <NewsListSkeleton />}
 
+        {/* #128: a failed load shows the error, not "조건에 맞는 뉴스가 없습니다". */}
+        {news.isError && (
+          <LoadErrorBanner
+            title="뉴스를 불러오지 못했습니다"
+            error={news.error}
+            failedAt={news.errorUpdatedAt}
+            onRetry={() => void news.refetch()}
+            retrying={news.isFetching}
+          />
+        )}
+
         {!news.isLoading &&
           news.data?.items.map((post) => (
             <NewsListRow key={post.id} post={post} highlightQuery />
           ))}
 
-        {!news.isLoading && !news.data?.items.length && (
+        {!news.isLoading && !news.isError && !news.data?.items.length && (
           <div className="personal-empty">
             <p>조건에 맞는 뉴스가 없습니다.</p>
             {anyFilterOn && (

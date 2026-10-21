@@ -11,9 +11,12 @@ import {
 import { ImportanceBadge, StatusPill, TrustBadge } from '../components/common/Badges'
 import { Btn } from '../components/common/Btn'
 import { Icon } from '../components/common/Icon'
+import { LoadErrorBanner, NotFoundState } from '../components/common/PageStates'
+import { DetailSkeleton } from '../components/common/Skeletons'
 import { useToast } from '../components/common/Toast'
 import { PostAiSummaryPanel } from '../components/posts/PostAiSummaryPanel'
 import { PostOriginalPane } from '../components/posts/PostOriginalPane'
+import { apiErrorStatus } from '../utils/apiError'
 import { formatDateTime } from '../utils/date'
 import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
 
@@ -23,11 +26,12 @@ export function PostDetailPage() {
   const toast = useToast()
   const qc = useQueryClient()
 
-  const { data: post, isLoading } = useQuery({
+  const postQuery = useQuery({
     queryKey: ['post', id],
     queryFn: () => getPost(id!),
     enabled: !!id,
   })
+  const { data: post, isLoading } = postQuery
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['post', id] })
@@ -59,8 +63,35 @@ export function PostDetailPage() {
     },
   })
 
+  // #128: a failed load no longer stays on "로딩 중…" — 404 gets a way back, other errors a retry.
+  if (postQuery.isError) {
+    return (
+      <div className="content-inner np-sheet">
+        {apiErrorStatus(postQuery.error) === 404 ? (
+          <NotFoundState
+            title="기사를 찾을 수 없습니다"
+            body="삭제됐거나 주소가 바뀐 기사입니다."
+            backTo="/news"
+            backLabel="뉴스로 돌아가기"
+          />
+        ) : (
+          <LoadErrorBanner
+            title="기사를 불러오지 못했습니다"
+            error={postQuery.error}
+            failedAt={postQuery.errorUpdatedAt}
+            onRetry={() => void postQuery.refetch()}
+            retrying={postQuery.isFetching}
+          />
+        )}
+      </div>
+    )
+  }
   if (isLoading || !post) {
-    return <div className="content-inner np-sheet">로딩 중…</div>
+    return (
+      <div className="content-inner np-sheet">
+        <DetailSkeleton label="기사를 불러오는 중" />
+      </div>
+    )
   }
 
   const ai = post.ai_outputs[0] || post.latest_ai
