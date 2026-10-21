@@ -1,8 +1,9 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { askChat, type ChatCitation } from '../../api/chatApi'
+import { listEditions } from '../../api/editionApi'
 import { Icon } from '../common/Icon'
 import { useToast } from '../common/Toast'
 import { usePostLinkState } from '../../hooks/usePostLinkState'
@@ -24,7 +25,7 @@ const SUGGESTIONS = [
 const WELCOME: ChatMessage = {
   role: 'assistant',
   content:
-    '안녕하세요. 전기차·충전과 자율주행, MOTREXEV에 수집된 기사를 찾아 답합니다.\n그 외 질문은 일반 지식 답변을 안내합니다.',
+    '안녕하세요. MOTREXEV에 수집된 분야별 기사를 찾아 답합니다.\n그 외 질문은 일반 지식 답변을 안내합니다.',
 }
 
 function TypingDots() {
@@ -72,6 +73,13 @@ export function ChatWidget() {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME])
   const messagesRef = useRef<HTMLDivElement>(null)
+  // #131: the subtitle follows the active editions instead of a fixed "전기차·충전 · 자율주행" list.
+  const { data: editions = [] } = useQuery({
+    queryKey: ['editions', 'active'],
+    queryFn: () => listEditions(true),
+  })
+  const topicNames = editions.map((edition) => edition.name)
+  const subtitle = topicNames.length > 0 ? `${topicNames.join(' · ')} 어시스턴트` : 'MOTREXEV 뉴스 어시스턴트'
 
   const scrollBottom = () => {
     requestAnimationFrame(() => {
@@ -133,7 +141,10 @@ export function ChatWidget() {
       prev.map((m) => (m.generalConfirm ? { ...m, generalConfirm: undefined } : m)),
     )
     appendAssistant({
-      content: '알겠습니다. 전기차·충전, 자율주행, 또는 MOTREXEV 수집 자료 관련 질문을 해 주세요.',
+      content:
+        topicNames.length > 0
+          ? `알겠습니다. ${topicNames.join(', ')} 또는 MOTREXEV 수집 자료 관련 질문을 해 주세요.`
+          : '알겠습니다. MOTREXEV 수집 자료 관련 질문을 해 주세요.',
     })
   }
 
@@ -146,8 +157,24 @@ export function ChatWidget() {
     if (open) scrollBottom()
   }, [open])
 
+  // #131: Esc closes; while open, the page behind does not scroll on phones (CSS reads the body class).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    document.body.classList.add('chat-sheet-open')
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.classList.remove('chat-sheet-open')
+    }
+  }, [open])
+
   return (
     <div className={`chat-widget${open ? ' is-open' : ''}`} aria-live="polite">
+      {/* #131: dim behind the phone sheet; tapping it closes (hidden on desktop via CSS). */}
+      {open && <div className="chat-widget-backdrop" aria-hidden onClick={() => setOpen(false)} />}
       {open && (
         <div className="chat-widget-panel" role="dialog" aria-label="MOTREXEV AI 챗봇">
           <div className="chat-widget-hero">
@@ -157,10 +184,10 @@ export function ChatWidget() {
               </div>
               <div className="chat-widget-hero-copy">
                 <strong>MOTREXEV AI</strong>
-                <span>전기차·충전 · 자율주행 어시스턴트</span>
+                <span>{subtitle}</span>
               </div>
-              <span className="chat-widget-status">
-                <i /> Live
+              <span className="chat-widget-status" aria-label="실시간 응답 가능">
+                <i /> <span className="chat-widget-status-text">Live</span>
               </span>
               <button
                 type="button"
@@ -254,7 +281,7 @@ export function ChatWidget() {
               <textarea
                 className="chat-composer-input"
                 rows={2}
-                placeholder="EV·충전 관련 무엇이든 물어보세요…"
+                placeholder="궁금한 소식을 물어보세요…"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
