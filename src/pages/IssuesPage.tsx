@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listIssues, updateIssueTracking } from '../api/issueApi'
 import { PageShell } from '../components/layout/PageShell'
 import { ChangeStateBadge, NewBadge } from '../components/common/Badges'
@@ -25,7 +24,18 @@ export function IssuesPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const qc = useQueryClient()
-  const [filter, setFilter] = useState<IssueListFilter>('all')
+  // #132: the filter tab lives in the URL (?filter=), like the admin sub-tabs (#106).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawFilter = searchParams.get('filter')
+  const filter: IssueListFilter = ISSUE_LIST_FILTERS.some((item) => item.value === rawFilter)
+    ? (rawFilter as IssueListFilter)
+    : 'all'
+  const setFilter = (next: IssueListFilter) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'all') params.delete('filter')
+    else params.set('filter', next)
+    setSearchParams(params, { replace: true })
+  }
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['issues', filter],
