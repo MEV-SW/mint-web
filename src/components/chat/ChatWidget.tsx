@@ -18,7 +18,7 @@ interface ChatMessage {
 const SUGGESTIONS = [
   '오늘 전기차·충전에서 중요한 소식은?',
   '자율주행 관련 최근 동향 알려줘',
-  '탐문 데스크에 올라온 이슈 요약해줘',
+  'AI 발견으로 올라온 이슈 요약해줘',
 ]
 
 const WELCOME: ChatMessage = {

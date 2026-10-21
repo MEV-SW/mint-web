@@ -278,9 +278,9 @@ export function MintFrontPage({
               )}
 
               {wireNews.length > 0 && (
-                <section className="np-col-wire" aria-label="탐문 속보">
+                <section className="np-col-wire" aria-label="AI 발견 속보">
                   <div className="np-col-digest-head">
-                    <span>탐문 속보</span>
+                    <span>AI 발견 속보</span>
                     <Link to="/news" className="np-col-wire-link">
                       더보기
                     </Link>
@@ -292,7 +292,7 @@ export function MintFrontPage({
                           <span className="np-col-wire-dot" aria-hidden />
                           <span className="np-col-wire-title">{post.title}</span>
                           <span className="np-col-wire-meta">
-                            {post.source_name ?? '탐문'} · {shortDate(post.collected_at)}
+                            {post.source_name ?? 'AI 발견'} · {shortDate(post.collected_at)}
                           </span>
                         </Link>
                       </li>
@@ -358,7 +358,7 @@ export function MintFrontPage({
               <dd>{stats?.trusted_count ?? '—'}</dd>
             </div>
             <div>
-              <dt>탐문 대기</dt>
+              <dt>AI 발견 대기</dt>
               <dd className={stats?.pending_discovery ? 'np-stat-alert' : undefined}>
                 {stats?.pending_discovery ?? '—'}
               </dd>

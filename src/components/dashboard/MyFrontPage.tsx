@@ -16,7 +16,7 @@ interface MyFrontPageProps {
 
 function contentKindLabel(post: PersonalizedNews): string {
   if (post.is_community) return '커뮤니티'
-  if (post.board_type === 'discovery') return '탐문'
+  if (post.board_type === 'discovery') return 'AI 발견'
   return '뉴스'
 }
 

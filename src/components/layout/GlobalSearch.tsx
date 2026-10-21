@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { globalSearch } from '../../api/searchApi'
 import { Icon } from '../common/Icon'
-import { DISCOVERY_BOARD_LABEL, TRUSTED_BOARD_LABEL } from '../../constants/boardLabels'
+import { TRUSTED_BOARD_LABEL, USER_DISCOVERY_LABEL } from '../../constants/boardLabels'
 import { newsListPath } from '../../utils/newsListState'
 import { usePermissions } from '../../hooks/usePermissions'
 import { usePostLinkState } from '../../hooks/usePostLinkState'
@@ -196,7 +196,7 @@ export function GlobalSearch() {
                     <SearchHighlight html={p.title_highlight} fallback={p.title} />
                   </span>
                   <span className="global-search-item-meta">
-                    {p.board_type === 'trusted' ? TRUSTED_BOARD_LABEL : DISCOVERY_BOARD_LABEL}
+                    {p.board_type === 'trusted' ? TRUSTED_BOARD_LABEL : USER_DISCOVERY_LABEL}
                     {p.source_name ? ` · ${p.source_name}` : ''}
                   </span>
                   {(p.summary_highlight || p.summary) && (
@@ -224,7 +224,7 @@ export function GlobalSearch() {
                 onClick={() => goBoard('discovery')}
                 {...optionProps('more-discovery')}
               >
-                {DISCOVERY_BOARD_LABEL}에서 더 보기
+                {USER_DISCOVERY_LABEL}에서 더 보기
               </button>
             </div>
           )}
