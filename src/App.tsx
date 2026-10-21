@@ -45,9 +45,15 @@ function RedirectWithHash({ to }: { to: string }) {
   return <Navigate to={`${to}${hash}`} replace />
 }
 
+// #127: data is fresh for 30s by default, so moving between screens does not refetch everything.
+// Lists that rarely change stay fresh for 5 minutes; their mutations invalidate them explicitly.
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 30_000 } },
 })
+const STATIC_LIST_STALE_MS = 5 * 60_000
+for (const key of [['editions'], ['keywords'], ['categories']]) {
+  queryClient.setQueryDefaults(key, { staleTime: STATIC_LIST_STALE_MS })
+}
 
 export default function App() {
   return (

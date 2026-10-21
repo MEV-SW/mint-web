@@ -3,6 +3,9 @@ import { listJobs } from '../api/jobApi'
 import type { JobStatus } from '../types/job'
 import { isActiveJobStatus, jobProgressSummary, pickPrimaryActiveJob } from '../utils/jobProgress'
 
+/** #127: poll interval while a job runs — shared by every jobs query. */
+export const ACTIVE_JOB_POLL_MS = 5_000
+
 function isActive(status: JobStatus) {
   return isActiveJobStatus(status)
 }
@@ -12,9 +15,10 @@ export function useJobsQuery(enabled = true) {
     queryKey: ['jobs'],
     queryFn: () => listJobs({ limit: 15 }),
     enabled,
+    // #127: 5s while a job runs (was 1s); this is the only query that polls faster during a crawl.
     refetchInterval: (query) => {
       const rows = query.state.data
-      if (rows?.some((j) => isActive(j.status))) return 1000
+      if (rows?.some((j) => isActive(j.status))) return ACTIVE_JOB_POLL_MS
       return false
     },
   })
