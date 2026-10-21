@@ -5689,3 +5689,40 @@ a.report-cal-entry:hover strong {
   white-space: nowrap;
   border: 0;
 }
+
+/* ===== 챗봇 모바일 (mint-web#131) ===== */
+.chat-widget-backdrop {
+  display: none;
+}
+/* Room under the page so the floating button never covers the last items (1면·뉴스). */
+.app:has(.chat-widget-fab) .content-inner {
+  padding-bottom: 112px;
+}
+@media (max-width: 900px) {
+  .chat-widget-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    display: block;
+    background: rgba(18, 22, 20, 0.42);
+    pointer-events: auto;
+  }
+  body.chat-sheet-open .content {
+    overflow: hidden;
+  }
+  /* LIVE stays visible on phones as a dot (text hidden, aria-label kept). */
+  .chat-widget-hero-inner {
+    grid-template-columns: auto 1fr auto auto;
+  }
+  .chat-widget-status {
+    display: inline-flex;
+  }
+  .chat-widget-status .chat-widget-status-text {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .app:has(.chat-widget-fab) .content-inner {
+    padding-bottom: 88px;
+  }
+}
