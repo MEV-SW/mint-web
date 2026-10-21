@@ -3,6 +3,7 @@ import { listEditions } from '../api/editionApi'
 import { generateReport, listReports } from '../api/reportApi'
 import { ReportCalendar } from '../components/reports/ReportCalendar'
 import { PageShell } from '../components/layout/PageShell'
+import { LoadErrorBanner } from '../components/common/PageStates'
 import { useToast } from '../components/common/Toast'
 import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
@@ -41,6 +42,15 @@ export function ReportsPage() {
       title="리포트"
       lead="날짜를 골라 배정된 분야 브리핑을 확인합니다."
     >
+      {orgReports.isError && (
+        <LoadErrorBanner
+          title="리포트 목록을 불러오지 못했습니다"
+          error={orgReports.error}
+          failedAt={orgReports.errorUpdatedAt}
+          onRetry={() => void orgReports.refetch()}
+          retrying={orgReports.isFetching}
+        />
+      )}
       <ReportCalendar
         orgReports={(orgReports.data ?? []).map((report) => ({
           id: report.id,

@@ -5074,6 +5074,61 @@ a.report-cal-entry:hover strong {
   }
 }
 
+/* ===== Load error / not found (R5-13 common states, mint-web#128) ===== */
+.load-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--red);
+  border-radius: 2px;
+  background: rgba(165, 42, 42, 0.06);
+  color: var(--ink);
+}
+.load-error-banner-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--panel);
+  font: 700 12px/1 var(--font);
+}
+.load-error-banner-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.load-error-banner-text strong {
+  font-size: 13.5px;
+  color: var(--red);
+}
+.load-error-banner-text span {
+  font-size: 12px;
+  color: var(--ink2);
+}
+.load-error-banner .btn {
+  flex: none;
+}
+.not-found-state {
+  padding: 48px 0;
+  text-align: center;
+}
+.not-found-state .personal-empty-actions {
+  justify-content: center;
+}
+.detail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+}
+
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
 /* Same rail as the fixed top nav (#114): sidebar starts at the nav's left
    content edge and the body ends at its right content edge. */

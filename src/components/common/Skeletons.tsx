@@ -36,3 +36,18 @@ export function NewsListSkeleton() {
     </div>
   )
 }
+
+/** Article / report detail placeholder (#128) — replaces the plain "로딩 중…" text. */
+export function DetailSkeleton({ label = '불러오는 중' }: { label?: string }) {
+  return (
+    <div className="np-skeleton detail-skeleton" aria-busy="true" aria-label={label}>
+      <div className="np-skeleton-line sm" />
+      <div className="np-skeleton-line lg" />
+      <div className="np-skeleton-line lg" />
+      <div className="np-skeleton-brief" />
+      <div className="np-skeleton-line" />
+      <div className="np-skeleton-line" />
+      <div className="np-skeleton-line" />
+    </div>
+  )
+}
