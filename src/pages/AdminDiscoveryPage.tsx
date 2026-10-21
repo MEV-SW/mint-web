@@ -14,6 +14,7 @@ import { usePermissions } from '../hooks/usePermissions'
 import type { Post } from '../types/post'
 import { apiErrorDetail } from '../utils/apiError'
 import { relativeCrawl } from '../utils/date'
+import { usePostLinkState } from '../hooks/usePostLinkState'
 
 type ColumnKey = 'pending' | 'published' | 'promoted' | 'hidden'
 type CardAction = 'approve' | 'promote' | 'hide' | 'delete'
@@ -187,6 +188,7 @@ function DiscoveryColumn({
   busy: boolean
   onAction: (type: CardAction, post: Post) => void
 }) {
+  const postState = usePostLinkState()
   const [size, setSize] = useState(PAGE_STEP)
   const [collapsed, setCollapsed] = useState(false)
   const narrow = useNarrowLayout()
@@ -240,7 +242,7 @@ function DiscoveryColumn({
         {query.isSuccess && items.length === 0 && <p className="discovery-col-empty">이 상태의 후보가 없습니다</p>}
         {items.map((post) => (
           <article key={post.id} className="discovery-card">
-            <Link to={`/posts/${post.id}`} className="discovery-card-title">
+            <Link to={`/posts/${post.id}`} state={postState} className="discovery-card-title">
               {post.title}
             </Link>
             <div className="discovery-card-meta">

@@ -5,8 +5,10 @@ import { getPersonalReport, markPersonalReportViewed } from '../api/personalizat
 import { ImportanceBadge } from '../components/common/Badges'
 import { Icon } from '../components/common/Icon'
 import { ListenButton, buildBriefingSpeech } from '../components/common/ListenButton'
+import { usePostLinkState } from '../hooks/usePostLinkState'
 
 export function PersonalReportDetailPage() {
+  const postState = usePostLinkState()
   const { id } = useParams<{ id: string }>()
   const report = useQuery({
     queryKey: ['personal-report', id],
@@ -42,7 +44,7 @@ export function PersonalReportDetailPage() {
       <ol>
         {items.map((item) => (
           <li key={item.post.id}>
-            <Link to={`/posts/${item.post.id}`}>
+            <Link to={`/posts/${item.post.id}`} state={postState}>
               <span className="report-rank">{String(item.rank).padStart(2, '0')}</span>
               <div>
                 <div className="personal-news-tags">{item.matched_keyword_names.map((name) => <span key={name}>{name}</span>)}</div>

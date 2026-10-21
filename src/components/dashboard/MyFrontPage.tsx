@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { PersonalizedNews, PersonalReport } from '../../types/personalization'
 import { formatDate } from '../../utils/date'
+import { usePostLinkState } from '../../hooks/usePostLinkState'
 
 interface MyFrontPageProps {
   dateLabel: string
@@ -53,6 +54,7 @@ export function MyFrontPage({
   picks,
   personalReport,
 }: MyFrontPageProps) {
+  const postState = usePostLinkState()
   const allItems = hero ? [hero, ...picks] : []
   const secondary = allItems.slice(1, 3)
   const listNews = allItems.slice(1, 8)
@@ -120,7 +122,7 @@ export function MyFrontPage({
               <ul>
                 {lane.items.map((post) => (
                   <li key={post.id}>
-                    <Link to={`/posts/${post.id}`}>{post.title}</Link>
+                    <Link to={`/posts/${post.id}`} state={postState}>{post.title}</Link>
                   </li>
                 ))}
               </ul>
@@ -185,7 +187,7 @@ export function MyFrontPage({
                   {hero.category ? ` · ${hero.category}` : ''}
                 </span>
               </div>
-              <Link to={`/posts/${hero.id}`} className="np-top-headline">
+              <Link to={`/posts/${hero.id}`} state={postState} className="np-top-headline">
                 {hero.title}
               </Link>
               <div className="np-top-body np-top-body-solo">
@@ -212,7 +214,7 @@ export function MyFrontPage({
                         <div className="np-subpair-kicker">
                           {post.matched_keywords[0]?.name ?? post.category ?? contentKindLabel(post)}
                         </div>
-                        <Link to={`/posts/${post.id}`} className="np-subpair-title">
+                        <Link to={`/posts/${post.id}`} state={postState} className="np-subpair-title">
                           {post.title}
                         </Link>
                         {post.summary && <p className="np-subpair-dek">{post.summary}</p>}
@@ -246,7 +248,7 @@ export function MyFrontPage({
           </div>
           {listNews.length > 0 ? (
             listNews.map((post) => (
-              <Link key={post.id} to={`/posts/${post.id}`} className="np-list-row">
+              <Link key={post.id} to={`/posts/${post.id}`} state={postState} className="np-list-row">
                 <div className="np-list-row-meta">
                   <span className={`np-list-level ${levelClass(post.importance)}`}>
                     ● {levelLabel(post.importance)}

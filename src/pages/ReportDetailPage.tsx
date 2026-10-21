@@ -12,8 +12,10 @@ import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail, apiErrorStatus } from '../utils/apiError'
 import { mediaUrl } from '../utils/mediaUrl'
 import type { KeyChange } from '../types/report'
+import { usePostLinkState } from '../hooks/usePostLinkState'
 
 export function ReportDetailPage() {
+  const postState = usePostLinkState()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const toast = useToast()
@@ -158,7 +160,7 @@ export function ReportDetailPage() {
                       <strong>{k.title}</strong>
                       {k.description && <span>{k.description}</span>}
                       {relatedItem?.post && (
-                        <Link to={`/posts/${relatedItem.post_id}`} className="link" style={{ fontSize: 13 }}>
+                        <Link to={`/posts/${relatedItem.post_id}`} state={postState} className="link" style={{ fontSize: 13 }}>
                           게시글 보기 →
                         </Link>
                       )}
@@ -182,7 +184,7 @@ export function ReportDetailPage() {
           {report.items.map((item) => (
             <div key={item.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
               {item.post ? (
-                <Link to={`/posts/${item.post_id}`} className="link" style={{ fontFamily: 'var(--serif)', fontWeight: 650 }}>
+                <Link to={`/posts/${item.post_id}`} state={postState} className="link" style={{ fontFamily: 'var(--serif)', fontWeight: 650 }}>
                   {item.post.title}
                 </Link>
               ) : (

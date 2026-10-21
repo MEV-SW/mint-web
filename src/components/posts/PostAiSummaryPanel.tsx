@@ -1,6 +1,7 @@
 import { AiBadge } from '../common/Badges'
 import { Btn } from '../common/Btn'
 import type { AIOutput } from '../../types/post'
+import { confidenceGrade } from '../../utils/aiConfidence'
 
 interface PostAiSummaryPanelProps {
   ai: AIOutput | null | undefined
@@ -21,7 +22,7 @@ export function PostAiSummaryPanel({
     <div className={`post-ai-panel${compact ? ' compact' : ''}`}>
       <div className="post-split-head">
         <span>AI 요약</span>
-        {ai && <AiBadge label="✦ Generated" />}
+        {ai && <AiBadge label="AI 생성" />}
       </div>
       <div className="post-split-summary">
         {ai ? (
@@ -43,9 +44,10 @@ export function PostAiSummaryPanel({
                 </ul>
               </div>
             )}
-            <p className="post-ai-meta">
-              {ai.model} · confidence {ai.confidence ?? '-'}
-            </p>
+            {/* #129: no model id for readers; confidence as a Korean grade. */}
+            {confidenceGrade(ai.confidence) && (
+              <p className="post-ai-meta">신뢰도 {confidenceGrade(ai.confidence)}</p>
+            )}
           </>
         ) : (
           <div className="post-ai-empty">

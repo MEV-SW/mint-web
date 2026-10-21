@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { DashboardPostPreview } from '../../api/statsApi'
 import { formatDate } from '../../utils/date'
+import { usePostLinkState } from '../../hooks/usePostLinkState'
 
 const SOURCE_TYPE_LABEL: Record<string, string> = {
   reddit: 'Reddit',
@@ -26,10 +27,11 @@ function sourceLabel(post: DashboardPostPreview): string {
 }
 
 function VoiceColumn({ post }: { post: DashboardPostPreview }) {
+  const postState = usePostLinkState()
   const body = voiceBody(post)
 
   return (
-    <Link to={`/posts/${post.id}`} className="np-voice-col">
+    <Link to={`/posts/${post.id}`} state={postState} className="np-voice-col">
       <div className="np-byline np-voice-byline">
         <span className="np-byline-source">{sourceLabel(post)}</span>
         <span className="np-byline-date">{formatDate(post.collected_at)}</span>
