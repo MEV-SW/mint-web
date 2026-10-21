@@ -51,7 +51,8 @@ export function NewsPage() {
   const [editionId, setEditionId] = useState(fromUrl.edition)
   const [showAllKeywords, setShowAllKeywords] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(Boolean(fromUrl.category || fromUrl.importance))
-  const [page, setPage] = useState(1)
+  // #132: the page number lives in the URL (?page=), so refresh / back / shared links keep it.
+  const page = fromUrl.page ?? 1
   const isComposingRef = useRef(false)
 
   const persist = (patch: Partial<NewsListParams>) => {
@@ -62,10 +63,13 @@ export function NewsPage() {
       category: patch.category ?? category,
       kw: patch.kw ?? keywordId,
       importance: patch.importance ?? importance,
+      // Any filter change goes back to page 1 unless the caller keeps the page explicitly.
+      page: patch.page,
     })
     if (next.toString() === searchParams.toString()) return
     setSearchParams(next, { replace: true })
   }
+  const goToPage = (next: number) => persist({ page: Math.max(1, next) })
   const persistRef = useRef(persist)
   persistRef.current = persist
 
@@ -95,13 +99,13 @@ export function NewsPage() {
     persistRef.current(
       invalid
         ? { edition: fallback, category: '', kw: '' }
-        : { edition: fallback },
+        : { edition: fallback, page },
     )
     if (invalid) {
       setCategory('')
       setKeywordId('')
     }
-  }, [editions, editionId])
+  }, [editions, editionId, page])
 
   const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
   const keywords = useQuery({ queryKey: ['keywords'], queryFn: () => listKeywords() })
@@ -122,14 +126,15 @@ export function NewsPage() {
 
   useEffect(() => {
     if (isComposingRef.current) return
+    // #132: nothing typed yet (first load from the URL) — keep the page from the URL.
+    if (queryDraft.trim() === query) return
     const timer = window.setTimeout(() => {
       const nextQuery = queryDraft.trim()
       setQuery(nextQuery)
-      setPage(1)
       persistRef.current({ q: nextQuery })
     }, 300)
     return () => window.clearTimeout(timer)
-  }, [queryDraft])
+  }, [queryDraft, query])
 
   const editionCategories = useMemo(
     () => rankNewsCategories(visibleNewsCategories(categories.data ?? [], editionId)),
@@ -165,7 +170,6 @@ export function NewsPage() {
     setContentKind('')
     setShowAllKeywords(false)
     setFiltersOpen(false)
-    setPage(1)
     persistRef.current({
       q: '',
       kind: '',
@@ -211,7 +215,6 @@ export function NewsPage() {
                   setCategory('')
                   setKeywordId('')
                   setShowAllKeywords(false)
-                  setPage(1)
                   persist({ edition: edition.id, category: '', kw: '' })
                 }}
               >
@@ -231,7 +234,6 @@ export function NewsPage() {
               className={`news-segment-tab${contentKind === item.value ? ' active' : ''}`}
               onClick={() => {
                 setContentKind(item.value)
-                setPage(1)
                 persist({ kind: item.value })
               }}
             >
@@ -274,7 +276,6 @@ export function NewsPage() {
               className={`news-chip ${!category ? 'active' : ''}`}
               onClick={() => {
                 setCategory('')
-                setPage(1)
                 persist({ category: '' })
               }}
             >
@@ -287,7 +288,6 @@ export function NewsPage() {
                 className={`news-chip ${category === item.name ? 'active' : ''}`}
                 onClick={() => {
                   setCategory(item.name)
-                  setPage(1)
                   persist({ category: item.name })
                 }}
               >
@@ -305,7 +305,6 @@ export function NewsPage() {
                   className={`news-chip news-chip-discovered ${category === item.name ? 'active' : ''}`}
                   onClick={() => {
                     setCategory(item.name)
-                    setPage(1)
                     persist({ category: item.name })
                   }}
                 >
@@ -323,7 +322,6 @@ export function NewsPage() {
                 className={`news-chip ${importance === item.value ? 'active' : ''}`}
                 onClick={() => {
                   setImportance(item.value)
-                  setPage(1)
                   persist({ importance: item.value })
                 }}
               >
@@ -341,7 +339,6 @@ export function NewsPage() {
           className={`news-chip ${!keywordId ? 'active' : ''}`}
           onClick={() => {
             setKeywordId('')
-            setPage(1)
             persist({ kw: '' })
           }}
         >
@@ -354,7 +351,6 @@ export function NewsPage() {
             className={`news-chip ${keywordId === keyword.id ? 'active' : ''}`}
             onClick={() => {
               setKeywordId(keyword.id)
-              setPage(1)
               persist({ kw: keyword.id })
             }}
           >
@@ -419,7 +415,7 @@ export function NewsPage() {
             variant="outline"
             size="sm"
             disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => goToPage(page - 1)}
           >
             이전
           </Btn>
@@ -430,7 +426,7 @@ export function NewsPage() {
             variant="outline"
             size="sm"
             disabled={page >= (news.data?.pages ?? 1)}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => goToPage(page + 1)}
           >
             다음
           </Btn>

@@ -8,6 +8,8 @@ export type NewsListParams = {
   category: string
   kw: string
   importance: NewsImportance | ''
+  /** #132: list page (1 is the default and is not written to the URL). */
+  page?: number
 }
 
 function asKind(raw: string | null): NewsKind | '' {
@@ -27,7 +29,13 @@ export function readNewsListParams(params: URLSearchParams): NewsListParams {
     category: (params.get('category') || '').trim(),
     kw: (params.get('kw') || '').trim(),
     importance: asImportance(params.get('importance')),
+    page: asPage(params.get('page')),
   }
+}
+
+function asPage(raw: string | null): number {
+  const value = Number(raw)
+  return Number.isInteger(value) && value > 1 ? value : 1
 }
 
 export function newsListSearchParams(opts: Partial<NewsListParams> = {}): URLSearchParams {
@@ -39,6 +47,7 @@ export function newsListSearchParams(opts: Partial<NewsListParams> = {}): URLSea
   if (opts.category) next.set('category', opts.category)
   if (opts.kw) next.set('kw', opts.kw)
   if (opts.importance) next.set('importance', opts.importance)
+  if (opts.page && opts.page > 1) next.set('page', String(opts.page))
   return next
 }
 
