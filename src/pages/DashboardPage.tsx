@@ -12,15 +12,14 @@ import { TrendDashboard } from '../components/trend/TrendDashboard'
 import { FrontPageSkeleton } from '../components/common/Skeletons'
 import { useToast } from '../components/common/Toast'
 import { useDashboardStatsQuery } from '../hooks/useDashboardStatsQuery'
-import { useActiveJobs } from '../hooks/useJobsQuery'
 import { usePermissions } from '../hooks/usePermissions'
 import type { DailyReport } from '../types/report'
 import type { PersonalizedNews } from '../types/personalization'
-import { invalidateFrontPageQueries } from '../utils/frontPageQueries'
 import { sliceFrontPageStories } from '../utils/frontPageStories'
 
-const IDLE_POLL_MS = 60_000
-const BUSY_POLL_MS = 5_000
+// #127: one steady interval. During a crawl only the jobs query polls; when the job ends,
+// JobStatusPanel (mounted for the same canEditAny users) invalidates these queries once.
+const POLL_MS = 60_000
 
 function toPreview(item: PersonalizedNews): DashboardPostPreview {
   return {
@@ -68,9 +67,8 @@ function toOrgReport(row: DailyReport | null | undefined): DashboardStats['lates
 export function DashboardPage() {
   const toast = useToast()
   const qc = useQueryClient()
-  const { isAdmin, canEditAny } = usePermissions()
-  const { busy: crawlBusy } = useActiveJobs(canEditAny)
-  const stats = useDashboardStatsQuery(crawlBusy)
+  const { isAdmin } = usePermissions()
+  const stats = useDashboardStatsQuery()
   const seenFrontSignature = useRef<string | undefined>(undefined)
   const [searchParams, setSearchParams] = useSearchParams()
   const kioskOn = searchParams.get('kiosk') === '1'
@@ -85,7 +83,6 @@ export function DashboardPage() {
     [searchParams, setSearchParams],
   )
 
-  const pollMs = crawlBusy ? BUSY_POLL_MS : IDLE_POLL_MS
 
   const editionsQuery = useQuery({
     queryKey: ['editions', 'active'],
@@ -109,7 +106,7 @@ export function DashboardPage() {
     queries: editions.map((edition) => ({
       queryKey: ['editorial-feed', edition.id],
       queryFn: () => getEditorialFeed(edition.id),
-      refetchInterval: pollMs,
+      refetchInterval: POLL_MS,
       refetchIntervalInBackground: false,
       enabled: edition.display_mode !== 'trend',
     })),
@@ -118,7 +115,7 @@ export function DashboardPage() {
     queries: editions.map((edition) => ({
       queryKey: ['edition-report', edition.id],
       queryFn: () => getLatestReport(edition.id),
-      refetchInterval: pollMs,
+      refetchInterval: POLL_MS,
       refetchIntervalInBackground: false,
       enabled: edition.display_mode !== 'trend',
     })),
@@ -156,7 +153,8 @@ export function DashboardPage() {
     }
     if (frontSignature !== seenFrontSignature.current) {
       seenFrontSignature.current = frontSignature
-      invalidateFrontPageQueries(qc)
+      // #127: feeds/reports were just refetched (that is what changed the signature); only re-sync stats.
+      void qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast('오늘의 MOTREXEV 뉴스가 갱신되었습니다.')
     }
   }, [frontReady, frontSignature, qc, toast])

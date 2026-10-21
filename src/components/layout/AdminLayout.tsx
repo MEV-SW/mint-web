@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { getOpenInquiryCount } from '../../api/inquiryApi'
-import { listUsers } from '../../api/usersApi'
 import { useAdminSummaryQuery } from '../../hooks/useAdminSummaryQuery'
 import { useJobsQuery } from '../../hooks/useJobsQuery'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -44,28 +41,18 @@ export function AdminLayout() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const dirtyPaths = useUnsavedStore((state) => state.dirtyPaths)
 
-  // Same query keys as TopNav, so the sidebar adds no requests.
-  const inquiriesQuery = useQuery({
-    queryKey: ['inquiries-open-count'],
-    queryFn: getOpenInquiryCount,
-    enabled: isAdmin,
-  })
-  const usersQuery = useQuery({
-    queryKey: ['users'],
-    queryFn: listUsers,
-    enabled: isAdmin,
-  })
   const { data: jobs = [] } = useJobsQuery(isAdmin || canEditAny)
+  // #127: every badge (incl. pending users / open inquiries) comes from the admin summary — same query as TopNav.
   const summaryQuery = useAdminSummaryQuery()
 
   const items = visibleAdminNav(isAdmin, canEditAny, canReviewSources)
   const counts = {
-    openInquiries: inquiriesQuery.data ?? 0,
-    pendingUsers: (usersQuery.data ?? []).filter((user) => user.approval_status === 'pending').length,
+    openInquiries: summaryQuery.data?.open_inquiries ?? 0,
+    pendingUsers: summaryQuery.data?.pending_users ?? 0,
     failedSources: summaryQuery.data?.failed_sources ?? 0,
     pendingCandidates: summaryQuery.data?.pending_candidates ?? 0,
   }
-  const countsLoading = isAdmin && (inquiriesQuery.isLoading || usersQuery.isLoading)
+  const countsLoading = isAdmin && summaryQuery.isLoading
   const current = currentAdminNavItem(items, location.pathname) ?? items[0]
   const pipeline = isAdmin || canEditAny ? pipelineState(jobs) : null
 

@@ -16,6 +16,7 @@ import { useConfirm } from '../components/common/useConfirm'
 import { PageShell } from '../components/layout/PageShell'
 import { DISCOVERY_BOARD_LABEL, DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
 import { useJobActions } from '../hooks/useJobActions'
+import { ACTIVE_JOB_POLL_MS } from '../hooks/useJobsQuery'
 import { JOB_STATUS_LABEL, type BackgroundJob } from '../types/job'
 import { COMMUNITY_SOURCE_TYPES } from '../types/source'
 import { apiErrorDetail } from '../utils/apiError'
@@ -54,7 +55,8 @@ export function AdminJobsPage() {
   const jobsQuery = useQuery({
     queryKey: ['jobs', 'log'],
     queryFn: () => listJobs({ limit: LOG_LIMIT }),
-    refetchInterval: (query) => (query.state.data?.some((job) => isActiveJobStatus(job.status)) ? 1000 : false),
+    refetchInterval: (query) =>
+      query.state.data?.some((job) => isActiveJobStatus(job.status)) ? ACTIVE_JOB_POLL_MS : false,
   })
   const jobs = jobsQuery.data ?? []
   const activeJob = pickPrimaryActiveJob(jobs)

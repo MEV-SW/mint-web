@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { getOpenInquiryCount } from '../../api/inquiryApi'
-import { listUsers } from '../../api/usersApi'
+import { useAdminSummaryQuery } from '../../hooks/useAdminSummaryQuery'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useAuthStore } from '../../store/authStore'
 import { logout as logoutRequest } from '../../api/authApi'
@@ -29,16 +27,8 @@ export function TopNav() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const user = useAuthStore((s) => s.user)
   const { isAdmin, canEditAny, roleLabel } = usePermissions()
-  const { data: openInquiries = 0 } = useQuery({
-    queryKey: ['inquiries-open-count'],
-    queryFn: getOpenInquiryCount,
-    enabled: isAdmin,
-  })
-  const { data: pendingUsers = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: listUsers,
-    enabled: isAdmin,
-  })
+  // #127: admin badge numbers come from the admin summary (#174) instead of the full /users list.
+  const { data: summary } = useAdminSummaryQuery()
 
   async function handleLogout() {
     setUserMenuOpen(false)
@@ -47,10 +37,8 @@ export function TopNav() {
   }
 
   const counts = {
-    openInquiries,
-    pendingUsers: isAdmin
-      ? pendingUsers.filter((u) => u.approval_status === 'pending').length
-      : 0,
+    openInquiries: isAdmin ? (summary?.open_inquiries ?? 0) : 0,
+    pendingUsers: isAdmin ? (summary?.pending_users ?? 0) : 0,
   }
 
   const adminBadgeTotal = counts.openInquiries + counts.pendingUsers
