@@ -5137,6 +5137,19 @@ a.report-cal-entry:hover strong {
   max-width: 760px;
 }
 
+/* ===== News importance legend (mint-web#130) ===== */
+.news-imp-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--ink3);
+}
+.news-imp-legend .news-imp-mark {
+  position: static;
+}
+
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
 /* Same rail as the fixed top nav (#114): sidebar starts at the nav's left
    content edge and the body ends at its right content edge. */

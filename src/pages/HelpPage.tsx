@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '../components/common/Icon'
 import { PageShell } from '../components/layout/PageShell'
-import { DISCOVERY_PIPELINE_LABEL } from '../constants/boardLabels'
 
 const FLOW = [
   { step: '1', title: '분야 선택', desc: '처음 접속하면 전기차·충전, 자율주행 등 볼 지면을 직접 고릅니다.', to: '/' },
@@ -38,7 +37,7 @@ const SECTIONS = [
   {
     icon: 'shield',
     title: '관리',
-    body: `설정, 검수함, 계정, 문의, 소스, 웹훅을 한곳에서 운영합니다. ${DISCOVERY_PIPELINE_LABEL}과 크롤링도 소스 메뉴에서 실행합니다.`,
+    body: `설정, 검수함, 계정, 문의, 소스, 웹훅을 한곳에서 운영합니다. AI 발견 수집과 크롤링도 관리 메뉴에서 실행합니다.`,
     link: { label: '관리', to: '/admin' },
   },
   {
@@ -72,7 +71,7 @@ const FAQ = [
   },
   {
     q: '자동 수집·리포트 스케줄은?',
-    a: `서버에 Celery worker·beat가 실행 중이면 매일 05:30 미승인 탐문 후보 정리, 06:00 ${DISCOVERY_PIPELINE_LABEL}, 08:00 조직 데일리 리포트가 자동 실행됩니다.`,
+    a: `서버에 Celery worker·beat가 실행 중이면 매일 05:30 미승인 AI 발견 후보 정리, 06:00 AI 발견 수집, 08:00 조직 데일리 리포트가 자동 실행됩니다.`,
   },
   {
     q: '홈에 지면이 안 보여요.',

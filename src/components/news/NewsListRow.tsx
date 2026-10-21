@@ -10,7 +10,7 @@ function contentKindLabel(post: {
   board_type?: string | null
 }): string {
   if (post.is_community) return '커뮤니티'
-  if (post.board_type === 'discovery') return '탐문'
+  if (post.board_type === 'discovery') return 'AI 발견'
   return '뉴스'
 }
 

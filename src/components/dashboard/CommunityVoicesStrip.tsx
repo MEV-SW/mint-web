@@ -59,7 +59,7 @@ export function CommunityVoicesStrip({ voices, loading }: CommunityVoicesStripPr
             고객의 소리
           </h2>
           <p className="np-section-dek">
-            커뮤니티 탐문에서 수집한 현장 의견 · 공식 보도와 구분해 참고하세요
+            커뮤니티에서 AI가 발견한 현장 의견 · 공식 보도와 구분해 참고하세요
           </p>
         </div>
         <Link to="/news" className="np-section-more">

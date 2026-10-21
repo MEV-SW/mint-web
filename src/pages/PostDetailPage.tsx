@@ -19,7 +19,7 @@ import { PostOriginalPane } from '../components/posts/PostOriginalPane'
 import { apiErrorStatus } from '../utils/apiError'
 import { backLabelFor } from '../utils/postBack'
 import { formatDateTime } from '../utils/date'
-import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
+import { USER_DISCOVERY_LABEL } from '../constants/boardLabels'
 
 export function PostDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -123,7 +123,7 @@ export function PostDetailPage() {
       {backLink}
 
       <article className="pg-article-hero">
-        <div className="pg-kicker">{isDiscovery ? DISCOVERY_BOARD_LABEL : '중요 뉴스'}</div>
+        <div className="pg-kicker">{isDiscovery ? USER_DISCOVERY_LABEL : '중요 뉴스'}</div>
         <div className="pg-article-badges">
           <StatusPill status={post.status} />
           <ImportanceBadge level={post.importance} />

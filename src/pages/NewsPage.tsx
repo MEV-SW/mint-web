@@ -32,7 +32,7 @@ const IMPORTANCE_FILTERS: { value: '' | Exclude<Importance, 'unknown'>; label: s
 const CONTENT_KIND_FILTERS: { value: NewsKind | ''; label: string }[] = [
   { value: '', label: '전체' },
   { value: 'news', label: '뉴스' },
-  { value: 'discovery', label: '탐문' },
+  { value: 'discovery', label: 'AI 발견' },
   { value: 'community', label: '커뮤니티' },
 ]
 
@@ -191,7 +191,7 @@ export function NewsPage() {
     <PageShell
       section="전체 뉴스"
       title="뉴스"
-      lead="지금 보는 지면의 뉴스·탐문·커뮤니티를 구분·탐색합니다."
+      lead="지금 보는 지면의 뉴스·AI 발견·커뮤니티를 구분·탐색합니다."
       actions={
         anyFilterOn ? (
           <Btn variant="outline" size="sm" onClick={resetFilters}>
@@ -375,6 +375,13 @@ export function NewsPage() {
         <header>
           <h2>뉴스 목록</h2>
           <span>{news.data?.total ?? 0}건</span>
+          {/* #130: the 고/중/낮 marks had no explanation. */}
+          <span className="news-imp-legend" aria-label="중요도 표시: 고는 높음, 중은 보통, 낮은 낮음">
+            <span className="news-imp-mark imp-high" aria-hidden>고</span>
+            <span className="news-imp-mark imp-medium" aria-hidden>중</span>
+            <span className="news-imp-mark imp-low" aria-hidden>낮</span>
+            중요도
+          </span>
         </header>
 
         {news.isLoading && <NewsListSkeleton />}
