@@ -2741,7 +2741,7 @@ a.report-cal-entry:hover strong {
   align-items: center;
   position: relative;
   height: var(--topnav-control-h, 32px);
-  overflow: hidden;
+  /* #125: no overflow:hidden here — it clipped the absolutely positioned results dropdown. */
 }
 .topnav-actions .header-search svg {
   color: var(--ink3);
@@ -2781,6 +2781,35 @@ a.report-cal-entry:hover strong {
   border: 1px solid var(--line) !important;
   background: var(--panel) !important;
   box-shadow: var(--sh-lg) !important;
+}
+.global-search-item.is-active,
+.global-search-more.is-active {
+  background: var(--tint);
+}
+/* #125 phones: a 327px dropdown right-aligned to the narrow search box ran off the left edge.
+   Anchor it to the whole top bar instead (search box becomes static; its icon flows inline). */
+@media (max-width: 640px) {
+  .app-topnav .topnav-bar {
+    position: relative;
+  }
+  .app-topnav .topnav-actions .header-search {
+    position: static;
+  }
+  .app-topnav .topnav-actions .header-search svg {
+    position: static;
+    flex: none;
+    margin-left: 9px;
+    transform: none;
+  }
+  .app-topnav .topnav-actions .header-search input {
+    padding-left: 6px;
+  }
+  .app-topnav .global-search-dropdown {
+    top: calc(100% + 1px);
+    left: var(--page-pad, 16px);
+    right: var(--page-pad, 16px);
+    width: auto;
+  }
 }
 
 /* ---------- Settings / admin lists ---------- */

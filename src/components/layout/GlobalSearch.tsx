@@ -24,6 +24,8 @@ export function GlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  // #125: keyboard selection; resets to the first option whenever the debounced query changes.
+  const [active, setActive] = useState<{ query: string; index: number }>({ query: '', index: 0 })
   const debounced = useDebounced(query, 280)
   const canSearch = debounced.trim().length >= 1
 
@@ -84,6 +86,51 @@ export function GlobalSearch() {
   const errorDetail =
     (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? null
 
+  // Every selectable row in display order: posts, the two "더 보기" links, then sources.
+  type SearchOption =
+    | { key: string; kind: 'post'; id: string }
+    | { key: string; kind: 'more'; board: 'trusted' | 'discovery' }
+    | { key: string; kind: 'source'; name: string }
+  const options: SearchOption[] = canSearch
+    ? [
+        ...posts.map((p): SearchOption => ({ key: `post-${p.id}`, kind: 'post', id: p.id })),
+        ...(posts.length > 0
+          ? ([
+              { key: 'more-trusted', kind: 'more', board: 'trusted' },
+              { key: 'more-discovery', kind: 'more', board: 'discovery' },
+            ] satisfies SearchOption[])
+          : []),
+        ...sources.map((s): SearchOption => ({ key: `source-${s.id}`, kind: 'source', name: s.name })),
+      ]
+    : []
+
+  function selectOption(option: SearchOption) {
+    if (option.kind === 'post') goPost(option.id)
+    else if (option.kind === 'more') goBoard(option.board)
+    else goSource(option.name)
+  }
+  const activeIndex =
+    active.query === debounced && active.index < options.length ? active.index : 0
+  const optionId = (index: number) => `global-search-opt-${index}`
+  const dropdownVisible = open && query.trim().length > 0
+  const indexOf = (key: string) => options.findIndex((option) => option.key === key)
+  const optionProps = (key: string) => {
+    const index = indexOf(key)
+    return {
+      id: optionId(index),
+      role: 'option' as const,
+      'aria-selected': index === activeIndex,
+      onMouseEnter: () => setActive({ query: debounced, index }),
+    }
+  }
+
+  function moveActive(step: number) {
+    if (options.length === 0) return
+    const next = (activeIndex + step + options.length) % options.length
+    setActive({ query: debounced, index: next })
+    requestAnimationFrame(() => document.getElementById(optionId(next))?.scrollIntoView({ block: 'nearest' }))
+  }
+
   return (
     <div className={`header-search global-search${open ? ' is-open' : ''}`} ref={rootRef}>
       <Icon name="search" />
@@ -91,21 +138,33 @@ export function GlobalSearch() {
         ref={inputRef}
         placeholder="검색"
         value={query}
+        role="combobox"
+        aria-label="검색"
+        aria-autocomplete="list"
+        aria-expanded={dropdownVisible}
+        aria-controls="global-search-listbox"
+        aria-activedescendant={dropdownVisible && options.length > 0 ? optionId(activeIndex) : undefined}
         onChange={(e) => {
           setQuery(e.target.value)
           setOpen(true)
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && canSearch && posts[0]) {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault()
-            goPost(posts[0].id)
+            if (!open) setOpen(true)
+            moveActive(e.key === 'ArrowDown' ? 1 : -1)
+          } else if (e.key === 'Enter' && dropdownVisible && options[activeIndex]) {
+            e.preventDefault()
+            selectOption(options[activeIndex])
+          } else if (e.key === 'Escape') {
+            close()
           }
         }}
       />
 
-      {open && query.trim().length > 0 && (
-        <div className="global-search-dropdown" role="listbox">
+      {dropdownVisible && (
+        <div className="global-search-dropdown" role="listbox" id="global-search-listbox" aria-label="검색 결과">
           {query.trim().length < 1 && (
             <div className="global-search-hint">검색어를 입력하세요</div>
           )}
@@ -126,8 +185,10 @@ export function GlobalSearch() {
                 <button
                   key={p.id}
                   type="button"
-                  className="global-search-item"
+                  tabIndex={-1}
+                  className={`global-search-item${indexOf(`post-${p.id}`) === activeIndex ? ' is-active' : ''}`}
                   onClick={() => goPost(p.id)}
+                  {...optionProps(`post-${p.id}`)}
                 >
                   <span className="global-search-item-title">
                     <SearchHighlight html={p.title_highlight} fallback={p.title} />
@@ -145,10 +206,22 @@ export function GlobalSearch() {
                   )}
                 </button>
               ))}
-              <button type="button" className="global-search-more" onClick={() => goBoard('trusted')}>
+              <button
+                type="button"
+                tabIndex={-1}
+                className={`global-search-more${indexOf('more-trusted') === activeIndex ? ' is-active' : ''}`}
+                onClick={() => goBoard('trusted')}
+                {...optionProps('more-trusted')}
+              >
                 중요 게시판에서 더 보기
               </button>
-              <button type="button" className="global-search-more" onClick={() => goBoard('discovery')}>
+              <button
+                type="button"
+                tabIndex={-1}
+                className={`global-search-more${indexOf('more-discovery') === activeIndex ? ' is-active' : ''}`}
+                onClick={() => goBoard('discovery')}
+                {...optionProps('more-discovery')}
+              >
                 {DISCOVERY_BOARD_LABEL}에서 더 보기
               </button>
             </div>
@@ -161,8 +234,10 @@ export function GlobalSearch() {
                 <button
                   key={s.id}
                   type="button"
-                  className="global-search-item"
+                  tabIndex={-1}
+                  className={`global-search-item${indexOf(`source-${s.id}`) === activeIndex ? ' is-active' : ''}`}
                   onClick={() => goSource(s.name)}
+                  {...optionProps(`source-${s.id}`)}
                 >
                   <span className="global-search-item-title">{s.name}</span>
                   <span className="global-search-item-meta">{s.url}</span>
