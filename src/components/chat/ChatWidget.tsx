@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { askChat, type ChatCitation } from '../../api/chatApi'
 import { Icon } from '../common/Icon'
 import { useToast } from '../common/Toast'
+import { usePostLinkState } from '../../hooks/usePostLinkState'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -43,6 +44,7 @@ function ChatCitations({
   citations: ChatCitation[]
   onNavigate: () => void
 }) {
+  const postState = usePostLinkState()
   if (citations.length === 0) return null
 
   return (
@@ -54,7 +56,7 @@ function ChatCitations({
       <ul className="chat-citations-list">
         {citations.map((c) => (
           <li key={c.post_id} className="chat-citation-item">
-            <Link to={`/posts/${c.post_id}`} onClick={onNavigate}>
+            <Link to={`/posts/${c.post_id}`} state={postState} onClick={onNavigate}>
               {c.title}
             </Link>
           </li>

@@ -2734,6 +2734,14 @@ a.report-cal-entry:hover strong {
 .back-link:hover {
   color: var(--pine);
 }
+/* #129: same look when the back link is a history-back button. */
+.back-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
 
 /* ---------- Global search (compact pine) ---------- */
 .topnav-actions .header-search {

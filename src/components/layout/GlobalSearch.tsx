@@ -6,6 +6,7 @@ import { Icon } from '../common/Icon'
 import { DISCOVERY_BOARD_LABEL, TRUSTED_BOARD_LABEL } from '../../constants/boardLabels'
 import { newsListPath } from '../../utils/newsListState'
 import { usePermissions } from '../../hooks/usePermissions'
+import { usePostLinkState } from '../../hooks/usePostLinkState'
 import { SearchHighlight } from '../common/SearchHighlight'
 
 function useDebounced(value: string, ms = 300): string {
@@ -19,6 +20,7 @@ function useDebounced(value: string, ms = 300): string {
 
 export function GlobalSearch() {
   const navigate = useNavigate()
+  const postState = usePostLinkState()
   const { canEditAny } = usePermissions()
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -61,7 +63,7 @@ export function GlobalSearch() {
 
   const goPost = (id: string) => {
     close()
-    navigate(`/posts/${id}`)
+    navigate(`/posts/${id}`, { state: postState })
   }
 
   const goSource = (name: string) => {

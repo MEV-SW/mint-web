@@ -8,6 +8,7 @@ import { StoryPhoto } from '../posts/StoryPhoto'
 import { usePermissions } from '../../hooks/usePermissions'
 import { formatDate } from '../../utils/date'
 import { sliceFrontPageStories } from '../../utils/frontPageStories'
+import { usePostLinkState } from '../../hooks/usePostLinkState'
 
 type OrgReport = NonNullable<DashboardStats['latest_report']>
 
@@ -64,6 +65,7 @@ export function MintFrontPage({
   onOpenKiosk,
   issueChanges,
 }: MintFrontPageProps) {
+  const postState = usePostLinkState()
   const { isAdmin } = usePermissions()
   const orgReport = report === undefined ? stats?.latest_report : report
   const trusted = stories ?? stats?.trusted_preview ?? []
@@ -188,7 +190,7 @@ export function MintFrontPage({
                 </>
               )
               return postId ? (
-                <Link key={`${item.title}-${index}`} to={`/posts/${postId}`} className="np-brief-pick">
+                <Link key={`${item.title}-${index}`} to={`/posts/${postId}`} state={postState} className="np-brief-pick">
                   {inner}
                 </Link>
               ) : (
@@ -213,7 +215,7 @@ export function MintFrontPage({
                   중요도 {levelLabel(heroTrusted.importance)}
                 </span>
               </div>
-              <Link to={`/posts/${heroTrusted.id}`} className="np-top-headline">
+              <Link to={`/posts/${heroTrusted.id}`} state={postState} className="np-top-headline">
                 {heroTrusted.title}
               </Link>
               <div className="np-top-body">
@@ -241,7 +243,7 @@ export function MintFrontPage({
                           {post.source_name ?? '뉴스'}
                         </div>
                         <StoryPhoto postId={post.id} src={post.image_url} className="np-subpair-thumb" />
-                        <Link to={`/posts/${post.id}`} className="np-subpair-title">
+                        <Link to={`/posts/${post.id}`} state={postState} className="np-subpair-title">
                           {post.title}
                         </Link>
                         {post.ai_summary && <p className="np-subpair-dek">{post.ai_summary}</p>}
@@ -263,7 +265,7 @@ export function MintFrontPage({
                   <ul className="np-col-digest-list">
                     {deeper.map((post) => (
                       <li key={post.id}>
-                        <Link to={`/posts/${post.id}`} className="np-col-digest-row">
+                        <Link to={`/posts/${post.id}`} state={postState} className="np-col-digest-row">
                           <span className="np-col-digest-body">
                             <strong>{post.title}</strong>
                             {post.ai_summary && <em>{post.ai_summary}</em>}
@@ -286,7 +288,7 @@ export function MintFrontPage({
                   <ul className="np-col-wire-list">
                     {wireNews.map((post) => (
                       <li key={post.id}>
-                        <Link to={`/posts/${post.id}`} className="np-col-wire-row">
+                        <Link to={`/posts/${post.id}`} state={postState} className="np-col-wire-row">
                           <span className="np-col-wire-dot" aria-hidden />
                           <span className="np-col-wire-title">{post.title}</span>
                           <span className="np-col-wire-meta">
@@ -322,7 +324,7 @@ export function MintFrontPage({
           </div>
           {listNews.length > 0 ? (
             listNews.map((post: DashboardPostPreview) => (
-              <Link key={post.id} to={`/posts/${post.id}`} className="np-list-row">
+              <Link key={post.id} to={`/posts/${post.id}`} state={postState} className="np-list-row">
                 <div className="np-list-row-meta">
                   <span className={`np-list-level ${levelClass(post.importance)}`}>
                     ● {levelLabel(post.importance)}

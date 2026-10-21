@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   approvePost,
   deletePost,
@@ -17,12 +17,14 @@ import { useToast } from '../components/common/Toast'
 import { PostAiSummaryPanel } from '../components/posts/PostAiSummaryPanel'
 import { PostOriginalPane } from '../components/posts/PostOriginalPane'
 import { apiErrorStatus } from '../utils/apiError'
+import { backLabelFor } from '../utils/postBack'
 import { formatDateTime } from '../utils/date'
 import { DISCOVERY_BOARD_LABEL } from '../constants/boardLabels'
 
 export function PostDetailPage() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
+  const navigate = useNavigate()
   const toast = useToast()
   const qc = useQueryClient()
 
@@ -99,14 +101,26 @@ export function PostDetailPage() {
   // mint-server#170: the server decides per post (linked edition editors and admins).
   const canEdit = post.can_edit === true
   const showSplit = Boolean(post.original_url || post.raw_content?.trim())
-  const backTo =
-    (location.state as { from?: string } | null)?.from ?? '/news'
+  // #129: back to where the reader came from — the link's `from`, else browser history, else the news list.
+  const from = (location.state as { from?: string } | null)?.from
+  const hasAppHistory = location.key !== 'default'
+  const backLink = from ? (
+    <Link to={from} className="back-link">
+      <Icon name="chevL" style={{ width: 14, height: 14 }} /> {backLabelFor(from)}
+    </Link>
+  ) : hasAppHistory ? (
+    <button type="button" className="back-link back-link-button" onClick={() => navigate(-1)}>
+      <Icon name="chevL" style={{ width: 14, height: 14 }} /> 이전 화면으로
+    </button>
+  ) : (
+    <Link to="/news" className="back-link">
+      <Icon name="chevL" style={{ width: 14, height: 14 }} /> 뉴스로
+    </Link>
+  )
 
   return (
     <div className="content-inner page-fade np-sheet post-detail-page">
-      <Link to={backTo} className="back-link">
-        <Icon name="chevL" style={{ width: 14, height: 14 }} /> 뉴스로
-      </Link>
+      {backLink}
 
       <article className="pg-article-hero">
         <div className="pg-kicker">{isDiscovery ? DISCOVERY_BOARD_LABEL : '중요 뉴스'}</div>
