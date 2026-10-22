@@ -103,9 +103,14 @@ function useBoardFit() {
   return fit
 }
 
-/** Controls fade to 85% three seconds after the last pointer/touch activity. */
+/**
+ * Controls fade to 85% three seconds after the last pointer/touch/key activity. `keyboard` is true
+ * after a key press and false after pointer input, so only keyboard focus (not the initial
+ * programmatic focus on the pause button) keeps the controls at full opacity.
+ */
 function useIdleDim(rootRef: React.RefObject<HTMLDivElement | null>) {
   const [dim, setDim] = useState(false)
+  const [keyboard, setKeyboard] = useState(false)
 
   useEffect(() => {
     const root = rootRef.current
@@ -116,16 +121,26 @@ function useIdleDim(rootRef: React.RefObject<HTMLDivElement | null>) {
       window.clearTimeout(timer)
       timer = window.setTimeout(() => setDim(true), DIM_AFTER_MS)
     }
-    root.addEventListener('pointermove', wake)
-    root.addEventListener('pointerdown', wake)
+    const onPointer = () => {
+      setKeyboard(false)
+      wake()
+    }
+    const onKey = () => {
+      setKeyboard(true)
+      wake()
+    }
+    root.addEventListener('pointermove', onPointer)
+    root.addEventListener('pointerdown', onPointer)
+    window.addEventListener('keydown', onKey)
     return () => {
       window.clearTimeout(timer)
-      root.removeEventListener('pointermove', wake)
-      root.removeEventListener('pointerdown', wake)
+      root.removeEventListener('pointermove', onPointer)
+      root.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('keydown', onKey)
     }
   }, [rootRef])
 
-  return dim
+  return { dim, keyboard }
 }
 
 export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClose }: Props) {
@@ -140,7 +155,7 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
   const intervalMs = intervalSec * 1000
   const now = useNow()
   const { closed, scale } = useBoardFit()
-  const dim = useIdleDim(rootRef)
+  const { dim, keyboard } = useIdleDim(rootRef)
 
   const count = stories.length
   const looping = count > 1
@@ -149,6 +164,20 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
   const visibleRows = closed + 1
   const top = Math.max(0, Math.min(active - ANCHOR, count - visibleRows))
   const lastVisible = Math.min(count, top + visibleRows)
+
+  // Sketches generated while the kiosk runs, so a row reopens with its photo at once.
+  const [arrivedPhotos, setArrivedPhotos] = useState<Record<string, string>>({})
+  const onPhotoReady = useCallback((id: string, url: string) => {
+    setArrivedPhotos((current) => (current[id] === url ? current : { ...current, [id]: url }))
+  }, [])
+  // The open row's layout (photo or not) is decided when it opens. A photo that arrives while it is
+  // open waits for the next time the row opens, so the text does not re-wrap in place.
+  const openStory = stories[active]
+  const openKey = openStory ? `${openStory.id}:${active}` : ''
+  const [openLayout, setOpenLayout] = useState({ key: '', photo: false })
+  if (openLayout.key !== openKey) {
+    setOpenLayout({ key: openKey, photo: Boolean(openStory?.image_url || (openStory && arrivedPhotos[openStory.id])) })
+  }
 
   // A new deck (edition switch, refetch with different stories) starts again from the top.
   const [shownDeck, setShownDeck] = useState(deckKey)
@@ -166,11 +195,22 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
     [looping, count],
   )
 
+  // Time left on the current row. A pause keeps it (the progress bar freezes in place) and the
+  // timer resumes from there; a new row, interval or deck starts a full interval again.
+  const remainingRef = useRef(intervalMs)
+  useEffect(() => {
+    remainingRef.current = intervalMs
+  }, [active, intervalMs, deckKey])
+
   useEffect(() => {
     if (paused || !looping) return
-    const timer = window.setTimeout(() => go(1), intervalMs)
-    return () => window.clearTimeout(timer)
-  }, [paused, looping, go, active, intervalMs])
+    const startedAt = performance.now()
+    const timer = window.setTimeout(() => go(1), remainingRef.current)
+    return () => {
+      window.clearTimeout(timer)
+      remainingRef.current = Math.max(0, remainingRef.current - (performance.now() - startedAt))
+    }
+  }, [paused, looping, go, active, intervalMs, deckKey])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -244,7 +284,7 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
   return createPortal(
     <div
       ref={rootRef}
-      className={`front-kiosk${dim && !paused ? ' is-dim' : ''}`}
+      className={`front-kiosk${dim && !paused ? ' is-dim' : ''}${keyboard ? ' is-keyboard' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label={`${editionName} 전시`}
@@ -334,7 +374,11 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
                 const date = formatKioskDate(story.published_at, story.collected_at, now)
                 const source = story.source_name ?? ''
                 return (
-                  <li key={story.id} className={`front-kiosk-row${open ? ' is-open' : ''}`} inert={offscreen}>
+                  <li
+                    key={story.id}
+                    className={`front-kiosk-row${open ? ' is-open' : ''}${open && openLayout.photo ? ' has-photo' : ''}`}
+                    inert={offscreen}
+                  >
                     <button
                       type="button"
                       className="front-kiosk-row-hit"
@@ -359,8 +403,14 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
                     </button>
                     {open && (
                       <>
-                        <span className="front-kiosk-photo" aria-hidden>
-                          <StoryPhoto postId={story.id} src={story.image_url} />
+                        {/* Mounted either way so a missing sketch is still generated, but only shown
+                            when the row opened in the photo layout. */}
+                        <span className={`front-kiosk-photo${openLayout.photo ? '' : ' is-held'}`} aria-hidden>
+                          <StoryPhoto
+                            postId={story.id}
+                            src={story.image_url ?? arrivedPhotos[story.id]}
+                            onReady={(url) => onPhotoReady(story.id, url)}
+                          />
                         </span>
                         {looping && paused && (
                           <span className="front-kiosk-paused" role="status">
@@ -371,7 +421,7 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
                         {looping && (
                           <span className="front-kiosk-progress" aria-hidden>
                             <span
-                              key={`${story.id}-${paused ? 'p' : 'r'}-${intervalSec}`}
+                              key={`${deckKey}-${story.id}-${intervalSec}`}
                               className="front-kiosk-progress-fill"
                               style={{
                                 animationDuration: `${intervalMs}ms`,

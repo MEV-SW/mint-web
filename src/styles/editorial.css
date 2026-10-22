@@ -4122,7 +4122,7 @@ a.report-cal-entry:hover strong {
   opacity: 0.85;
 }
 .front-kiosk.is-dim .front-kiosk-controls:hover,
-.front-kiosk.is-dim .front-kiosk-controls:focus-within {
+.front-kiosk.is-dim.is-keyboard .front-kiosk-controls:focus-within {
   opacity: 1;
 }
 .front-kiosk-controls button {
@@ -4319,7 +4319,7 @@ a.report-cal-entry:hover strong {
   max-width: 1616px;
   animation: front-kiosk-fade 0.2s ease both;
 }
-.front-kiosk-row.is-open:has(.np-photo-slot-wrap) .front-kiosk-copy {
+.front-kiosk-row.has-photo .front-kiosk-copy {
   /* 1180 at 1920: text from x240, 36px gap, 400px photo, 64px gutter. */
   max-width: min(1180px, calc(100vw - 340px - 400px * var(--s)));
 }
@@ -4346,7 +4346,7 @@ a.report-cal-entry:hover strong {
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
-.front-kiosk-row.is-open:has(.np-photo-slot-wrap) .front-kiosk-dek {
+.front-kiosk-row.has-photo .front-kiosk-dek {
   font-size: calc(28px * var(--s));
   -webkit-line-clamp: 2;
 }
@@ -4366,7 +4366,9 @@ a.report-cal-entry:hover strong {
   height: calc(280px * var(--s));
   animation: front-kiosk-fade 0.2s ease both;
 }
-/* Only a real photo gets the frame; while a sketch is generating the row stays in its no-photo layout. */
+/* Only a row that opened with a real photo gets the frame. A sketch still generating, or one that
+   arrives while the row is open (.is-held), stays hidden until the row opens again. */
+.front-kiosk-photo.is-held,
 .front-kiosk-photo:not(:has(.np-photo-slot-wrap)) {
   display: none;
 }
@@ -4541,7 +4543,7 @@ a.report-cal-entry:hover strong {
     font-size: 26px;
   }
   .front-kiosk-dek,
-  .front-kiosk-row.is-open:has(.np-photo-slot-wrap) .front-kiosk-dek {
+  .front-kiosk-row.has-photo .front-kiosk-dek {
     font-size: 17px;
   }
   .front-kiosk-row.is-open .front-kiosk-source {
@@ -4554,8 +4556,28 @@ a.report-cal-entry:hover strong {
   .front-kiosk-photo {
     display: none;
   }
+  /* Phones: the open row is as tall as its text (no photo column to keep aligned). */
+  .front-kiosk-row.is-open {
+    height: auto;
+  }
+  .front-kiosk-row.is-open .front-kiosk-row-hit {
+    position: relative;
+    padding-top: 18px;
+    padding-bottom: 56px;
+  }
+  .front-kiosk-row.is-open .front-kiosk-source {
+    bottom: 22px;
+  }
+  .front-kiosk-paused {
+    right: 16px;
+    bottom: 14px;
+  }
+  /* Rows past the visible window show in the freed space; they are inert, so do not draw them. */
+  .front-kiosk-row[inert] {
+    visibility: hidden;
+  }
   .front-kiosk-row.is-open .front-kiosk-copy,
-  .front-kiosk-row.is-open:has(.np-photo-slot-wrap) .front-kiosk-copy {
+  .front-kiosk-row.has-photo .front-kiosk-copy {
     max-width: none;
   }
   .front-kiosk-empty {

@@ -6,14 +6,21 @@ type Props = {
   postId: string
   src?: string | null
   className?: string
+  /** Called with the generated image path when a missing photo arrives. */
+  onReady?: (url: string) => void
 }
 
-export function StoryPhoto({ postId, src, className }: Props) {
+export function StoryPhoto({ postId, src, className, onReady }: Props) {
   const [url, setUrl] = useState(() => mediaUrl(src))
   const [loading, setLoading] = useState(false)
   // One generation attempt per post. `loading` is not a dependency: the effect used to cancel itself
   // when it set loading, so a photo without image_url stayed on "생성 중" whatever the request returned.
   const triedFor = useRef<string | null>(null)
+  // Latest callback without restarting the request effect when the parent re-renders.
+  const onReadyRef = useRef(onReady)
+  useEffect(() => {
+    onReadyRef.current = onReady
+  })
 
   useEffect(() => {
     setUrl(mediaUrl(src))
@@ -27,7 +34,9 @@ export function StoryPhoto({ postId, src, className }: Props) {
     setLoading(true)
     void ensureStoryPhoto(postId)
       .then((next) => {
-        if (!cancelled) setUrl(mediaUrl(next))
+        if (cancelled) return
+        setUrl(mediaUrl(next))
+        if (next) onReadyRef.current?.(next)
       })
       .catch(() => {
         if (!cancelled) setUrl(null)
