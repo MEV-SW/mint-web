@@ -1,16 +1,25 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type TransitionEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import type { DashboardPostPreview } from '../../api/statsApi'
-import { formatDate } from '../../utils/date'
+import { formatKioskDate } from '../../utils/date'
 import { StoryPhoto } from '../posts/StoryPhoto'
 
 const MIN_INTERVAL_SEC = 3
 const MAX_INTERVAL_SEC = 60
 const DEFAULT_INTERVAL_SEC = 8
 const INTERVAL_STORAGE_KEY = 'mint.kioskIntervalSec'
-const VISIBLE = 6
-const SLOT_OFFSETS = [-1, 0, 1, 2, 3, 4, 5, 6] as const
+const DIM_AFTER_MS = 3000
 
-type Shift = 'rest' | 'fwd' | 'back'
+// #143 board geometry at scale 1 (1920×1080): mast + column heads 132, footer 80,
+// one open row 340 and 4–6 collapsed rows of 88 in between.
+const CHROME_TOP = 132
+const CHROME_BOTTOM = 80
+const OPEN_ROW = 340
+const CLOSED_ROW = 88
+const MIN_CLOSED = 4
+const MAX_CLOSED = 6
+// The open row may sit at most on the 4th visible line before the list scrolls up.
+const ANCHOR = 3
 
 function clampIntervalSec(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_INTERVAL_SEC
@@ -46,136 +55,172 @@ function useKioskIntervalSec() {
 type Props = {
   editionName: string
   stories: DashboardPostPreview[]
+  featuredKeywords?: { id: string; name: string }[]
   onClose: () => void
 }
 
-function folio(n: number): string {
-  return String(n).padStart(2, '0')
+function clockLabel(now: number): string {
+  return new Date(now).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
-function wrap(index: number, count: number): number {
-  if (count < 1) return 0
-  return ((index % count) + count) % count
-}
-
-function useClockLabel() {
-  const [label, setLabel] = useState(() =>
-    new Date().toLocaleString('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-  )
+/** Wall clock shared by the footer label and the "보도" column (today/yesterday flips at midnight). */
+function useNow() {
+  const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    const tick = () =>
-      setLabel(
-        new Date().toLocaleString('ko-KR', {
-          timeZone: 'Asia/Seoul',
-          month: 'long',
-          day: 'numeric',
-          weekday: 'long',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      )
-    const id = window.setInterval(tick, 15_000)
+    const id = window.setInterval(() => setNow(Date.now()), 15_000)
     return () => window.clearInterval(id)
   }, [])
 
-  return label
+  return now
 }
 
-export function FrontKiosk({
-  editionName,
-  stories,
-  onClose,
-}: Props) {
+/** Collapsed-row count and scale for the window height (handoff §2). */
+function boardFit(height: number): { closed: number; scale: number } {
+  const list = height - CHROME_TOP - CHROME_BOTTOM
+  const minimum = OPEN_ROW + MIN_CLOSED * CLOSED_ROW
+  if (list < minimum) return { closed: MIN_CLOSED, scale: Math.max(0, list) / minimum }
+  const closed = Math.floor((list - OPEN_ROW) / CLOSED_ROW)
+  return { closed: Math.min(MAX_CLOSED, Math.max(MIN_CLOSED, closed)), scale: 1 }
+}
+
+function useBoardFit() {
+  const [fit, setFit] = useState(() => boardFit(window.innerHeight))
+
+  useEffect(() => {
+    const onResize = () => setFit(boardFit(window.innerHeight))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return fit
+}
+
+/**
+ * Controls fade to 85% three seconds after the last pointer/touch/key activity. `keyboard` is true
+ * after a key press and false after pointer input, so only keyboard focus (not the initial
+ * programmatic focus on the pause button) keeps the controls at full opacity.
+ */
+function useIdleDim(rootRef: React.RefObject<HTMLDivElement | null>) {
+  const [dim, setDim] = useState(false)
+  const [keyboard, setKeyboard] = useState(false)
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    let timer = window.setTimeout(() => setDim(true), DIM_AFTER_MS)
+    const wake = () => {
+      setDim(false)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setDim(true), DIM_AFTER_MS)
+    }
+    const onPointer = () => {
+      setKeyboard(false)
+      wake()
+    }
+    const onKey = () => {
+      setKeyboard(true)
+      wake()
+    }
+    root.addEventListener('pointermove', onPointer)
+    root.addEventListener('pointerdown', onPointer)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.clearTimeout(timer)
+      root.removeEventListener('pointermove', onPointer)
+      root.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [rootRef])
+
+  return { dim, keyboard }
+}
+
+export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClose }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
-  const trackRef = useRef<HTMLDivElement>(null)
-  const snapRef = useRef(false)
-  const shiftRef = useRef<Shift>('rest')
-  const [topIndex, setTopIndex] = useState(0)
-  const [shift, setShift] = useState<Shift>('rest')
-  const [paused, setPaused] = useState(false)
+  const firstControlRef = useRef<HTMLButtonElement>(null)
+  const fullscreenRef = useRef<HTMLButtonElement>(null)
+  const [active, setActive] = useState(0)
+  const [pausedByButton, setPausedByButton] = useState(false)
+  const [holding, setHolding] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [intervalSec, setIntervalSec] = useKioskIntervalSec()
   const intervalMs = intervalSec * 1000
-  const clock = useClockLabel()
+  const now = useNow()
+  const { closed, scale } = useBoardFit()
+  const { dim, keyboard } = useIdleDim(rootRef)
 
   const count = stories.length
   const looping = count > 1
+  const paused = pausedByButton || holding
   const deckKey = stories.map((item) => item.id).join('|')
-  const year = new Date().toLocaleDateString('en', { timeZone: 'Asia/Seoul', year: 'numeric' })
-  const visible = Array.from({ length: VISIBLE }, (_, i) => wrap(topIndex + i, count))
-  shiftRef.current = shift
+  const visibleRows = closed + 1
+  const top = Math.max(0, Math.min(active - ANCHOR, count - visibleRows))
+  const lastVisible = Math.min(count, top + visibleRows)
+
+  // Sketches generated while the kiosk runs, so a row reopens with its photo at once.
+  const [arrivedPhotos, setArrivedPhotos] = useState<Record<string, string>>({})
+  const onPhotoReady = useCallback((id: string, url: string) => {
+    setArrivedPhotos((current) => (current[id] === url ? current : { ...current, [id]: url }))
+  }, [])
+  // The open row's layout (photo or not) is decided when it opens. A photo that arrives while it is
+  // open waits for the next time the row opens, so the text does not re-wrap in place.
+  const openStory = stories[active]
+  const openKey = openStory ? `${openStory.id}:${active}` : ''
+  const [openLayout, setOpenLayout] = useState({ key: '', photo: false })
+  if (openLayout.key !== openKey) {
+    setOpenLayout({ key: openKey, photo: Boolean(openStory?.image_url || (openStory && arrivedPhotos[openStory.id])) })
+  }
+
+  // A new deck (edition switch, refetch with different stories) starts again from the top.
+  const [shownDeck, setShownDeck] = useState(deckKey)
+  if (shownDeck !== deckKey) {
+    setShownDeck(deckKey)
+    setActive(0)
+    setPausedByButton(false)
+  }
 
   const go = useCallback(
     (delta: number) => {
-      if (!looping || delta === 0 || shiftRef.current !== 'rest') return
-      const next: Shift = delta > 0 ? 'fwd' : 'back'
-      shiftRef.current = next
-      setShift(next)
+      if (!looping) return
+      setActive((current) => (((current + delta) % count) + count) % count)
     },
-    [looping],
+    [looping, count],
   )
 
-  const settle = useCallback(
-    (dir: 1 | -1) => {
-      if (shiftRef.current === 'rest') return
-      shiftRef.current = 'rest'
-      snapRef.current = true
-      setTopIndex((current) => wrap(current + dir, count))
-      setShift('rest')
-    },
-    [count],
-  )
+  // Time left on the current row. A pause keeps it (the progress bar freezes in place) and the
+  // timer resumes from there; a new row, interval or deck starts a full interval again.
+  const remainingRef = useRef(intervalMs)
+  useEffect(() => {
+    remainingRef.current = intervalMs
+  }, [active, intervalMs, deckKey])
 
   useEffect(() => {
-    setTopIndex(0)
-    setShift('rest')
-    shiftRef.current = 'rest'
-    snapRef.current = false
-    setPaused(false)
-  }, [deckKey])
-
-  useLayoutEffect(() => {
-    if (!snapRef.current) return
-    const track = trackRef.current
-    track?.classList.add('is-snap')
-    void track?.offsetWidth
-    snapRef.current = false
-    requestAnimationFrame(() => track?.classList.remove('is-snap'))
-  }, [topIndex, shift])
-
-  useEffect(() => {
-    if (shift === 'rest') return
-    const track = trackRef.current
-    const ms = track ? Number.parseFloat(getComputedStyle(track).transitionDuration) * 1000 : 0
-    const dir = shift === 'fwd' ? (1 as const) : (-1 as const)
-    if (!Number.isFinite(ms) || ms <= 0) {
-      settle(dir)
-      return
+    if (paused || !looping) return
+    const startedAt = performance.now()
+    const timer = window.setTimeout(() => go(1), remainingRef.current)
+    return () => {
+      window.clearTimeout(timer)
+      remainingRef.current = Math.max(0, remainingRef.current - (performance.now() - startedAt))
     }
-    const fallback = window.setTimeout(() => settle(dir), ms + 80)
-    return () => window.clearTimeout(fallback)
-  }, [shift, settle])
-
-  useEffect(() => {
-    if (paused || !looping || shift !== 'rest') return
-    const timer = window.setInterval(() => go(1), intervalMs)
-    return () => window.clearInterval(timer)
-  }, [paused, looping, go, shift, topIndex, intervalMs])
+  }, [paused, looping, go, active, intervalMs, deckKey])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
         onClose()
+        return
       }
+      // The interval slider keeps its own arrow keys.
+      if ((event.target as HTMLElement | null)?.closest?.('input')) return
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         event.preventDefault()
         go(1)
@@ -195,11 +240,25 @@ export function FrontKiosk({
     return () => document.removeEventListener('fullscreenchange', onFs)
   }, [])
 
-  useEffect(() => {
+  // Focus starts on the first control; on close it returns to the 1면 "전시" button.
+  useLayoutEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    firstControlRef.current?.focus()
     return () => {
       if (document.fullscreenElement) void document.exitFullscreen()
+      window.requestAnimationFrame(() => {
+        const target = opener?.isConnected ? opener : document.querySelector<HTMLElement>('.np-kiosk-toggle')
+        target?.focus()
+      })
     }
   }, [])
+
+  // Opened before the deck loaded: focus sat on 전체화면; move it to the pause button once it appears.
+  useEffect(() => {
+    if (!looping) return
+    const current = document.activeElement
+    if (current === fullscreenRef.current || current === document.body) firstControlRef.current?.focus()
+  }, [looping])
 
   async function toggleFullscreen() {
     try {
@@ -213,58 +272,38 @@ export function FrontKiosk({
     }
   }
 
-  function jumpTo(index: number) {
-    if (!looping || shiftRef.current !== 'rest' || index === topIndex) return
-    snapRef.current = true
-    setTopIndex(index)
-    setShift('rest')
-  }
+  const position = count <= 1 ? null : count <= visibleRows ? `${count}건` : `${top + 1}–${lastVisible} / ${count}`
+  const boardStyle = {
+    '--kiosk-scale': scale,
+    '--kiosk-shift': top,
+    '--kiosk-rows': closed,
+  } as CSSProperties
 
-  function onTrackTransitionEnd(event: TransitionEvent<HTMLDivElement>) {
-    if (event.target !== trackRef.current) return
-    if (event.propertyName !== 'transform') return
-    if (shift === 'rest') return
-    settle(shift === 'fwd' ? 1 : -1)
-  }
-
-  const slots = looping
-    ? SLOT_OFFSETS.map((offset) => {
-        const index = wrap(topIndex + offset, count)
-        return { offset, index, story: stories[index] }
-      })
-    : stories[0]
-      ? [{ offset: 0, index: 0, story: stories[0] }]
-      : []
-
-  return (
+  // Portalled to <body>: the 1면 page wrapper keeps a transform from its entry animation,
+  // which would trap position: fixed inside the content column instead of the viewport.
+  return createPortal(
     <div
       ref={rootRef}
-      className="front-kiosk"
+      className={`front-kiosk${dim && !paused ? ' is-dim' : ''}${keyboard ? ' is-keyboard' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label={`${editionName} 전시`}
     >
       <header className="front-kiosk-mast">
-        <div className="front-kiosk-mast-brand">
-          <span className="front-kiosk-wordmark">MOTREXEV</span>
-          <span className="front-kiosk-wordmark-sub">MOTREXEV · {year}</span>
-        </div>
-        <div className="front-kiosk-mast-center">
-          <span className="front-kiosk-edition">{editionName || '1면'}</span>
-          {looping && shift === 'rest' && (
-            <span
-              key={`${stories[topIndex]?.id ?? topIndex}-${paused ? 'p' : 'r'}-${intervalSec}`}
-              className="front-kiosk-progress-fill"
-              style={{ animationDuration: `${intervalMs}ms`, animationPlayState: paused ? 'paused' : 'running' }}
-            />
-          )}
-        </div>
-        <div className="front-kiosk-mast-end">
-          <time>{clock}</time>
+        <span className="front-kiosk-wordmark">MOTREXEV</span>
+        <span className="front-kiosk-edition">
+          {editionName || '1면'}
+          <span aria-hidden> · </span>1면 전시
+        </span>
+        {position && (
+          <span className="front-kiosk-position" aria-live="off">
+            {position}
+          </span>
+        )}
+        <div className="front-kiosk-controls">
           {looping && (
-            <div className="front-kiosk-interval-group">
+            <>
               <label className="front-kiosk-interval">
-                <span className="front-kiosk-interval-label">전환 간격</span>
                 <input
                   type="range"
                   min={MIN_INTERVAL_SEC}
@@ -277,104 +316,149 @@ export function FrontKiosk({
                 <span className="front-kiosk-interval-value">{intervalSec}초</span>
               </label>
               <button
+                ref={firstControlRef}
                 type="button"
-                className="front-kiosk-exit-quick"
-                onClick={onClose}
-                aria-label="전시 모드 종료"
+                aria-pressed={pausedByButton}
+                onClick={() => setPausedByButton((value) => !value)}
               >
-                종료
+                {pausedByButton ? (
+                  '▶ 다시 재생'
+                ) : (
+                  <>
+                    <span className="front-kiosk-pause-icon" aria-hidden />
+                    일시정지
+                  </>
+                )}
               </button>
-            </div>
+            </>
           )}
-          <span className="front-kiosk-mast-actions">
-            <button type="button" onClick={() => void toggleFullscreen()}>
-              {isFullscreen ? '창 모드' : '전체화면'}
-            </button>
-            <button type="button" onClick={onClose}>
-              1면
-            </button>
-          </span>
+          <button
+            ref={(node) => {
+              fullscreenRef.current = node
+              if (!looping) firstControlRef.current = node
+            }}
+            type="button"
+            onClick={() => void toggleFullscreen()}
+          >
+            {isFullscreen ? '창 모드' : '전체화면'}
+          </button>
+          <button type="button" onClick={onClose} aria-label="전시 모드 종료 (Esc)">
+            종료 Esc
+          </button>
         </div>
       </header>
 
-      {looping && (
+      {count > 0 ? (
         <>
-          <button type="button" className="front-kiosk-skip is-prev" aria-label="이전 기사" onClick={() => go(-1)}>
-            이전
-          </button>
-          <button type="button" className="front-kiosk-skip is-next" aria-label="다음 기사" onClick={() => go(1)}>
-            다음
-          </button>
-        </>
-      )}
-
-      <div
-        className={`front-kiosk-stage${looping ? ' is-ticker' : ' is-single'}`}
-        onPointerDown={(event) => {
-          if ((event.target as HTMLElement).closest('button, a')) return
-          setPaused(true)
-        }}
-        onPointerUp={() => setPaused(false)}
-        onPointerCancel={() => setPaused(false)}
-        onPointerLeave={() => setPaused(false)}
-      >
-        {slots.length > 0 ? (
+          <div className="front-kiosk-heads" aria-hidden>
+            <span>보도</span>
+            <span>기사</span>
+            <span>출처</span>
+          </div>
           <div
-            ref={trackRef}
-            className={`front-kiosk-track is-${shift}`}
-            onTransitionEnd={onTrackTransitionEnd}
+            className="front-kiosk-board"
+            style={boardStyle}
+            onPointerDown={() => setHolding(true)}
+            onPointerUp={() => setHolding(false)}
+            onPointerCancel={() => setHolding(false)}
+            onPointerLeave={() => setHolding(false)}
+            // Focus moving into an off-screen row must not scroll the clipped viewport.
+            onScroll={(event) => {
+              event.currentTarget.scrollTop = 0
+            }}
           >
-            {slots.map((slot) => {
-              return (
-                <article key={`${slot.story.id}-${slot.offset}`} className="front-kiosk-card has-plate">
-                  <div className="front-kiosk-copy">
-                    <p className="front-kiosk-kicker">
-                      <em>{folio(slot.index + 1)}</em>
-                      <span aria-hidden />
-                      {editionName || '1면'}
-                    </p>
-                    <h1 className="front-kiosk-title">{slot.story.title}</h1>
-                    <p className="front-kiosk-dek">
-                      {slot.story.ai_summary || '요약이 준비되면 이곳에 표시됩니다.'}
-                    </p>
-                    <p className="front-kiosk-byline">
-                      <b>{slot.story.source_name ?? '출처'}</b>
-                      <span>{formatDate(slot.story.collected_at)}</span>
-                    </p>
-                  </div>
-                  <aside className="front-kiosk-plate">
-                    <StoryPhoto postId={slot.story.id} src={slot.story.image_url} />
-                  </aside>
-                </article>
-              )
-            })}
+            <ul className="front-kiosk-list" aria-label={`${editionName || '1면'} 기사`}>
+              {stories.map((story, index) => {
+                const open = index === active
+                const offscreen = index < top || index >= lastVisible
+                const date = formatKioskDate(story.published_at, story.collected_at, now)
+                const source = story.source_name ?? ''
+                return (
+                  <li
+                    key={story.id}
+                    className={`front-kiosk-row${open ? ' is-open' : ''}${open && openLayout.photo ? ' has-photo' : ''}`}
+                    inert={offscreen}
+                  >
+                    <button
+                      type="button"
+                      className="front-kiosk-row-hit"
+                      aria-expanded={open}
+                      aria-current={open ? 'true' : undefined}
+                      aria-label={[date.label, story.title, source].filter(Boolean).join(', ')}
+                      onClick={() => setActive(index)}
+                    >
+                      <span className={`front-kiosk-date${date.text.length > 5 ? ' is-long' : ''}`}>
+                        <span className="front-kiosk-date-value">{date.text}</span>
+                        {date.collected && <span className="front-kiosk-date-note">수집</span>}
+                      </span>
+                      <span className="front-kiosk-copy">
+                        <span className="front-kiosk-title">{story.title}</span>
+                        {open && (
+                          <span className="front-kiosk-dek">
+                            {story.ai_summary || '요약이 준비되면 이곳에 표시됩니다.'}
+                          </span>
+                        )}
+                      </span>
+                      <span className="front-kiosk-source">{source}</span>
+                    </button>
+                    {open && (
+                      <>
+                        {/* Mounted either way so a missing sketch is still generated, but only shown
+                            when the row opened in the photo layout. */}
+                        <span className={`front-kiosk-photo${openLayout.photo ? '' : ' is-held'}`} aria-hidden>
+                          <StoryPhoto
+                            postId={story.id}
+                            src={story.image_url ?? arrivedPhotos[story.id]}
+                            onReady={(url) => onPhotoReady(story.id, url)}
+                          />
+                        </span>
+                        {looping && paused && (
+                          <span className="front-kiosk-paused" role="status">
+                            <span className="front-kiosk-pause-icon" aria-hidden />
+                            일시정지됨
+                          </span>
+                        )}
+                        {looping && (
+                          <span className="front-kiosk-progress" aria-hidden>
+                            <span
+                              key={`${deckKey}-${story.id}-${intervalSec}`}
+                              className="front-kiosk-progress-fill"
+                              style={{
+                                animationDuration: `${intervalMs}ms`,
+                                animationPlayState: paused ? 'paused' : 'running',
+                              }}
+                            />
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
           </div>
-        ) : (
-          <div className="front-kiosk-empty">
-            <p>이 1면에 전시할 기사가 없습니다.</p>
-            <button type="button" onClick={onClose}>
-              1면으로
-            </button>
-          </div>
-        )}
-      </div>
-
-      {looping && (
-        <nav className="front-kiosk-index" aria-label="슬라이드">
-          {stories.map((item, i) => (
-            <button
-              key={item.id}
-              type="button"
-              className={visible.includes(i) ? 'is-on' : undefined}
-              aria-label={`${i + 1}번째 기사`}
-              aria-current={i === topIndex ? 'true' : undefined}
-              onClick={() => jumpTo(i)}
-            >
-              {folio(i + 1)}
-            </button>
-          ))}
-        </nav>
+        </>
+      ) : (
+        <div className="front-kiosk-empty">
+          <p className="front-kiosk-empty-title">이 1면에 전시할 기사가 없습니다.</p>
+          <p className="front-kiosk-empty-note">
+            기사가 들어오면 자동으로 채워집니다.<span aria-hidden> · </span>종료 Esc
+          </p>
+        </div>
       )}
-    </div>
+
+      <footer className="front-kiosk-foot">
+        <span className="front-kiosk-keywords">
+          {featuredKeywords.length > 0 && (
+            <>
+              <span className="front-kiosk-keywords-label">분야 키워드</span>
+              {featuredKeywords.map((item) => item.name).join(' · ')}
+            </>
+          )}
+        </span>
+        <time>{clockLabel(now)}</time>
+      </footer>
+    </div>,
+    document.body,
   )
 }

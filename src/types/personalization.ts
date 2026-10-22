@@ -46,6 +46,7 @@ export interface PersonalizedNews {
   is_community?: boolean
   category: string | null
   collected_at: string
+  published_at?: string | null
   original_url: string | null
   importance: Importance
   summary: string | null
