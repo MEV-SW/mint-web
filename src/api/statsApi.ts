@@ -10,6 +10,8 @@ export interface DashboardPostPreview {
   status: PostStatus
   importance: Importance
   collected_at: string
+  /** #143: report date; null when the source gave none. */
+  published_at?: string | null
   original_url: string | null
   ai_summary: string | null
   image_url?: string | null

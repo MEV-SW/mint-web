@@ -32,6 +32,7 @@ function toPreview(item: PersonalizedNews): DashboardPostPreview {
     status: 'published',
     importance: item.importance,
     collected_at: item.collected_at,
+    published_at: item.published_at ?? null,
     original_url: item.original_url,
     ai_summary: item.summary,
     image_url: item.image_url ?? null,
@@ -228,10 +229,15 @@ export function DashboardPage() {
     (editorialQueries[currentEditionIndex]?.data?.items ?? []).map(toPreview),
   ).deck
 
+  const kioskKeywords = keywords
+    .filter((item) => item.edition_id === currentEdition?.id && item.is_featured)
+    .map((item) => ({ id: item.id, name: item.name }))
+
   const kioskOverlay = kioskOn ? (
     <FrontKiosk
       editionName={currentEdition?.name ?? ''}
       stories={kioskDeck}
+      featuredKeywords={kioskKeywords}
       onClose={() => setKiosk(false)}
     />
   ) : null
