@@ -4174,8 +4174,8 @@ a.report-cal-entry:hover strong {
 
 .front-kiosk-board {
   --s: var(--kiosk-scale, 1);
-  --closed-h: calc(88px * var(--s));
-  --open-h: calc(340px * var(--s));
+  --closed-h: calc(68px * var(--s));
+  --open-h: calc(240px * var(--s));
   height: calc(var(--open-h) + var(--closed-h) * var(--kiosk-rows, 6));
   overflow: hidden;
   flex: none;
@@ -4243,7 +4243,7 @@ a.report-cal-entry:hover strong {
 }
 .front-kiosk-row.is-open .front-kiosk-row-hit {
   align-items: start;
-  padding-top: calc(30px * var(--s));
+  padding-top: calc(22px * var(--s));
   cursor: default;
 }
 .front-kiosk-row.is-open .front-kiosk-row-hit:focus-visible::after {
@@ -4258,7 +4258,7 @@ a.report-cal-entry:hover strong {
 }
 .front-kiosk-date-value {
   font-family: var(--display);
-  font-size: calc(38px * var(--s));
+  font-size: calc(28px * var(--s));
   font-weight: 400;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
@@ -4273,19 +4273,16 @@ a.report-cal-entry:hover strong {
   color: var(--ink2);
 }
 .front-kiosk-row.is-open .front-kiosk-date-value {
-  font-size: calc(56px * var(--s));
+  font-size: calc(40px * var(--s));
   color: var(--amber);
 }
 .front-kiosk-row.is-open .front-kiosk-date-note {
   margin-top: 6px;
-  font-size: calc(14px * var(--s));
+  font-size: calc(12px * var(--s));
   color: rgba(244, 241, 232, 0.8);
 }
-/* Other-year dates (YYYY.MM.DD) would overrun the 176px column at full size. */
-.front-kiosk-date.is-long .front-kiosk-date-value {
-  font-size: calc(28px * var(--s));
-  line-height: 1.5;
-}
+/* Other-year dates (YYYY.MM.DD) would overrun the 176px column at the open row's 40px;
+   collapsed rows are already 28px. */
 .front-kiosk-row.is-open .front-kiosk-date.is-long .front-kiosk-date-value {
   font-size: calc(32px * var(--s));
 }
@@ -4297,7 +4294,7 @@ a.report-cal-entry:hover strong {
 }
 .front-kiosk-title {
   font-family: var(--serif);
-  font-size: calc(44px * var(--s));
+  font-size: calc(32px * var(--s));
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.02em;
@@ -4308,7 +4305,7 @@ a.report-cal-entry:hover strong {
 }
 .front-kiosk-source {
   margin-left: 40px;
-  font-size: calc(18px * var(--s));
+  font-size: calc(14px * var(--s));
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--ink2);
@@ -4320,11 +4317,11 @@ a.report-cal-entry:hover strong {
   animation: front-kiosk-fade 0.2s ease both;
 }
 .front-kiosk-row.has-photo .front-kiosk-copy {
-  /* 1180 at 1920: text from x240, 36px gap, 400px photo, 64px gutter. */
-  max-width: min(1180px, calc(100vw - 340px - 400px * var(--s)));
+  /* 1296 at 1920: text from x240, 40px gap, 280px photo, 64px gutter. */
+  max-width: min(1296px, calc(100vw - 344px - 280px * var(--s)));
 }
 .front-kiosk-row.is-open .front-kiosk-title {
-  font-size: calc(56px * var(--s));
+  font-size: calc(40px * var(--s));
   font-weight: 900;
   line-height: 1.18;
   color: var(--paper);
@@ -4335,9 +4332,9 @@ a.report-cal-entry:hover strong {
   padding-bottom: 0.06em;
 }
 .front-kiosk-dek {
-  margin-top: calc(18px * var(--s));
+  margin-top: calc(12px * var(--s));
   font-family: var(--serif);
-  font-size: calc(32px * var(--s));
+  font-size: calc(22px * var(--s));
   font-weight: 400;
   line-height: 1.48;
   color: rgba(244, 241, 232, 0.8);
@@ -4347,23 +4344,23 @@ a.report-cal-entry:hover strong {
   overflow: hidden;
 }
 .front-kiosk-row.has-photo .front-kiosk-dek {
-  font-size: calc(28px * var(--s));
+  font-size: calc(20px * var(--s));
   -webkit-line-clamp: 2;
 }
 .front-kiosk-row.is-open .front-kiosk-source {
   position: absolute;
   left: 240px;
-  bottom: calc(30px * var(--s));
+  bottom: calc(22px * var(--s));
   margin: 0;
   color: rgba(244, 241, 232, 0.6);
   text-align: left;
 }
 .front-kiosk-photo {
   position: absolute;
-  top: calc(30px * var(--s));
+  top: calc(22px * var(--s));
   right: 64px;
-  width: calc(400px * var(--s));
-  height: calc(280px * var(--s));
+  width: calc(280px * var(--s));
+  height: calc(196px * var(--s));
   animation: front-kiosk-fade 0.2s ease both;
 }
 /* Only a row that opened with a real photo gets the frame. A sketch still generating, or one that
@@ -4398,7 +4395,7 @@ a.report-cal-entry:hover strong {
 .front-kiosk-paused {
   position: absolute;
   right: 64px;
-  bottom: calc(20px * var(--s));
+  bottom: calc(14px * var(--s));
   display: inline-flex;
   align-items: center;
   justify-content: center;

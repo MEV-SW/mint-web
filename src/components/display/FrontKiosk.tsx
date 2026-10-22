@@ -10,14 +10,14 @@ const DEFAULT_INTERVAL_SEC = 8
 const INTERVAL_STORAGE_KEY = 'mint.kioskIntervalSec'
 const DIM_AFTER_MS = 3000
 
-// #143 board geometry at scale 1 (1920×1080): mast + column heads 132, footer 80,
-// one open row 340 and 4–6 collapsed rows of 88 in between.
+// #143 board geometry at scale 1 (1920×1080, 70% type): mast + column heads 132, footer 80,
+// one open row 240 and 4–9 collapsed rows of 68 in between (the whole 10-story deck at 1080).
 const CHROME_TOP = 132
 const CHROME_BOTTOM = 80
-const OPEN_ROW = 340
-const CLOSED_ROW = 88
+const OPEN_ROW = 240
+const CLOSED_ROW = 68
 const MIN_CLOSED = 4
-const MAX_CLOSED = 6
+const MAX_CLOSED = 9
 // The open row may sit at most on the 4th visible line before the list scrolls up.
 const ANCHOR = 3
 
@@ -161,7 +161,9 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
   const looping = count > 1
   const paused = pausedByButton || holding
   const deckKey = stories.map((item) => item.id).join('|')
-  const visibleRows = closed + 1
+  // Never more collapsed rows than there are other stories, so a short deck gets a shorter board.
+  const boardRows = Math.min(closed, Math.max(0, count - 1))
+  const visibleRows = boardRows + 1
   const top = Math.max(0, Math.min(active - ANCHOR, count - visibleRows))
   const lastVisible = Math.min(count, top + visibleRows)
 
@@ -276,7 +278,7 @@ export function FrontKiosk({ editionName, stories, featuredKeywords = [], onClos
   const boardStyle = {
     '--kiosk-scale': scale,
     '--kiosk-shift': top,
-    '--kiosk-rows': closed,
+    '--kiosk-rows': boardRows,
   } as CSSProperties
 
   // Portalled to <body>: the 1면 page wrapper keeps a transform from its entry animation,
