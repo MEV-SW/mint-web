@@ -4468,9 +4468,10 @@ a.report-cal-entry:hover strong {
   margin: 0;
 }
 .front-kiosk-empty-title {
-  font-family: var(--display);
+  /* A Korean sentence with digits: only digit-only elements use Caslon. */
+  font-family: var(--font);
   font-size: 56px;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: -0.02em;
   color: var(--ink);
 }
