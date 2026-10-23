@@ -371,7 +371,7 @@ export function NewsPage() {
         )}
       </div>
 
-      <div className="personal-news-list">
+      <div className="personal-news-list news-page-list">
         <header>
           <h2>뉴스 목록</h2>
           <span>{news.data?.total ?? 0}건</span>
