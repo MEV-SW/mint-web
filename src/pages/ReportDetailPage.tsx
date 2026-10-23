@@ -184,7 +184,7 @@ export function ReportDetailPage() {
           {report.items.map((item) => (
             <div key={item.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
               {item.post ? (
-                <Link to={`/posts/${item.post_id}`} state={postState} className="link" style={{ fontFamily: 'var(--serif)', fontWeight: 650 }}>
+                <Link to={`/posts/${item.post_id}`} state={postState} className="link" style={{ fontFamily: 'var(--serif)', fontWeight: 700 }}>
                   {item.post.title}
                 </Link>
               ) : (

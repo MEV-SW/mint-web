@@ -182,8 +182,8 @@ body {
   font-family: var(--serif);
   font-weight: 600;
   font-size: 46px;
-  line-height: 1.16;
-  letter-spacing: -0.01em;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
   margin: 0 0 22px;
 }
 .login-hero p {
@@ -253,7 +253,8 @@ body {
   font-size: 34px;
   font-weight: 600;
   margin: 10px 0 6px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 .login-card .sub {
   color: var(--ink2);
@@ -414,7 +415,7 @@ body {
   font-family: var(--serif);
   font-weight: 700;
   font-size: 32px;
-  line-height: 1.2;
+  line-height: 1.25;
   letter-spacing: -0.02em;
   margin: 18px 0 0;
   color: var(--ink);
@@ -1063,17 +1064,18 @@ a.login-sso-cta:hover {
 .np-lead-headline {
   font-family: var(--serif) !important;
   font-size: 40px !important;
-  line-height: 1.12 !important;
+  line-height: 1.25 !important;
   font-weight: 700 !important;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
   margin: 0 0 18px !important;
 }
 .np-lead-dek {
   font-family: var(--serif);
   font-size: 17px;
-  line-height: 1.85;
+  line-height: 1.6;
   color: var(--ink);
   margin: 0 0 26px;
+  letter-spacing: 0;
 }
 .np-briefing-picks {
   border-top: 2px solid var(--ink);
@@ -1110,6 +1112,7 @@ a.login-sso-cta:hover {
   font-weight: 600;
   color: var(--pine);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .np-pick-body strong {
   display: block;
@@ -1162,6 +1165,7 @@ a.login-sso-cta:hover {
   font-variant-numeric: tabular-nums;
   margin: 0;
   color: var(--ink);
+  letter-spacing: -0.02em;
 }
 .np-edition-cta {
   display: inline-flex;
@@ -1245,7 +1249,7 @@ a.login-sso-cta:hover {
   font-size: 32px !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.25;
   margin: 8px 0 6px !important;
 }
 .pg-lead {
@@ -1910,9 +1914,10 @@ button.btn.btn-danger {
 .np-daily-fact .np-daily-text {
   font-family: var(--serif);
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--ink);
   margin: 0;
+  letter-spacing: 0;
 }
 .np-daily-term-word {
   font-family: var(--display) !important;
@@ -1952,7 +1957,7 @@ button.btn.btn-danger {
 .np-daily-weather-meta strong {
   font-family: var(--serif);
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 700;
   color: var(--ink);
 }
 .np-daily-weather-meta span {
@@ -1979,8 +1984,9 @@ button.btn.btn-danger {
   margin: 0;
   font-family: var(--serif);
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 700;
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 .np-daily-weather-loading {
   margin: 0;
@@ -2010,6 +2016,8 @@ button.btn.btn-danger {
   font-size: 28px;
   font-weight: 700;
   margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 .np-section-voices .np-section-dek {
   color: var(--ink2);
@@ -2041,8 +2049,9 @@ button.btn.btn-danger {
 .np-voice-excerpt {
   font-family: var(--serif);
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.6;
   margin: 10px 0 0;
+  letter-spacing: 0;
 }
 .np-voice-tag {
   font-size: 10px;
@@ -2357,6 +2366,7 @@ button.btn.btn-danger {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 .report-cal-nav-btn {
   display: inline-flex;
@@ -2474,8 +2484,9 @@ button.btn.btn-danger {
 .report-cal-daynum {
   font-family: var(--serif);
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .report-cal-markers {
   display: flex;
@@ -2533,7 +2544,7 @@ a.report-cal-entry:hover strong {
 .report-cal-entry strong {
   font-family: var(--serif);
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.35;
   color: var(--ink);
 }
@@ -2608,9 +2619,9 @@ a.report-cal-entry:hover strong {
 .pg-article-title {
   font-family: var(--serif) !important;
   font-size: 38px !important;
-  line-height: 1.22 !important;
+  line-height: 1.25 !important;
   font-weight: 700 !important;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   margin: 0 0 12px !important;
 }
 .pg-article-meta {
@@ -2657,8 +2668,9 @@ a.report-cal-entry:hover strong {
   padding: 28px 32px 40px;
   font-family: var(--serif);
   font-size: 17px;
-  line-height: 1.85;
+  line-height: 1.6;
   color: var(--ink);
+  letter-spacing: 0;
 }
 .post-original-pane .post-split-raw-stored p {
   max-width: 42em;
@@ -3228,10 +3240,11 @@ a.report-cal-entry:hover strong {
 .np-brief-band-copy {
   font-family: var(--serif);
   font-size: 15.5px;
-  line-height: 1.75;
+  line-height: 1.6;
   margin: 0;
   text-wrap: pretty;
   color: var(--ink);
+  letter-spacing: 0;
 }
 .np-brief-band-picks {
   padding: 14px 26px 12px 22px;
@@ -3269,6 +3282,7 @@ a.report-cal-entry:hover strong {
   font-weight: 700;
   color: var(--pine);
   flex: none;
+  font-variant-numeric: tabular-nums;
 }
 .np-brief-pick-title {
   font-size: 13px;
@@ -3361,9 +3375,9 @@ a.report-cal-entry:hover strong {
   display: block;
   font-family: var(--serif);
   font-size: clamp(36px, 3.2vw, 44px);
-  line-height: 1.18;
+  line-height: 1.25;
   font-weight: 700;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.03em;
   margin: 0 0 20px;
   text-wrap: pretty;
   color: var(--ink);
@@ -3385,9 +3399,10 @@ a.report-cal-entry:hover strong {
 .np-top-dek {
   font-family: var(--serif);
   font-size: 16.5px;
-  line-height: 1.9;
+  line-height: 1.6;
   margin: 0;
   color: var(--ink);
+  letter-spacing: 0;
 }
 .np-top-meta {
   font-size: 12.5px;
@@ -4322,8 +4337,9 @@ a.report-cal-entry:hover strong {
 }
 .front-kiosk-row.is-open .front-kiosk-title {
   font-size: calc(40px * var(--s));
-  font-weight: 900;
-  line-height: 1.18;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
   color: var(--paper);
   white-space: normal;
   display: -webkit-box;
@@ -4336,12 +4352,13 @@ a.report-cal-entry:hover strong {
   font-family: var(--serif);
   font-size: calc(22px * var(--s));
   font-weight: 400;
-  line-height: 1.48;
+  line-height: 1.6;
   color: rgba(244, 241, 232, 0.8);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
+  letter-spacing: 0;
 }
 .front-kiosk-row.has-photo .front-kiosk-dek {
   font-size: calc(20px * var(--s));
@@ -4777,9 +4794,10 @@ a.report-cal-entry:hover strong {
 .admin-kpi-value {
   font-family: var(--serif);
   font-size: 30px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 .admin-kpi.tone-red .admin-kpi-value { color: var(--red); }
 .admin-kpi.tone-amber .admin-kpi-value { color: var(--amber); }
@@ -5326,7 +5344,7 @@ a.report-cal-entry:hover strong {
   margin: 0;
   font-family: var(--serif);
   font-size: 22px;
-  font-weight: 750;
+  font-weight: 700;
   color: var(--ink);
 }
 .admin-pipeline {
