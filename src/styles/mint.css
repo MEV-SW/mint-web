@@ -71,7 +71,8 @@
   --font: "Pretendard", "Pretendard Variable", system-ui, -apple-system, sans-serif;
   /* mint-web#149: titles use Pretendard too (name kept for now; usages are cleaned up later). */
   --serif: var(--font);
-  --display: "Libre Caslon Display", "Pretendard", "Pretendard Variable", Georgia, serif;
+  /* Korean glyphs (e.g. "어제") fall back to Pretendard, never to a system serif. */
+  --display: "Libre Caslon Display", var(--font);
   --mono: ui-monospace, Menlo, Consolas, monospace;
 
   --sidebar-w: 248px;

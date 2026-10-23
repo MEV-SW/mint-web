@@ -180,7 +180,7 @@ body {
 }
 .login-hero h1 {
   font-family: var(--serif);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 46px;
   line-height: 1.25;
   letter-spacing: -0.03em;
@@ -251,7 +251,7 @@ body {
 .login-card h2 {
   font-family: var(--serif);
   font-size: 34px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 10px 0 6px;
   letter-spacing: -0.02em;
   line-height: 1.25;
@@ -2212,6 +2212,11 @@ button.btn.btn-danger {
   font-size: 20px;
   font-weight: 700;
 }
+/* NewsPage only: its header also holds the importance legend at the far right. */
+.news-page-list > header > h2 + span {
+  margin-left: 10px;
+  margin-right: auto;
+}
 .personal-news-list > header span {
   font-size: 13px;
   color: var(--ink3);
@@ -2334,7 +2339,7 @@ button.btn.btn-danger {
 .report-list-row span {
   font-family: var(--serif);
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
 }
 .report-list-row time {
   color: var(--ink3);
