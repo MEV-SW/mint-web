@@ -23,7 +23,7 @@ import { apiErrorDetail } from '../utils/apiError'
 import { isHiddenNewsCategory } from '../utils/newsTaxonomy'
 import { listSources, updateSource } from '../api/sourceApi'
 import type { EditionDisplayMode } from '../types/edition'
-import { sourceTypeLabel } from '../types/source'
+import { sourceEditionIds, sourceTypeLabel } from '../types/source'
 import { SETTINGS_PATH } from '../components/layout/navItems'
 import { useUnsavedStore } from '../store/unsavedStore'
 import { cx } from '../utils/cx'
@@ -287,7 +287,7 @@ export function SettingsPage() {
   const selectedEdition =
     editableEditions.find((edition) => edition.id === selectedEditionId) ?? editableEditions[0]
   const selectedEditionSources = selectedEdition
-    ? sources.filter((source) => source.edition_id === selectedEdition.id)
+    ? sources.filter((source) => sourceEditionIds(source).includes(selectedEdition.id))
     : []
   const selectedEditionKeywords = selectedEdition
     ? keywords.filter(
@@ -887,7 +887,7 @@ export function SettingsPage() {
                         />
                         <div className="edition-source-list">
                           {sources
-                            .filter((source) => source.edition_id === edition.id)
+                            .filter((source) => sourceEditionIds(source).includes(edition.id))
                             .filter((source) => {
                               const query = (sourceSearchByEdition[edition.id] ?? '').trim().toLowerCase()
                               return !query || source.name.toLowerCase().includes(query) || source.url.toLowerCase().includes(query)
@@ -895,18 +895,23 @@ export function SettingsPage() {
                             .map((source) => (
                               <div key={source.id} className="edition-source-row">
                                 <span><b>{source.name}</b><small>{sourceTypeLabel(source.source_type)}</small></span>
-                                <select
-                                  className="input"
-                                  aria-label={`${source.name} 주제 변경`}
-                                  value={source.edition_id}
-                                  disabled={moveSource.isPending}
-                                  onChange={(event) => void confirmMoveSource(source, event.target.value)}
-                                >
-                                  {editions.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}
-                                </select>
+                                {sourceEditionIds(source).length > 1 ? (
+                                  // Moving one topic would drop the others; the server rejects it (409).
+                                  <small className="edition-source-multi">여러 주제 · 소스 화면에서 변경</small>
+                                ) : (
+                                  <select
+                                    className="input"
+                                    aria-label={`${source.name} 주제 변경`}
+                                    value={source.edition_id}
+                                    disabled={moveSource.isPending}
+                                    onChange={(event) => void confirmMoveSource(source, event.target.value)}
+                                  >
+                                    {editions.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}
+                                  </select>
+                                )}
                               </div>
                             ))}
-                          {!sources.some((source) => source.edition_id === edition.id) && <p>배정된 소스가 없습니다.</p>}
+                          {!sources.some((source) => sourceEditionIds(source).includes(edition.id)) && <p>배정된 소스가 없습니다.</p>}
                         </div>
                       </div>
                     </div>

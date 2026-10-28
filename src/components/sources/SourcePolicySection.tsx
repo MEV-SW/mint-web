@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createSource } from '../../api/sourceApi'
 import type { Edition } from '../../types/edition'
 import type { Source } from '../../types/source'
+import { sourceEditionIds } from '../../types/source'
 import { apiErrorDetail } from '../../utils/apiError'
 import { useToast } from '../common/Toast'
 
@@ -51,7 +52,7 @@ export function SourcePolicySection({ sources, editions }: { sources: Source[]; 
           <h4>주제별 중복 등록</h4>
           {SHARED_WIRES.map((name) => {
             const matches = sources.filter((source) => source.name.startsWith(name))
-            const topicIds = new Set(matches.map((source) => source.edition_id))
+            const topicIds = new Set(matches.flatMap((source) => sourceEditionIds(source)))
             const target = editions.find(
               (edition) => ['ev', 'autonomous'].includes(edition.slug) && !topicIds.has(edition.id),
             )

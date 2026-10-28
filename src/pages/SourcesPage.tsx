@@ -23,6 +23,7 @@ import type { Source, SourceCreate } from '../types/source'
 import {
   COMMUNITY_SOURCE_PRESET,
   COMMUNITY_SOURCE_TYPES,
+  sourceEditionIds,
   sourceTypeLabel,
 } from '../types/source'
 import { useActiveJobs } from '../hooks/useJobsQuery'
@@ -88,6 +89,7 @@ function sourceToForm(s: Source): SourceCreate {
     crawl_frequency: s.crawl_frequency,
     is_active: s.is_active,
     edition_id: s.edition_id,
+    edition_ids: sourceEditionIds(s),
   }
 }
 
@@ -141,7 +143,7 @@ export function SourcesPage() {
     const isCommunity = COMMUNITY_SOURCE_TYPES.includes(s.source_type)
     if (sourceKind === 'community' && !isCommunity) return false
     if (sourceKind === 'official' && isCommunity) return false
-    if (editionFilter !== 'all' && s.edition_id !== editionFilter) return false
+    if (editionFilter !== 'all' && !sourceEditionIds(s).includes(editionFilter)) return false
     if (
       qLower &&
       !s.name.toLowerCase().includes(qLower) &&
@@ -157,7 +159,9 @@ export function SourcesPage() {
   ) as Record<StatusChip, number>
   const rows = scoped.filter((s) => matchesChip(s, statusChip))
   const editionName = (s: Source) =>
-    editions.find((edition) => edition.id === s.edition_id)?.name ?? '알 수 없음'
+    sourceEditionIds(s)
+      .map((id) => editions.find((edition) => edition.id === id)?.name ?? '알 수 없음')
+      .join(', ')
   const activeCount = sources.filter((s) => s.is_active).length
   const communityCount = sources.filter((s) => COMMUNITY_SOURCE_TYPES.includes(s.source_type)).length
   const editingIsCommunity =
@@ -172,7 +176,7 @@ export function SourcesPage() {
       setForm(emptyForm)
       toast('소스를 등록했습니다.')
     },
-    onError: () => toast('등록 실패', 'err'),
+    onError: (error) => toast(apiErrorDetail(error) ?? '등록 실패', 'err'),
   })
 
   const update = useMutation({
@@ -187,7 +191,7 @@ export function SourcesPage() {
       setForm(emptyForm)
       toast('소스를 수정했습니다.')
     },
-    onError: () => toast('수정 실패', 'err'),
+    onError: (error) => toast(apiErrorDetail(error) ?? '수정 실패', 'err'),
   })
 
   const toggleActive = useMutation({
@@ -332,13 +336,17 @@ export function SourcesPage() {
   }
 
   function openAdd() {
-    setForm({ ...emptyForm, edition_id: editions[0]?.id ?? '' })
+    setForm({ ...emptyForm, edition_id: editions[0]?.id ?? '', edition_ids: editions[0] ? [editions[0].id] : [] })
     setAddMode('official')
     setShowAdd(true)
   }
 
   function openAddCommunity() {
-    setForm({ ...COMMUNITY_SOURCE_PRESET, edition_id: editions[0]?.id ?? '' })
+    setForm({
+      ...COMMUNITY_SOURCE_PRESET,
+      edition_id: editions[0]?.id ?? '',
+      edition_ids: editions[0] ? [editions[0].id] : [],
+    })
     setAddMode('community')
     setShowAdd(true)
   }
@@ -355,13 +363,13 @@ export function SourcesPage() {
     setForm(emptyForm)
   }
 
-  const canSave = Boolean(form.name.trim() && form.url.trim() && form.edition_id)
+  const canSave = Boolean(form.name.trim() && form.url.trim() && sourceEditionIds(form).length)
 
   return (
     <PageShell
       section="운영 · 수집"
       title="소스 관리"
-      lead="크롤링 대상 소스를 등록·관리합니다. 소스는 주제 1개에만 속하며, 크롤러는 그 주제의 관련성 키워드로 수집합니다. 범용 와이어는 주제별로 중복 등록해 양쪽을 커버합니다."
+      lead="크롤링 대상 소스를 등록·관리합니다. 소스는 여러 주제에 연결할 수 있고, 크롤러는 연결된 주제마다 그 주제의 관련성 키워드로 판정합니다."
       leadSingleLine
     >
       {busy && (

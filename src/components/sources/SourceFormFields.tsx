@@ -4,6 +4,8 @@ import {
   COMMUNITY_SOURCE_TYPES,
   SOURCE_CATEGORIES,
   TRUST_SCORE_DEFAULTS,
+  sourceEditionIds,
+  withEditionIds,
 } from '../../types/source'
 
 export type SourceFormMode = 'official' | 'community'
@@ -269,22 +271,41 @@ export function SourceFormFields({
       </label>
 
       {editions.length > 0 && (
-        <div className="field">
-          <label>소속 주제</label>
+        <fieldset className="field source-form-editions">
+          <legend>소속 주제</legend>
           <p className="source-form-field-note">
-            소스는 하나의 주제에만 속하며 해당 주제의 관련성 키워드로 수집됩니다.
+            여러 주제를 고를 수 있습니다. 기사는 고른 주제마다 그 주제의 관련성 기준으로 따로 판정됩니다.
           </p>
-          <select
-            className="input"
-            value={form.edition_id}
-            onChange={(event) => onChange({ ...form, edition_id: event.target.value })}
-          >
-            <option value="" disabled>주제를 선택하세요</option>
-            {editions.map((edition) => (
-              <option key={edition.id} value={edition.id}>{edition.name}</option>
-            ))}
-          </select>
-        </div>
+          {editions.map((edition) => {
+            const selected = sourceEditionIds(form)
+            const checked = selected.includes(edition.id)
+            return (
+              <label key={edition.id} className="source-form-edition">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) =>
+                    onChange(
+                      withEditionIds(
+                        form,
+                        event.target.checked
+                          ? [...selected, edition.id]
+                          : selected.filter((id) => id !== edition.id),
+                      ),
+                    )
+                  }
+                />
+                <span>{edition.name}</span>
+                {checked && selected.length > 1 && form.edition_id === edition.id && (
+                  <small>대표</small>
+                )}
+              </label>
+            )
+          })}
+          {sourceEditionIds(form).length === 0 && (
+            <p className="source-form-field-note source-form-field-error">주제를 하나 이상 고르세요.</p>
+          )}
+        </fieldset>
       )}
     </>
   )
