@@ -5,10 +5,12 @@ import { PageShell } from '../components/layout/PageShell'
 import { SETTINGS_PATH } from '../components/layout/navItems'
 import { useAdminSummaryQuery } from '../hooks/useAdminSummaryQuery'
 import { useJobsQuery } from '../hooks/useJobsQuery'
+import { useUsageSummaryQuery } from '../hooks/useUsageSummaryQuery'
 import { usePermissions } from '../hooks/usePermissions'
 import { JOB_STATUS_LABEL } from '../types/job'
 import { cx } from '../utils/cx'
 import { formatDateTime } from '../utils/date'
+import { screenLabel } from '../utils/screenKey'
 import { jobProgressSummary, pickPrimaryActiveJob } from '../utils/jobProgress'
 
 interface KpiCardProps {
@@ -59,6 +61,45 @@ function TodayPipeline() {
   )
 }
 
+const USAGE_TOP = 6
+
+/** mint-server#213 — screen visits over the last 7 days (counts only, no per-person data). */
+function UsageVisits() {
+  const usage = useUsageSummaryQuery()
+  const data = usage.data
+  const top = (data?.items ?? []).slice(0, USAGE_TOP)
+  return (
+    <section className="card card-pad admin-home-usage" aria-labelledby="admin-home-usage">
+      <div className="admin-home-section-head">
+        <h2 id="admin-home-usage">지난 7일 화면별 방문</h2>
+        {data && <span className="admin-home-usage-total">합계 {data.total.toLocaleString('ko-KR')}</span>}
+      </div>
+      {usage.isError ? (
+        <p className="admin-home-note">방문 수를 불러오지 못했습니다.</p>
+      ) : usage.isLoading ? (
+        <div className="admin-usage-grid" aria-hidden>
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="admin-kpi is-zero">
+              <span className="admin-kpi-skeleton" />
+            </div>
+          ))}
+        </div>
+      ) : top.length === 0 ? (
+        <p className="admin-home-note">아직 기록된 방문이 없습니다.</p>
+      ) : (
+        <div className="admin-usage-grid">
+          {top.map((item) => (
+            <div key={item.key} className="admin-kpi">
+              <span className="admin-kpi-label">{screenLabel(item.key)}</span>
+              <strong className="admin-kpi-value">{item.count.toLocaleString('ko-KR')}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 /** 01 관리 홈 (mint-web#96). Admin only; data from mint-server#174. */
 export function AdminHomePage() {
   const summary = useAdminSummaryQuery()
@@ -91,6 +132,8 @@ export function AdminHomePage() {
           </div>
 
           <TodayPipeline />
+
+          <UsageVisits />
 
           <section className="card card-pad admin-home-editions" aria-labelledby="admin-home-editions">
             <div className="admin-home-section-head">
