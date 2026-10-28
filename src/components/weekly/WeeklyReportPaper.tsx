@@ -136,8 +136,7 @@ export function WeeklyReportPaper({
       ))}
 
       <p className="wk-basis">
-        근거: 데일리 리포트 <span className="wk-num">{report.input_daily_count}</span>편 · 기사{' '}
-        <span className="wk-num">{report.input_post_count}</span>건
+        근거: 데일리 리포트 {report.input_daily_count}편 · 기사 {report.input_post_count}건
       </p>
     </article>
   )

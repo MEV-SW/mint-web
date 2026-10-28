@@ -201,11 +201,16 @@ export function WeeklyReportEditor({
         <label className="wk-field-label" htmlFor="wk-edit-title">
           제목
         </label>
-        <input
+        {/* A textarea so long titles wrap on narrow screens; the title itself stays one line. */}
+        <textarea
           id="wk-edit-title"
           className="wk-title-input"
+          rows={1}
           value={draft.title}
-          onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+          onChange={(e) => {
+            const title = e.target.value.replace(/\s*\n\s*/g, ' ')
+            setDraft((prev) => ({ ...prev, title }))
+          }}
         />
         <Counter value={draft.title.length} max={TITLE_MAX} />
       </div>
