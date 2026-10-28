@@ -23,6 +23,7 @@ import { apiErrorDetail } from '../utils/apiError'
 import { isHiddenNewsCategory } from '../utils/newsTaxonomy'
 import { listSources, updateSource } from '../api/sourceApi'
 import type { EditionDisplayMode } from '../types/edition'
+import { sourceTypeLabel } from '../types/source'
 import { SETTINGS_PATH } from '../components/layout/navItems'
 import { useUnsavedStore } from '../store/unsavedStore'
 import { cx } from '../utils/cx'
@@ -694,7 +695,7 @@ export function SettingsPage() {
                         })
                         .map((source) => (
                           <div key={source.id} className="edition-source-row">
-                            <span><b>{source.name}</b><small>{source.source_type}</small></span>
+                            <span><b>{source.name}</b><small>{sourceTypeLabel(source.source_type)}</small></span>
                             <span className={cx('topic-source-state', !source.is_active && 'is-off')}>{source.is_active ? '수집 중' : '꺼짐'}</span>
                           </div>
                         ))}
@@ -893,7 +894,7 @@ export function SettingsPage() {
                             })
                             .map((source) => (
                               <div key={source.id} className="edition-source-row">
-                                <span><b>{source.name}</b><small>{source.source_type}</small></span>
+                                <span><b>{source.name}</b><small>{sourceTypeLabel(source.source_type)}</small></span>
                                 <select
                                   className="input"
                                   aria-label={`${source.name} 주제 변경`}
