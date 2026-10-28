@@ -4816,8 +4816,30 @@ a.report-cal-entry:hover strong {
   background: rgba(26, 23, 18, 0.08);
 }
 .admin-home-pipeline,
+.admin-home-usage,
 .admin-home-editions {
   margin-bottom: 16px;
+}
+/* mint-server#213 — 지난 7일 화면별 방문: KPI cards reused as plain numbers (not links). */
+.admin-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.admin-usage-grid .admin-kpi {
+  padding: 12px 14px;
+  border-top-color: var(--line);
+}
+.admin-usage-grid .admin-kpi:hover {
+  background: var(--panel);
+}
+.admin-usage-grid .admin-kpi-value {
+  font-size: 22px;
+}
+.admin-home-usage-total {
+  font-size: 12.5px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
 }
 .admin-home-section-head {
   display: flex;
@@ -4854,6 +4876,9 @@ a.report-cal-entry:hover strong {
   .admin-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .admin-usage-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 @media (max-width: 767px) {
   .admin-kpi-grid {
@@ -4861,6 +4886,9 @@ a.report-cal-entry:hover strong {
   }
   .admin-home-editions .tbl {
     min-width: 0;
+  }
+  .admin-usage-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

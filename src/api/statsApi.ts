@@ -116,3 +116,22 @@ export async function getAdminSummary(): Promise<AdminSummary> {
   return data
 }
 
+
+/** mint-server#213 — count one screen visit. Best effort: errors never reach the screen. */
+export function recordVisit(screen: string): void {
+  apiClient.post('/api/v1/stats/visits', { screen }).catch(() => undefined)
+}
+
+export interface UsageSummary {
+  metric: 'visit'
+  days: number
+  start_date: string
+  end_date: string
+  total: number
+  items: { key: string; count: number }[]
+}
+
+export async function getUsageSummary(days = 7): Promise<UsageSummary> {
+  const { data } = await apiClient.get<UsageSummary>('/api/v1/stats/usage', { params: { days } })
+  return data
+}

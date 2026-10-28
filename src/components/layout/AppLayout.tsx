@@ -1,9 +1,11 @@
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom'
+import { useVisitTracker } from '../../hooks/useVisitTracker'
 import { ChatWidget } from '../chat/ChatWidget'
 import { TopNav } from './TopNav'
 import { TopicsBar } from './TopicsBar'
 
 export function AppLayout() {
+  useVisitTracker()
   const { pathname } = useLocation()
   const [params] = useSearchParams()
   const kioskOn = pathname === '/' && params.get('kiosk') === '1'
