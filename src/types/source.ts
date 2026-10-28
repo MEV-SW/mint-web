@@ -26,7 +26,10 @@ export interface Source {
   crawl_frequency: string
   last_crawled_at: string | null
   is_active: boolean
+  /** Representative topic (always one of edition_ids). */
   edition_id: string
+  /** All linked topics; an older backend may omit it (#212 multi-topic sources). */
+  edition_ids?: string[]
   created_at: string
   updated_at: string
   // mint-server#178 — optional so an older backend still renders (all "정상").
@@ -61,6 +64,18 @@ export interface SourceCreate {
   crawl_frequency?: string
   is_active?: boolean
   edition_id: string
+  edition_ids?: string[]
+}
+
+/** Topics a source is linked to, falling back to the single representative topic. */
+export function sourceEditionIds(source: { edition_id: string; edition_ids?: string[] }): string[] {
+  return source.edition_ids?.length ? source.edition_ids : source.edition_id ? [source.edition_id] : []
+}
+
+/** Keep the representative topic when it is still selected, else take the first one. */
+export function withEditionIds(form: SourceCreate, editionIds: string[]): SourceCreate {
+  const editionId = editionIds.includes(form.edition_id) ? form.edition_id : (editionIds[0] ?? '')
+  return { ...form, edition_id: editionId, edition_ids: editionIds }
 }
 
 export const SOURCE_CATEGORIES = [
