@@ -6,6 +6,8 @@ export type SourceType =
   | 'manual'
   | 'reddit'
   | 'community_forum'
+  // mint-server#212 C2: 나라장터 입찰공고 (공공데이터포털). Official sources only.
+  | 'official_api'
 export type TrustLevel = 'high' | 'medium' | 'low'
 
 export interface Source {
@@ -66,11 +68,30 @@ export const SOURCE_CATEGORIES = [
   '시장',
   '기술',
   '경쟁사',
+  '입찰/조달',
   '커뮤니티/현장',
   'general',
 ] as const
 
 export const COMMUNITY_SOURCE_TYPES: SourceType[] = ['reddit', 'community_forum']
+
+/** Short type labels for source lists (server types the web union lacks are listed too). */
+export const SOURCE_TYPE_LABELS: Record<string, string> = {
+  rss: 'RSS',
+  webpage: '웹페이지',
+  news_page: '뉴스',
+  notice_page: '공지',
+  manual: '수동',
+  reddit: 'Reddit (수집 불가)',
+  community_forum: '커뮤니티',
+  community_api: '커뮤니티 API',
+  community_feed: '커뮤니티 피드',
+  official_api: '공식 API(입찰)',
+}
+
+export function sourceTypeLabel(sourceType: string): string {
+  return SOURCE_TYPE_LABELS[sourceType] ?? sourceType
+}
 
 export const COMMUNITY_SOURCE_PRESET: SourceCreate = {
   name: '',

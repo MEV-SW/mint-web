@@ -23,6 +23,7 @@ import type { Source, SourceCreate } from '../types/source'
 import {
   COMMUNITY_SOURCE_PRESET,
   COMMUNITY_SOURCE_TYPES,
+  sourceTypeLabel,
 } from '../types/source'
 import { useActiveJobs } from '../hooks/useJobsQuery'
 import { usePermissions } from '../hooks/usePermissions'
@@ -40,18 +41,6 @@ const emptyForm: SourceCreate = {
   crawl_frequency: 'daily',
   is_active: true,
   edition_id: '',
-}
-
-const SOURCE_TYPE_LABELS: Record<string, string> = {
-  rss: 'RSS',
-  webpage: '웹페이지',
-  news_page: '뉴스',
-  notice_page: '공지',
-  manual: '수동',
-  reddit: 'Reddit (수집 불가)',
-  community_forum: '커뮤니티',
-  community_api: '커뮤니티 API',
-  community_feed: '커뮤니티 피드',
 }
 
 type SourceKind = 'all' | 'official' | 'community'
@@ -506,7 +495,7 @@ export function SourcesPage() {
                       </td>
                       <td>
                         <span className="type-tag">
-                          {SOURCE_TYPE_LABELS[s.source_type] ?? s.source_type}
+                          {sourceTypeLabel(s.source_type)}
                         </span>
                       </td>
                       <td>
@@ -536,7 +525,7 @@ export function SourcesPage() {
                       {autoPublishCell(s)}
                     </div>
                     <small className="sources-card-meta">
-                      {SOURCE_TYPE_LABELS[s.source_type] ?? s.source_type} · {editionName(s)} · {relativeCrawl(s.last_crawled_at)}
+                      {sourceTypeLabel(s.source_type)} · {editionName(s)} · {relativeCrawl(s.last_crawled_at)}
                     </small>
                   </div>
                   {rowMenu(s)}

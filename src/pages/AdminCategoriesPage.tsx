@@ -17,13 +17,7 @@ import { usePermissions } from '../hooks/usePermissions'
 import { apiErrorDetail } from '../utils/apiError'
 import type { NewsCategory } from '../types/personalization'
 import type { SourceSuggestionCandidate } from '../types/source'
-
-const SOURCE_TYPE_LABELS: Record<string, string> = {
-  rss: 'RSS',
-  webpage: '웹페이지',
-  news_page: '뉴스',
-  notice_page: '공지',
-}
+import { sourceTypeLabel } from '../types/source'
 
 interface CategoryForm {
   name: string
@@ -325,7 +319,7 @@ export function AdminCategoriesPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <strong style={{ flex: 1 }}>{candidate.name}</strong>
                       <span className="pill">
-                        {SOURCE_TYPE_LABELS[candidate.source_type] ?? candidate.source_type}
+                        {sourceTypeLabel(candidate.source_type)}
                       </span>
                     </div>
                     <a href={candidate.url} target="_blank" rel="noreferrer" className="mono">

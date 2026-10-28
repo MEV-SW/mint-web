@@ -1982,6 +1982,17 @@ select.input { appearance: none; cursor: pointer;
   color: var(--text-faint);
   line-height: 1.4;
 }
+/* mint-server#212: bid API help lists full example URLs. */
+.source-form-field-note p,
+.source-form-field-note ul {
+  margin: 4px 0 0;
+}
+.source-form-field-note ul {
+  padding-left: 16px;
+}
+.source-form-field-note code {
+  overflow-wrap: anywhere;
+}
 
 .sources-block-list {
   padding-top: 4px;

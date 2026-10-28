@@ -8,11 +8,20 @@ import {
 
 export type SourceFormMode = 'official' | 'community'
 
+// mint-server#212 C2: the server accepts only these two 나라장터 search operations.
+const BID_API_BASE = 'https://apis.data.go.kr/1230000/ad/BidPublicInfoService'
+const BID_API_EXAMPLES = [
+  { label: '물품', url: `${BID_API_BASE}/getBidPblancListInfoThngPPSSrch?bidNtceNm=충전,전기차,자율주행` },
+  { label: '용역', url: `${BID_API_BASE}/getBidPblancListInfoServcPPSSrch?bidNtceNm=충전,전기차,자율주행` },
+]
+const BID_CATEGORY = '입찰/조달'
+
 const ALL_SOURCE_TYPES: { value: SourceCreate['source_type']; label: string }[] = [
   { value: 'rss', label: 'RSS' },
   { value: 'webpage', label: '웹페이지' },
   { value: 'news_page', label: '뉴스 페이지' },
   { value: 'notice_page', label: '공지사항' },
+  { value: 'official_api', label: '공식 API(입찰)' },
   { value: 'manual', label: '수동 등록' },
   { value: 'reddit', label: 'Reddit (수집 비권장)' },
   { value: 'community_forum', label: '커뮤니티 게시판' },
@@ -71,7 +80,13 @@ export function SourceFormFields({
       })
       return
     }
-    onChange({ ...form, source_type: sourceType })
+    // A bid source goes to 입찰/조달; leaving the bid type drops that category again.
+    if (sourceType === 'official_api') {
+      onChange({ ...form, source_type: sourceType, category: BID_CATEGORY })
+      return
+    }
+    const category = form.category === BID_CATEGORY ? '정책/규제' : form.category
+    onChange({ ...form, source_type: sourceType, category })
   }
 
   return (
@@ -107,9 +122,27 @@ export function SourceFormFields({
           placeholder={
             isCommunity
               ? 'https://www.reddit.com/r/electricvehicles/'
-              : 'https://example.go.kr/rss'
+              : form.source_type === 'official_api'
+                ? BID_API_EXAMPLES[0].url
+                : 'https://example.go.kr/rss'
           }
         />
+        {form.source_type === 'official_api' && (
+          <div className="source-form-field-note">
+            <p>나라장터 입찰공고(물품·용역)만 등록할 수 있습니다. 공사·외자는 지원하지 않습니다.</p>
+            <ul>
+              {BID_API_EXAMPLES.map((example) => (
+                <li key={example.label}>
+                  {example.label}: <code>{example.url}</code>
+                </li>
+              ))}
+            </ul>
+            <p>
+              검색어는 <code>bidNtceNm</code>에 쉼표로 구분해 최대 5개까지 넣습니다. 서비스키는 서버
+              설정에서 읽으므로 URL에 넣지 마세요. 카테고리는 기본값 「{BID_CATEGORY}」로 저장됩니다.
+            </p>
+          </div>
+        )}
       </div>
       <div className="form-row">
         <div className="field">
