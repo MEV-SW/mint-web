@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { createWebhook, deleteWebhook, listWebhooks, testSlack, updateWebhook } from '../api/slackApi'
+import { createWebhook, deleteWebhook, listWebhooks, testSlack, testWebhook, updateWebhook } from '../api/slackApi'
 import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
 import { OverflowMenu } from '../components/common/OverflowMenu'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
-import type { SlackWebhook } from '../api/slackApi'
+import type { SlackWebhook, WebhookProvider } from '../api/slackApi'
 import { apiErrorDetail } from '../utils/apiError'
 import { cx } from '../utils/cx'
 
@@ -22,6 +22,18 @@ const PURPOSE_LABEL: Record<string, string> = Object.fromEntries(
   PURPOSE_OPTIONS.map((item) => [item.value, item.label]),
 )
 
+const PROVIDER_OPTIONS: { value: WebhookProvider; label: string }[] = [
+  { value: 'slack', label: 'Slack' },
+  { value: 'teams', label: 'Teams' },
+]
+
+const PROVIDER_LABEL: Record<WebhookProvider, string> = { slack: 'Slack', teams: 'Teams' }
+
+const URL_PLACEHOLDER: Record<WebhookProvider, string> = {
+  slack: 'https://hooks.slack.com/services/…',
+  teams: 'https://….environment.api.powerplatform.com/powerautomate/…',
+}
+
 export function SlackSettingsPage() {
   const toast = useToast()
   const confirm = useConfirm()
@@ -30,6 +42,8 @@ export function SlackSettingsPage() {
   const [url, setUrl] = useState('')
   const [channel, setChannel] = useState('')
   const [purpose, setPurpose] = useState<string>('all')
+  const [provider, setProvider] = useState<WebhookProvider>('slack')
+  const [formError, setFormError] = useState<string | null>(null)
 
   const { data: webhooks = [] } = useQuery({ queryKey: ['slack-webhooks'], queryFn: listWebhooks })
 
@@ -38,22 +52,32 @@ export function SlackSettingsPage() {
     setUrl('')
     setChannel('')
     setPurpose('all')
+    setProvider('slack')
+    setFormError(null)
   }
 
   const add = useMutation({
     mutationFn: () =>
-      createWebhook({ webhook_url: url, channel_name: channel.trim(), purpose }),
+      createWebhook({ webhook_url: url.trim(), channel_name: channel.trim(), purpose, provider }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['slack-webhooks'] })
       closeAdd()
       toast('웹훅을 등록했습니다.')
     },
-    onError: () => toast('등록 실패', 'err'),
+    // The server explains a rejected URL in Korean (e.g. a non-Workflows Teams address).
+    onError: (e) => setFormError(apiErrorDetail(e) || '등록하지 못했습니다.'),
   })
 
   const test = useMutation({
     mutationFn: () => testSlack(),
     onSuccess: (res) => toast(res.message, res.success ? 'ok' : 'err'),
+  })
+
+  const testOne = useMutation({
+    mutationFn: (w: SlackWebhook) => testWebhook(w.id),
+    onSuccess: (res, w) =>
+      toast(res.success ? `「${w.channel_name}」에 테스트를 보냈습니다.` : res.message, res.success ? 'ok' : 'err'),
+    onError: (e) => toast(apiErrorDetail(e) || '테스트 전송 실패', 'err'),
   })
 
   const remove = useMutation({
@@ -99,12 +123,16 @@ export function SlackSettingsPage() {
     <PageShell
       section="관리 · 웹훅"
       title="웹훅 설정"
-      lead="Slack·Teams Incoming Webhook URL을 등록합니다. 테스트는 활성 웹훅 전체에 발송됩니다."
+      lead="Slack Incoming Webhook과 Teams 워크플로 웹훅 URL을 등록합니다. 연결별 테스트는 각 줄의 메뉴에서 보냅니다."
       leadSingleLine
       actions={
         <>
-          <Btn variant="outline" onClick={() => test.mutate()} disabled={test.isPending || !webhooks.length}>
-            테스트 메시지 보내기
+          <Btn
+            variant="outline"
+            onClick={() => test.mutate()}
+            disabled={test.isPending || !webhooks.some((w) => w.provider === 'slack' && w.is_active)}
+          >
+            Slack 테스트 보내기
           </Btn>
           <Btn variant="primary" icon="plus" onClick={() => setShowAdd(true)}>
             웹훅 추가
@@ -118,6 +146,7 @@ export function SlackSettingsPage() {
             <div className="webhook-row-main">
               <strong>{w.channel_name}</strong>
               <div className="webhook-row-meta">
+                <span className={cx('webhook-provider', `is-${w.provider}`)}>{PROVIDER_LABEL[w.provider] ?? w.provider}</span>
                 <span className="webhook-purpose">{PURPOSE_LABEL[w.purpose] ?? w.purpose}</span>
                 {/* The API never returns the URL (stored only), so it is always shown masked. */}
                 <span className="webhook-url">저장된 URL (가려짐)</span>
@@ -129,6 +158,12 @@ export function SlackSettingsPage() {
             <OverflowMenu
               label={`${w.channel_name} 메뉴`}
               items={[
+                {
+                  key: 'test',
+                  label: '테스트 전송',
+                  disabled: testOne.isPending,
+                  onClick: () => testOne.mutate(w),
+                },
                 {
                   key: 'toggle',
                   label: w.is_active ? '끄기' : '켜기',
@@ -148,7 +183,7 @@ export function SlackSettingsPage() {
         ))}
         {!webhooks.length && (
           <p className="webhook-empty">
-            등록된 웹훅이 없습니다. Incoming Webhook URL과 받을 채널을 넣으면 일일 리포트 등을 받을
+            등록된 웹훅이 없습니다. Slack이나 Teams 웹훅 URL과 받을 채널을 넣으면 일일 리포트 등을 받을
             수 있습니다.
           </p>
         )}
@@ -170,20 +205,54 @@ export function SlackSettingsPage() {
           }
         >
           <div className="field">
-            <label>웹훅 URL</label>
+            <label id="webhook-provider-label">종류</label>
+            <div className="seg" role="radiogroup" aria-labelledby="webhook-provider-label">
+              {PROVIDER_OPTIONS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={provider === item.value}
+                  className={provider === item.value ? 'on' : undefined}
+                  onClick={() => {
+                    setProvider(item.value)
+                    setFormError(null)
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="webhook-url-input">웹훅 URL</label>
             <input
+              id="webhook-url-input"
               className="input"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://hooks.slack.com/services/…"
+              onChange={(e) => {
+                setUrl(e.target.value)
+                setFormError(null)
+              }}
+              placeholder={URL_PLACEHOLDER[provider]}
+              aria-describedby={provider === 'teams' ? 'webhook-teams-hint' : undefined}
             />
+            {provider === 'teams' && (
+              <p id="webhook-teams-hint" className="webhook-hint">
+                Teams 채널 › 워크플로 › ‘웹훅 요청이 수신되면 채널에 게시’ 템플릿에서 만든 URL을 붙여 넣으세요. URL은
+                저장 후 다시 보여 주지 않습니다.
+              </p>
+            )}
           </div>
           <div className="field">
             <label>채널명</label>
             <input
               className="input"
               value={channel}
-              onChange={(e) => setChannel(e.target.value)}
+              onChange={(e) => {
+                setChannel(e.target.value)
+                setFormError(null)
+              }}
               placeholder="#mint"
             />
           </div>
@@ -197,13 +266,21 @@ export function SlackSettingsPage() {
                   role="radio"
                   aria-checked={purpose === item.value}
                   className={purpose === item.value ? 'on' : undefined}
-                  onClick={() => setPurpose(item.value)}
+                  onClick={() => {
+                    setPurpose(item.value)
+                    setFormError(null)
+                  }}
                 >
                   {item.label}
                 </button>
               ))}
             </div>
           </div>
+          {formError && (
+            <p className="source-form-field-error" role="alert">
+              {formError}
+            </p>
+          )}
         </Modal>
       )}
     </PageShell>
