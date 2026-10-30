@@ -118,6 +118,8 @@ export function SourcesPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [addMode, setAddMode] = useState<AddMode>('official')
   const [editing, setEditing] = useState<Source | null>(null)
+  // mint-server#212: a rejected save is explained inside the modal (a toast sits behind its backdrop).
+  const [formError, setFormError] = useState<string | null>(null)
   const [form, setForm] = useState<SourceCreate>(emptyForm)
   const [crawling, setCrawling] = useState<string | null>(null)
   const [sourceKind, setSourceKind] = useState<SourceKind>('all')
@@ -176,7 +178,7 @@ export function SourcesPage() {
       setForm(emptyForm)
       toast('소스를 등록했습니다.')
     },
-    onError: (error) => toast(apiErrorDetail(error) ?? '등록 실패', 'err'),
+    onError: (error) => setFormError(apiErrorDetail(error) ?? '등록하지 못했습니다.'),
   })
 
   const update = useMutation({
@@ -191,7 +193,7 @@ export function SourcesPage() {
       setForm(emptyForm)
       toast('소스를 수정했습니다.')
     },
-    onError: (error) => toast(apiErrorDetail(error) ?? '수정 실패', 'err'),
+    onError: (error) => setFormError(apiErrorDetail(error) ?? '수정하지 못했습니다.'),
   })
 
   const toggleActive = useMutation({
@@ -338,6 +340,7 @@ export function SourcesPage() {
   function openAdd() {
     setForm({ ...emptyForm, edition_id: editions[0]?.id ?? '', edition_ids: editions[0] ? [editions[0].id] : [] })
     setAddMode('official')
+    setFormError(null)
     setShowAdd(true)
   }
 
@@ -348,12 +351,14 @@ export function SourcesPage() {
       edition_ids: editions[0] ? [editions[0].id] : [],
     })
     setAddMode('community')
+    setFormError(null)
     setShowAdd(true)
   }
 
   function openEdit(s: Source) {
     setEditing(s)
     setForm(sourceToForm(s))
+    setFormError(null)
   }
 
   function closeModals() {
@@ -361,7 +366,20 @@ export function SourcesPage() {
     setEditing(null)
     setAddMode('official')
     setForm(emptyForm)
+    setFormError(null)
   }
+
+  // Any field change clears the server message from the last failed save.
+  function editForm(next: SourceCreate) {
+    setForm(next)
+    setFormError(null)
+  }
+
+  const formErrorNote = formError && (
+    <p className="source-form-field-error source-form-save-error" role="alert">
+      {formError}
+    </p>
+  )
 
   const canSave = Boolean(form.name.trim() && form.url.trim() && sourceEditionIds(form).length)
 
@@ -562,7 +580,8 @@ export function SourcesPage() {
             </>
           }
         >
-          <SourceFormFields mode={addMode} form={form} onChange={setForm} editions={editions} />
+          <SourceFormFields mode={addMode} form={form} onChange={editForm} editions={editions} />
+          {formErrorNote}
         </Modal>
       )}
 
@@ -589,10 +608,11 @@ export function SourcesPage() {
           <SourceFormFields
             mode={editingIsCommunity ? 'community' : 'official'}
             form={form}
-            onChange={setForm}
+            onChange={editForm}
             lockSourceType
             editions={editions}
           />
+          {formErrorNote}
         </Modal>
       )}
     </PageShell>
