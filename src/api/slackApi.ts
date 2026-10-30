@@ -50,6 +50,29 @@ export async function testWebhook(id: string, message?: string): Promise<{ succe
   return data
 }
 
+export interface WebhookTestResult {
+  webhook_id: string
+  channel_name: string
+  provider: WebhookProvider
+  success: boolean
+  message: string
+}
+
+export interface WebhookTestAllResponse {
+  results: WebhookTestResult[]
+  sent: number
+  failed: number
+}
+
+/** mint-server#210: test every active connection (Slack text, Teams card), each reported separately. */
+export async function testAllWebhooks(message?: string): Promise<WebhookTestAllResponse> {
+  const { data } = await apiClient.post<WebhookTestAllResponse>('/api/v1/slack/webhooks/test-all', {
+    message: message || 'MOTREXEV 테스트 메시지',
+  })
+  return data
+}
+
+/** Legacy Slack-only test (kept for compatibility; the admin screen uses testAllWebhooks). */
 export async function testSlack(message?: string): Promise<{ success: boolean; message: string }> {
   const { data } = await apiClient.post('/api/v1/slack/test', { message: message || 'MOTREXEV 테스트 메시지' })
   return data

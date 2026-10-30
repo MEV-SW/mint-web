@@ -5024,6 +5024,39 @@ a.report-cal-entry:hover strong {
   border-color: var(--pine);
   color: var(--pine);
 }
+/* mint-server#210: 전체 테스트 결과 (failures listed with their reason). */
+/* .np-sheet .card-pad drops side padding; the accent bar needs it back. */
+.np-sheet .webhook-test-result {
+  margin-bottom: 12px;
+  padding: 12px 14px 12px 18px;
+  box-shadow: inset 4px 0 0 var(--pine);
+}
+.np-sheet .webhook-test-result.has-failed {
+  box-shadow: inset 4px 0 0 var(--red);
+}
+.webhook-test-result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+}
+.webhook-test-result-close {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--ink2);
+  font: 700 12px var(--font);
+  cursor: pointer;
+}
+.webhook-test-result-failures {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--red);
+  word-break: break-word;
+}
 .webhook-hint {
   margin: 6px 0 0;
   font-size: 12px;
