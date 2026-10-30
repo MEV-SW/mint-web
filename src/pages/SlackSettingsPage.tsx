@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { createWebhook, deleteWebhook, listWebhooks, testSlack, testWebhook, updateWebhook } from '../api/slackApi'
+import { createWebhook, deleteWebhook, listWebhooks, testAllWebhooks, testWebhook, updateWebhook } from '../api/slackApi'
 import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
 import { OverflowMenu } from '../components/common/OverflowMenu'
 import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
-import type { SlackWebhook, WebhookProvider } from '../api/slackApi'
+import type { SlackWebhook, WebhookProvider, WebhookTestAllResponse } from '../api/slackApi'
 import { apiErrorDetail } from '../utils/apiError'
 import { cx } from '../utils/cx'
 
@@ -28,6 +28,15 @@ const PROVIDER_OPTIONS: { value: WebhookProvider; label: string }[] = [
 ]
 
 const PROVIDER_LABEL: Record<WebhookProvider, string> = { slack: 'Slack', teams: 'Teams' }
+
+/** "Slack 1곳·Teams 1곳 전송, 실패 0" (sent counts per provider, providers that were tested only). */
+function testAllSummary(res: WebhookTestAllResponse): string {
+  const parts = PROVIDER_OPTIONS.flatMap(({ value, label }) => {
+    const tested = res.results.filter((r) => r.provider === value)
+    return tested.length ? [`${label} ${tested.filter((r) => r.success).length}곳`] : []
+  })
+  return `${parts.join('·') || '0곳'} 전송, 실패 ${res.failed}`
+}
 
 const URL_PLACEHOLDER: Record<WebhookProvider, string> = {
   slack: 'https://hooks.slack.com/services/…',
@@ -68,9 +77,14 @@ export function SlackSettingsPage() {
     onError: (e) => setFormError(apiErrorDetail(e) || '등록하지 못했습니다.'),
   })
 
+  const [testResult, setTestResult] = useState<WebhookTestAllResponse | null>(null)
   const test = useMutation({
-    mutationFn: () => testSlack(),
-    onSuccess: (res) => toast(res.message, res.success ? 'ok' : 'err'),
+    mutationFn: () => testAllWebhooks(),
+    onSuccess: (res) => {
+      setTestResult(res)
+      toast(testAllSummary(res), res.failed ? 'err' : 'ok')
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '전체 테스트 전송 실패', 'err'),
   })
 
   const testOne = useMutation({
@@ -123,16 +137,16 @@ export function SlackSettingsPage() {
     <PageShell
       section="관리 · 웹훅"
       title="웹훅 설정"
-      lead="Slack Incoming Webhook과 Teams 워크플로 웹훅 URL을 등록합니다. 연결별 테스트는 각 줄의 메뉴에서 보냅니다."
+      lead="Slack Incoming Webhook과 Teams 워크플로 웹훅 URL을 등록합니다. 전체 테스트는 켜진 연결 모두에, 연결별 테스트는 각 줄의 메뉴에서 보냅니다."
       leadSingleLine
       actions={
         <>
           <Btn
             variant="outline"
             onClick={() => test.mutate()}
-            disabled={test.isPending || !webhooks.some((w) => w.provider === 'slack' && w.is_active)}
+            disabled={test.isPending || !webhooks.some((w) => w.is_active)}
           >
-            Slack 테스트 보내기
+            {test.isPending ? '보내는 중…' : '전체 테스트 보내기'}
           </Btn>
           <Btn variant="primary" icon="plus" onClick={() => setShowAdd(true)}>
             웹훅 추가
@@ -140,6 +154,31 @@ export function SlackSettingsPage() {
         </>
       }
     >
+      {testResult && (
+        <div
+          className={cx('card card-pad webhook-test-result', testResult.failed > 0 && 'has-failed')}
+          role="status"
+        >
+          <div className="webhook-test-result-head">
+            <strong>전체 테스트 결과 · {testAllSummary(testResult)}</strong>
+            <button type="button" className="webhook-test-result-close" onClick={() => setTestResult(null)}>
+              닫기
+            </button>
+          </div>
+          {testResult.failed > 0 && (
+            <ul className="webhook-test-result-failures">
+              {testResult.results
+                .filter((r) => !r.success)
+                .map((r) => (
+                  <li key={r.webhook_id}>
+                    <strong>{r.channel_name}</strong> ({PROVIDER_LABEL[r.provider] ?? r.provider}) — {r.message}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="card card-pad webhook-list">
         {webhooks.map((w) => (
           <div key={w.id} className={cx('webhook-row', !w.is_active && 'is-off')}>
