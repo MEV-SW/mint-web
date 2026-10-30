@@ -5012,6 +5012,24 @@ a.report-cal-entry:hover strong {
   display: flex;
   flex-wrap: wrap;
 }
+/* mint-server#210: Slack / Teams badge and the Teams URL hint. */
+.webhook-provider {
+  padding: 0 6px;
+  border: 1px solid var(--ink3);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink2);
+}
+.webhook-provider.is-teams {
+  border-color: var(--pine);
+  color: var(--pine);
+}
+.webhook-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink2);
+}
 
 /* ===== 05 탐문 후보 보드 (mint-web#105) ===== */
 .discovery-board-top {
