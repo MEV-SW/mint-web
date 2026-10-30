@@ -2014,6 +2014,12 @@ select.input { appearance: none; cursor: pointer;
 .source-form-field-error {
   color: var(--red);
 }
+/* mint-server#212: server message for a rejected save, under the form inside the modal. */
+.source-form-save-error {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
 .edition-source-multi {
   color: var(--ink3);
   font-size: 11.5px;
