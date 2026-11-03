@@ -13,6 +13,8 @@ import {
   getDeliveryReport,
   getDeliveryStatus,
   getMailPreview,
+  getAutoSettings,
+  listGenerations,
   getRetryPreview,
   getSendPreview,
   listBatches,
@@ -27,18 +29,20 @@ import {
   type BatchProgress,
   type DeliveryReport,
   type DeliveryReportKind,
+  type Generation,
   type Recipient,
   type SendPreview,
 } from '../../api/deliveryApi'
 import { useAuthStore } from '../../store/authStore'
 import { apiErrorCode, apiErrorDetail } from '../../utils/apiError'
 import { cx } from '../../utils/cx'
-import { formatShortDateTime } from '../../utils/date'
 import { Btn } from '../common/Btn'
 import { Modal } from '../common/Modal'
 import { OverflowMenu } from '../common/OverflowMenu'
 import { useToast } from '../common/Toast'
 import { useConfirm } from '../common/useConfirm'
+import { AutoSettingsCard, ReviewCard, StateText } from './AutoReportParts'
+import { draftTitle, kstDateTime, kstShort, reportState, targetMonth } from './autoReportState'
 
 /** mint-server#228 — 관리 › 외부전달 › 이메일 보고서 (Design 시안 02~06, 승인 2026-11-03). */
 
@@ -60,7 +64,7 @@ function formatPeriod(start: string, end: string, short = false): string {
 }
 
 function shortDate(iso: string): string {
-  return formatShortDateTime(iso).split(' ')[0]
+  return kstShort(iso).split(' ')[0]
 }
 
 function failedCount(batch: Batch): number {
@@ -81,14 +85,50 @@ function resultLabel(batch: Batch): { text: string; bad: boolean } {
   return { text: parts.join(' · '), bad: failed > 0 || batch.unknown > 0 || batch.status !== 'done' }
 }
 
+/** A row of the 보고서 card: a stored report, or (#232) a running/failed generation without a draft. */
+export type ReportItem =
+  | { key: string; kind: 'report'; report: DeliveryReport }
+  | { key: string; kind: 'generation'; generation: Generation; editionName: string }
+
 export function EmailReportsPanel({ tabs }: { tabs: ReactNode }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
   const [expandedBatch, setExpandedBatch] = useState<string | null>(null)
+  const [sendNow, setSendNow] = useState(0)
 
   const status = useQuery({ queryKey: ['delivery-status'], queryFn: getDeliveryStatus })
-  const reports = useQuery({ queryKey: ['delivery-reports'], queryFn: listDeliveryReports })
-  const selected = reports.data?.find((r) => r.id === selectedId) ?? reports.data?.[0] ?? null
+  const reports = useQuery({
+    queryKey: ['delivery-reports'],
+    queryFn: listDeliveryReports,
+  })
+  const generations = useQuery({
+    queryKey: ['delivery-generations'],
+    queryFn: listGenerations,
+    refetchInterval: (query) => (query.state.data?.some((g) => g.status === 'running') ? 3000 : false),
+  })
+  const autoSettings = useQuery({ queryKey: ['delivery-auto-settings'], queryFn: getAutoSettings })
+  const editionNames = new Map((autoSettings.data?.editions ?? []).map((e) => [e.id, e.name]))
+  const month = targetMonth()
+  const { current, past } = groupItems(reports.data ?? [], generations.data ?? [], month, editionNames)
+  const items = [...current, ...past]
+  const selected = items.find((item) => item.key === selectedKey) ?? items[0] ?? null
+  const selectedReport = selected?.kind === 'report' ? selected.report : null
+  const isAutoView = selected?.kind === 'generation' || selectedReport?.origin === 'auto'
+  const refreshList = () => {
+    void reports.refetch()
+    void generations.refetch()
+  }
+  // When a running generation settles, its draft appears in the report list (not the generations).
+  const runningIds = (generations.data ?? []).filter((g) => g.status === 'running').map((g) => g.id).join(',')
+  const lastRunningRef = useRef(runningIds)
+  useEffect(() => {
+    const finished = lastRunningRef.current.split(',').filter((id) => id && !runningIds.includes(id))
+    lastRunningRef.current = runningIds
+    if (finished.length) {
+      void reports.refetch()
+      void autoSettings.refetch()
+    }
+  }, [runningIds, reports, autoSettings])
 
   const notice = !status.data
     ? null
@@ -111,40 +151,89 @@ export function EmailReportsPanel({ tabs }: { tabs: ReactNode }) {
       <div className="dlv-grid">
         <div className="dlv-col">
           <ReportsCard
-            reports={reports.data ?? []}
+            current={current}
+            past={past}
+            month={month}
             loading={reports.isLoading}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelectedId}
+            selectedKey={selected?.key ?? null}
+            onSelect={setSelectedKey}
             onUpload={() => setShowUpload(true)}
+            onChanged={refreshList}
           />
           <RecipientsCard />
-          <AutoSendCard />
         </div>
         <div className="dlv-col">
-          <PreviewCard report={selected} />
+          {isAutoView ? (
+            <ReviewCard
+              key={`review-${selected?.key ?? 'none'}`}
+              report={selectedReport}
+              generation={selected?.kind === 'generation' ? selected.generation : null}
+              editionName={
+                selected?.kind === 'generation'
+                  ? selected.editionName
+                  : editionNames.get(selectedReport?.edition_id ?? '') ?? ''
+              }
+              activeRecipients={status.data?.active_recipients ?? 0}
+              scheduledFor={selected?.kind === 'generation' && autoSettings.data ? autoSettings.data.next.send_at : null}
+              onSendNow={() => setSendNow((n) => n + 1)}
+              onSelectReport={() => setSelectedKey(null)}
+            />
+          ) : (
+            <PreviewCard report={selectedReport} />
+          )}
           <SendCard
-            key={selected?.id ?? 'none'}
-            report={selected}
+            key={`send-${selected?.key ?? 'none'}`}
+            report={selectedReport}
             canSend={Boolean(status.data?.enabled && status.data?.configured)}
+            sendRequest={sendNow}
             onShowHistory={(batchId) => {
               setExpandedBatch(batchId)
               document.getElementById('dlv-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }}
           />
         </div>
+        <AutoSettingsCard />
         <HistoryCard expanded={expandedBatch} onExpand={setExpandedBatch} canSend={Boolean(status.data?.enabled && status.data?.configured)} />
       </div>
       {showUpload && (
         <UploadModal
           onClose={() => setShowUpload(false)}
           onUploaded={(id) => {
-            setSelectedId(id)
+            setSelectedKey(`r:${id}`)
             setShowUpload(false)
           }}
         />
       )}
     </>
   )
+}
+
+/** "이번 달 초안" = this cycle's auto drafts and their running/failed generations; the rest is "지난 보고서". */
+function groupItems(reports: DeliveryReport[], generations: Generation[], month: string, names: Map<string, string>) {
+  const current: ReportItem[] = []
+  const past: ReportItem[] = []
+  const liveEditions = new Set<string>()
+  for (const report of reports) {
+    const item: ReportItem = { key: `r:${report.id}`, kind: 'report', report }
+    const live = report.review_status === 'pending' || report.review_status === 'approved'
+    if (report.origin === 'auto' && report.report_month === month && live) {
+      current.push(item)
+      if (report.edition_id) liveEditions.add(report.edition_id)
+    } else if (report.review_status !== 'superseded') {
+      past.push(item)
+    }
+  }
+  // The latest generation per edition for this month, when it is running or failed and has no live draft.
+  const latest = new Map<string, Generation>()
+  for (const g of generations) {
+    if (g.report_month !== month || !g.edition_id) continue
+    if (!latest.has(g.edition_id)) latest.set(g.edition_id, g)
+  }
+  for (const [editionId, g] of latest) {
+    if (liveEditions.has(editionId) || !(g.status === 'running' || g.status === 'failed' || g.status === 'skipped')) continue
+    current.push({ key: `g:${g.id}`, kind: 'generation', generation: g, editionName: names.get(editionId) ?? '' })
+  }
+  return { current, past }
 }
 
 function Card({ title, aside, className, children, id }: { title: string; aside?: ReactNode; className?: string; children: ReactNode; id?: string }) {
@@ -161,27 +250,36 @@ function Card({ title, aside, className, children, id }: { title: string; aside?
 
 // --- 보고서 -------------------------------------------------------------------------------
 
+const PAST_VISIBLE = 3
+
 function ReportsCard({
-  reports,
+  current,
+  past,
+  month,
   loading,
-  selectedId,
+  selectedKey,
   onSelect,
   onUpload,
+  onChanged,
 }: {
-  reports: DeliveryReport[]
+  current: ReportItem[]
+  past: ReportItem[]
+  month: string
   loading: boolean
-  selectedId: string | null
-  onSelect: (id: string) => void
+  selectedKey: string | null
+  onSelect: (key: string) => void
   onUpload: () => void
+  onChanged: () => void
 }) {
   const toast = useToast()
   const confirm = useConfirm()
   const qc = useQueryClient()
+  const [showAllPast, setShowAllPast] = useState(false)
   const remove = useMutation({
     mutationFn: deleteDeliveryReport,
     onSuccess: () => {
       toast('보고서를 지웠습니다. 발송 기록은 남습니다.')
-      void qc.invalidateQueries({ queryKey: ['delivery-reports'] })
+      onChanged()
       void qc.invalidateQueries({ queryKey: ['delivery-batches'] })
     },
     onError: (e) => toast(apiErrorDetail(e) || '지우지 못했습니다.', 'err'),
@@ -199,6 +297,69 @@ function ReportsCard({
     if (ok) remove.mutate(report.id)
   }
 
+  const createdOn = current.find((i) => i.kind === 'report')
+  const shownPast = showAllPast ? past : past.slice(0, PAST_VISIBLE)
+  const row = (item: ReportItem) => {
+    if (item.kind === 'generation') {
+      const g = item.generation
+      const state = g.status === 'running' ? 'generating' : 'failed'
+      return (
+        <li key={item.key} className={cx('dlv-report', item.key === selectedKey && 'is-selected')}>
+          <button type="button" className="dlv-report-main" aria-pressed={item.key === selectedKey} onClick={() => onSelect(item.key)}>
+            <span className="dlv-report-top">
+              <strong>{draftTitle(month, item.editionName)}</strong>
+              <StateText state={state} />
+            </span>
+            <span className="dlv-report-meta">
+              {periodOfMonth(month)} · 월간 · {state === 'generating' ? `자동 생성 중 (${kstDateTime(g.created_at)} 시작)` : `자동 생성 실패 ${shortTime(g.finished_at ?? g.created_at)}`}
+            </span>
+            <span className="dlv-report-meta">{state === 'generating' ? '다 만들면 관리자에게 알립니다' : '발송 예정 시각 전에 다시 만들고 승인해야 보냅니다'}</span>
+          </button>
+        </li>
+      )
+    }
+    const report = item.report
+    const state = reportState(report)
+    const auto = report.origin === 'auto'
+    const live = report.review_status === 'pending' || report.review_status === 'approved'
+    return (
+      <li key={item.key} className={cx('dlv-report', item.key === selectedKey && 'is-selected')}>
+        <button type="button" className="dlv-report-main" aria-pressed={item.key === selectedKey} onClick={() => onSelect(item.key)}>
+          <span className="dlv-report-top">
+            <strong>{report.title}</strong>
+            <StateText state={state} />
+          </span>
+          <span className="dlv-report-meta">
+            <span className="dlv-wide-only">{formatPeriod(report.period_start, report.period_end)}</span>
+            <span className="dlv-narrow-only">{formatPeriod(report.period_start, report.period_end, true)}</span>
+            {' · '}
+            {KIND_LABEL[report.kind]}
+            {' · '}
+            {auto ? `자동 생성` : '직접 올림'}
+            <span className="dlv-wide-only"> {auto ? shortTime(report.created_at) : shortDate(report.created_at)}</span>
+            {' · '}
+            {formatSize(report.pdf_size)}
+          </span>
+          <span className="dlv-report-meta">{rowResult(report, live)}</span>
+        </button>
+        <OverflowMenu
+          label={`${report.title} 메뉴`}
+          items={[
+            { key: 'pdf', label: 'PDF 내려받기', onClick: () => download(() => downloadReportPdf(report)) },
+            { key: 'html', label: '메일 본문 HTML 내려받기', onClick: () => download(() => downloadReportHtml(report)) },
+            {
+              key: 'delete',
+              label: '삭제…',
+              danger: true,
+              disabled: remove.isPending || report.send_status === 'sending' || report.review_status === 'approved',
+              onClick: () => void requestRemove(report),
+            },
+          ]}
+        />
+      </li>
+    )
+  }
+
   return (
     <Card
       title="보고서"
@@ -211,49 +372,60 @@ function ReportsCard({
     >
       {loading ? (
         <p className="dlv-empty">불러오는 중…</p>
-      ) : reports.length === 0 ? (
+      ) : current.length + past.length === 0 ? (
         <p className="dlv-empty">아직 올린 보고서가 없습니다. PDF와 메일 본문 HTML을 올려 주세요.</p>
       ) : (
-        <ul className="dlv-report-list">
-          {reports.map((report) => (
-            <li key={report.id} className={cx('dlv-report', report.id === selectedId && 'is-selected')}>
-              <button
-                type="button"
-                className="dlv-report-main"
-                aria-pressed={report.id === selectedId}
-                onClick={() => onSelect(report.id)}
-              >
-                <strong>{report.title}</strong>
-                <span className="dlv-report-meta">
-                  <span className="dlv-wide-only">{formatPeriod(report.period_start, report.period_end)}</span>
-                  <span className="dlv-narrow-only">{formatPeriod(report.period_start, report.period_end, true)}</span>
-                  {' · '}
-                  {KIND_LABEL[report.kind]}
-                  <span className="dlv-wide-only"> · {shortDate(report.created_at)} 올림</span>
-                  {' · '}
-                  {formatSize(report.pdf_size)}
-                </span>
-              </button>
-              <OverflowMenu
-                label={`${report.title} 메뉴`}
-                items={[
-                  { key: 'pdf', label: 'PDF 내려받기', onClick: () => download(() => downloadReportPdf(report)) },
-                  { key: 'html', label: '메일 본문 HTML 내려받기', onClick: () => download(() => downloadReportHtml(report)) },
-                  {
-                    key: 'delete',
-                    label: '삭제…',
-                    danger: true,
-                    disabled: remove.isPending || report.send_status === 'sending',
-                    onClick: () => void requestRemove(report),
-                  },
-                ]}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          {current.length > 0 && (
+            <>
+              <p className="dlv-group-label">
+                이번 달 초안{createdOn?.kind === 'report' ? ` · ${shortDate(createdOn.report.created_at)} 자동 생성` : ''}
+              </p>
+              <ul className="dlv-report-list">{current.map(row)}</ul>
+            </>
+          )}
+          {past.length > 0 && (
+            <>
+              {current.length > 0 && <p className="dlv-group-label">지난 보고서</p>}
+              <ul className="dlv-report-list">{shownPast.map(row)}</ul>
+              {past.length > PAST_VISIBLE && !showAllPast && (
+                <button type="button" className="dlv-more" onClick={() => setShowAllPast(true)}>
+                  지난 보고서 더 보기 ({past.length - PAST_VISIBLE}건) ▾
+                </button>
+              )}
+            </>
+          )}
+        </>
       )}
     </Card>
   )
+}
+
+function shortTime(iso: string): string {
+  return kstShort(iso)
+}
+
+function periodOfMonth(month: string): string {
+  const [y, m] = month.split('-').map(Number)
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  return `${y}.${String(m).padStart(2, '0')}.01 ~ ${String(m).padStart(2, '0')}.${last}`
+}
+
+function rowResult(report: DeliveryReport, live: boolean): string {
+  const sentCount = report.counts?.sent ?? 0
+  if (report.send_status === 'sent' || report.send_status === 'partial') {
+    return `${kstShort(report.last_sent_at ?? report.updated_at)} ${sentCount}명에게 보냄`
+  }
+  if (report.origin === 'auto') {
+    if (report.review_status === 'pending') return `${kstDateTime(report.scheduled_at)} 발송 예정 · 승인해야 보냅니다`
+    if (report.review_status === 'approved') return `${kstDateTime(report.scheduled_at)} 발송 예정 · ${kstShort(report.approved_at)} 승인`
+    if (report.review_status === 'expired') {
+      const due = kstDateTime(report.scheduled_at)
+      return report.reviewed_note === '발송 시각까지 승인되지 않음' ? `${due}까지 승인하지 않아 보내지 않음` : `보내지 않음 (${report.reviewed_note ?? ''})`
+    }
+    if (report.review_status === 'rejected') return '버린 초안'
+  }
+  return live ? '' : '아직 보내지 않음'
 }
 
 function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded: (id: string) => void }) {
@@ -467,21 +639,6 @@ function RecipientsCard() {
   )
 }
 
-function AutoSendCard() {
-  return (
-    <Card title="자동 발송" className="dlv-auto" aside={<span className="dlv-aside">준비 중</span>}>
-      <div className="dlv-auto-body" aria-disabled="true">
-        <div className="dlv-auto-row dlv-wide-only">
-          <span>주기</span>
-          <input className="input" disabled value="매월 1일 09:00" readOnly aria-label="주기" />
-          <span className="switch" aria-hidden="true" />
-        </div>
-        <p>자동 발송은 다음 단계에서 열립니다. 지금은 &quot;지금 보내기&quot;로만 보낼 수 있습니다.</p>
-      </div>
-    </Card>
-  )
-}
-
 // --- 미리보기 -----------------------------------------------------------------------------
 
 function PreviewCard({ report }: { report: DeliveryReport | null }) {
@@ -539,10 +696,12 @@ function useBatchProgress(batchId: string | null | undefined) {
 function SendCard({
   report,
   canSend,
+  sendRequest,
   onShowHistory,
 }: {
   report: DeliveryReport | null
   canSend: boolean
+  sendRequest: number
   onShowHistory: (batchId: string) => void
 }) {
   const toast = useToast()
@@ -576,8 +735,24 @@ function SendCard({
     onSuccess: (data) => (data.count ? setConfirmPreview(data) : toast('보낼 사람이 없습니다. 켜진 사람이 모두 이미 받았습니다.', 'err')),
     onError: (e) => toast(apiErrorDetail(e) || '받는 사람을 확인하지 못했습니다.', 'err'),
   })
+  // #232 §6-1: an auto draft can be sent by hand only after its deadline (expired), with the
+  // content hash of the preview the admin reviewed.
+  const autoDraft = report?.origin === 'auto'
+  const directSendable = !autoDraft || report?.review_status === 'expired'
+  const mailPreview = useQuery({
+    queryKey: ['delivery-preview', report?.id],
+    queryFn: () => getMailPreview(report!.id),
+    enabled: Boolean(report && autoDraft),
+  })
+  const requestedRef = useRef(sendRequest)
+  useEffect(() => {
+    if (sendRequest !== requestedRef.current) {
+      requestedRef.current = sendRequest
+      if (report && directSendable && canSend) preview.mutate()
+    }
+  })
   const send = useMutation({
-    mutationFn: (digest: string) => sendReport(report!.id, digest),
+    mutationFn: (digest: string) => sendReport(report!.id, digest, autoDraft ? mailPreview.data?.content_hash : undefined),
     onSuccess: (started) => {
       setConfirmPreview(null)
       setRunningId(started.batch_id)
@@ -588,6 +763,11 @@ function SendCard({
       if (apiErrorCode(e) === 'recipients_changed') {
         toast('받는 사람이 바뀌었습니다. 다시 확인해 주세요.', 'err')
         preview.mutate()
+        return
+      }
+      if (apiErrorCode(e) === 'content_changed') {
+        toast('보고서 내용이 바뀌었습니다. 미리보기를 다시 확인해 주세요.', 'err')
+        void qc.invalidateQueries({ queryKey: ['delivery-preview', report?.id] })
         return
       }
       toast(apiErrorDetail(e) || '보내지 못했습니다.', 'err')
@@ -616,10 +796,17 @@ function SendCard({
         <Btn variant="outline" disabled={disabled || Boolean(running) || test.isPending} onClick={() => test.mutate()}>
           {test.isPending ? '보내는 중…' : '나에게 테스트 발송'}
         </Btn>
-        <Btn variant="primary" disabled={disabled || Boolean(running) || preview.isPending} onClick={() => preview.mutate()}>
+        <Btn
+          variant="primary"
+          disabled={disabled || Boolean(running) || preview.isPending || !directSendable || (autoDraft && !mailPreview.data)}
+          onClick={() => preview.mutate()}
+        >
           {running ? '보내는 중…' : '지금 보내기'}
         </Btn>
       </div>
+      {autoDraft && !directSendable && (
+        <p className="dlv-hint">초안은 승인하면 발송 예정 시각에 자동으로 갑니다. 지금 보내기는 기한이 지난 초안과 직접 올린 보고서에만 쓸 수 있습니다.</p>
+      )}
       {running ? (
         <div className="dlv-progress" role="status">
           <div className="dlv-progress-bar" aria-hidden="true">
@@ -656,7 +843,7 @@ function SendCard({
 
 function LastBatch({ batch, onShowHistory }: { batch: BatchProgress; onShowHistory: (id: string) => void }) {
   const failed = failedCount(batch)
-  const when = formatShortDateTime(batch.finished_at ?? batch.created_at)
+  const when = kstShort(batch.finished_at ?? batch.created_at)
   if (!failed && !batch.unknown && batch.status === 'done') {
     return (
       <div className="dlv-last is-ok">
@@ -751,6 +938,7 @@ function HistoryCard({ expanded, onExpand, canSend }: { expanded: string | null;
           <div className="dlv-history-row is-head" role="row">
             <span role="columnheader">보낸 시각</span>
             <span role="columnheader">보고서</span>
+            <span role="columnheader">방식</span>
             <span role="columnheader">받는 사람</span>
             <span role="columnheader">결과</span>
             <span role="columnheader" className="sr-only">
@@ -765,12 +953,15 @@ function HistoryCard({ expanded, onExpand, canSend }: { expanded: string | null;
               <Fragment key={batch.id}>
                 <div className="dlv-history-row" role="row">
                   <span role="cell" className="dlv-history-when">
-                    {formatShortDateTime(batch.created_at)}
+                    {kstShort(batch.created_at)}
                   </span>
                   <span role="cell" className="dlv-history-title">
                     {batch.report_title}
                     {batch.kind === 'test' && ' (테스트)'}
                     {batch.kind === 'retry' && ' (다시 보내기)'}
+                  </span>
+                  <span role="cell" className="dlv-history-trigger">
+                    {batch.trigger === 'schedule' ? '자동' : '직접'}
                   </span>
                   <span role="cell" className="dlv-history-count">
                     {batch.kind === 'test' ? '나에게' : `${batch.total}명`}
