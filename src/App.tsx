@@ -32,6 +32,7 @@ import { AdminDiscoveryPage } from './pages/AdminDiscoveryPage'
 import { AdminRoute, SourceReviewRoute, SuperAdminRoute } from './routes/AdminRoute'
 import { NewsPage } from './pages/NewsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { AiConnectionPage } from './pages/AiConnectionPage'
 import { TopicHubPage } from './pages/TopicHubPage'
 import { legacyBoardToNewsPath } from './utils/newsListState'
 
@@ -83,6 +84,7 @@ export default function App() {
                   <Route path="/personal-reports/:id" element={<Navigate to="/" replace />} />
                   <Route path="/inquiries" element={<InquiriesPage />} />
                   <Route path="/help" element={<HelpPage />} />
+                  <Route path="/ai-connection" element={<AiConnectionPage />} />
                   <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<AdminIndexRoute />} />
                     <Route path="settings" element={<SettingsPage />} />
