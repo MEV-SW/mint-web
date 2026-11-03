@@ -116,8 +116,8 @@ export const APP_NAV_ADMIN_SUB: NavItem[] = [
     badgeTone: 'amber',
   },
   {
-    path: '/admin/webhooks',
-    label: '웹훅',
+    path: '/admin/delivery',
+    label: '외부전달',
     icon: 'slack',
     adminOnly: true,
     superAdminOnly: true,

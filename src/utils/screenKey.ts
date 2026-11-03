@@ -13,7 +13,6 @@ const ADMIN_SCREENS = new Set([
   'issues',
   'accounts',
   'inquiries',
-  'webhooks',
 ])
 
 const PLAIN_SCREENS: Record<string, string> = {
@@ -39,6 +38,8 @@ export function screenKey(pathname: string, search: string): string | null {
   const [head, second, ...rest] = parts
   if (head === 'admin') {
     if (second === undefined) return 'admin_home'
+    // mint-server#228: 웹훅 became 외부전달; keep the server's existing usage key.
+    if (second === 'delivery') return rest.length === 0 ? 'admin_webhooks' : null
     return rest.length === 0 && ADMIN_SCREENS.has(second) ? `admin_${second}` : null
   }
   if (rest.length > 0) return null
@@ -67,7 +68,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   admin_issues: '관리 · 이슈 병합',
   admin_accounts: '관리 · 계정',
   admin_inquiries: '관리 · 문의',
-  admin_webhooks: '관리 · 웹훅',
+  admin_webhooks: '관리 · 외부전달',
 }
 
 export function screenLabel(key: string): string {
