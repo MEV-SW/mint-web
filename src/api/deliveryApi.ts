@@ -8,6 +8,8 @@ export type DeliveryReportKind = 'monthly' | 'quarterly'
 export type DeliveryReportStatus = 'draft' | 'sending' | 'sent' | 'partial' | 'failed'
 export type BatchKind = 'send' | 'retry' | 'test'
 export type BatchStatus = 'queued' | 'sending' | 'done' | 'cancelled' | 'failed'
+export type ReportOrigin = 'manual' | 'auto'
+export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'superseded' | 'expired'
 
 export interface DeliveryStatus {
   enabled: boolean
@@ -34,6 +36,8 @@ export interface BatchFailure {
 export interface Batch {
   id: string
   kind: BatchKind
+  /** mint-server#232: 'schedule' = 자동 발송 */
+  trigger: 'manual' | 'schedule'
   status: BatchStatus
   report_id: string | null
   report_title: string
@@ -62,6 +66,13 @@ export interface DeliveryReport {
   pdf_filename: string
   pdf_size: number
   send_status: DeliveryReportStatus
+  origin: ReportOrigin
+  review_status: ReviewStatus | null
+  report_month: string | null
+  scheduled_at: string | null
+  approved_at: string | null
+  reviewed_note: string | null
+  generation_id: string | null
   created_at: string
   updated_at: string
   counts: Record<string, number>
@@ -86,6 +97,7 @@ export interface MailPreview {
   html: string
   text: string
   message_size_bytes: number
+  content_hash: string
 }
 
 export interface Recipient {
@@ -220,8 +232,10 @@ export async function getSendPreview(reportId: string): Promise<SendPreview> {
   return (await apiClient.get<SendPreview>(`${BASE}/reports/${reportId}/send-preview`)).data
 }
 
-export async function sendReport(reportId: string, digest: string): Promise<SendStarted> {
-  return (await apiClient.post<SendStarted>(`${BASE}/reports/${reportId}/send`, { digest })).data
+export async function sendReport(reportId: string, digest: string, contentHash?: string): Promise<SendStarted> {
+  // mint-server#232 §6-1: an expired auto draft also sends the content hash of the reviewed preview.
+  const body = contentHash ? { digest, content_hash: contentHash } : { digest }
+  return (await apiClient.post<SendStarted>(`${BASE}/reports/${reportId}/send`, body)).data
 }
 
 export async function getRetryPreview(batchId: string): Promise<SendPreview> {
@@ -250,4 +264,73 @@ export async function listBatches(): Promise<Batch[]> {
 
 export async function getBatchDeliveries(batchId: string): Promise<BatchDeliveries> {
   return (await apiClient.get<BatchDeliveries>(`${BASE}/batches/${batchId}/deliveries`)).data
+}
+
+// --- mint-server#232 월간 보고서 자동화 (/admin/delivery/auto) -------------------------------
+
+const AUTO = `${BASE}/auto`
+
+export interface AutoSettings {
+  enabled: boolean
+  scheduler_enabled: boolean
+  editions: { id: string; name: string; selected: boolean }[]
+  generate_day: number
+  generate_time: string
+  send_day: number
+  send_time: string
+  notify_webhook: boolean
+  next: { send_at: string; generate_at: string; report_month: string; approved: number; pending: number }
+}
+
+export interface AutoSettingsInput {
+  enabled: boolean
+  edition_ids: string[]
+  generate_day: number
+  generate_time: string
+  send_day: number
+  send_time: string
+  notify_webhook: boolean
+}
+
+export interface Generation {
+  id: string
+  edition_id: string | null
+  report_month: string
+  trigger: 'schedule' | 'manual'
+  status: 'running' | 'succeeded' | 'failed' | 'skipped'
+  stage: string | null
+  error: string | null
+  attempt: number
+  model: string | null
+  llm_calls: number
+  input_tokens: number
+  output_tokens: number
+  duration_ms: number | null
+  created_at: string
+  finished_at: string | null
+  job_id: string | null
+}
+
+export async function getAutoSettings(): Promise<AutoSettings> {
+  return (await apiClient.get<AutoSettings>(`${AUTO}/settings`)).data
+}
+
+export async function saveAutoSettings(input: AutoSettingsInput): Promise<AutoSettings> {
+  return (await apiClient.put<AutoSettings>(`${AUTO}/settings`, input)).data
+}
+
+export async function listGenerations(): Promise<Generation[]> {
+  return (await apiClient.get<Generation[]>(`${AUTO}/generations`, { params: { limit: 50 } })).data
+}
+
+export async function generateReport(editionId: string, month: string): Promise<Generation> {
+  return (await apiClient.post<Generation>(`${AUTO}/generate`, { edition_id: editionId, month })).data
+}
+
+export async function approveDraft(reportId: string, contentHash: string): Promise<DeliveryReport> {
+  return (await apiClient.post<DeliveryReport>(`${AUTO}/drafts/${reportId}/approve`, { content_hash: contentHash })).data
+}
+
+export async function rejectDraft(reportId: string): Promise<DeliveryReport> {
+  return (await apiClient.post<DeliveryReport>(`${AUTO}/drafts/${reportId}/reject`, {})).data
 }
