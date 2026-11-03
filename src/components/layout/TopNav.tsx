@@ -141,6 +141,18 @@ export function TopNav() {
                   <span>문의</span>
                 </NavLink>
                 <NavLink
+                  to="/ai-connection"
+                  role="menuitem"
+                  className={({ isActive }) => cx('topnav-settings-item', isActive && 'active')}
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <Icon name="sparkles" />
+                  <span>AI 연결</span>
+                </NavLink>
+                <NavLink
                   to="/help"
                   role="menuitem"
                   className={({ isActive }) => cx('topnav-settings-item', isActive && 'active')}
@@ -211,6 +223,14 @@ export function TopNav() {
             >
               <Icon name="message" />
               <span>문의</span>
+            </NavLink>
+            <NavLink
+              to="/ai-connection"
+              className={({ isActive }) => cx('topnav-mobile-link', isActive && 'active')}
+              onClick={() => setMenuOpen(false)}
+            >
+              <Icon name="sparkles" />
+              <span>AI 연결</span>
             </NavLink>
             <NavLink
               to="/help"

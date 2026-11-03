@@ -12,6 +12,7 @@ import {
 } from '../api/usersApi'
 import { Btn } from '../components/common/Btn'
 import { PageShell } from '../components/layout/PageShell'
+import { OrgApiTokens } from '../components/accounts/OrgApiTokens'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
 import { useAuthStore } from '../store/authStore'
@@ -22,11 +23,12 @@ import { PERMISSION_MATRIX, PERMISSION_ROLES } from '../constants/permissionMatr
 import { cx } from '../utils/cx'
 
 type Filter = 'all' | 'unassigned' | 'admin' | 'inactive'
-type AccountsTab = 'members' | 'pending' | 'roles'
+type AccountsTab = 'members' | 'pending' | 'roles' | 'tokens'
 const ACCOUNT_TABS: Array<[AccountsTab, string]> = [
   ['members', '구성원'],
   ['pending', '승인 대기'],
   ['roles', '역할·권한'],
+  ['tokens', 'API 토큰'],
 ]
 
 function membershipsOf(user: UserAdmin) {
@@ -59,7 +61,8 @@ export function AdminAccountsPage() {
   const [filter, setFilter] = useState<Filter>('all')
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const tab: AccountsTab = tabParam === 'pending' || tabParam === 'roles' ? tabParam : 'members'
+  const tab: AccountsTab =
+    tabParam === 'pending' || tabParam === 'roles' || tabParam === 'tokens' ? tabParam : 'members'
   function selectTab(next: AccountsTab) {
     const params = new URLSearchParams(searchParams)
     if (next === 'members') params.delete('tab')
@@ -218,7 +221,9 @@ export function AdminAccountsPage() {
         ))}
       </div>
 
-      {tab === 'roles' ? (
+      {tab === 'tokens' ? (
+        <OrgApiTokens />
+      ) : tab === 'roles' ? (
         <section className="permission-matrix" aria-label="역할·권한">
           <p className="permission-matrix-note">
             현재 권한 규칙을 그대로 보여 주는 읽기 전용 표입니다. 한 사람이 여러 역할이면(예: 매니저이면서 분야
