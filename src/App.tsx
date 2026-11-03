@@ -14,7 +14,7 @@ import { LoginCallbackPage } from './pages/LoginCallbackPage'
 import { PostDetailPage } from './pages/PostDetailPage'
 import { ReportDetailPage } from './pages/ReportDetailPage'
 import { ReportsPage } from './pages/ReportsPage'
-import { SlackSettingsPage } from './pages/SlackSettingsPage'
+import { AdminDeliveryPage } from './pages/AdminDeliveryPage'
 import { HelpPage } from './pages/HelpPage'
 import { SourcesPage } from './pages/SourcesPage'
 import { InquiriesPage } from './pages/InquiriesPage'
@@ -103,12 +103,13 @@ export default function App() {
                         <Route path="accounts/inquiries" element={<Navigate to="/admin/inquiries" replace />} />
                         <Route path="users" element={<Navigate to="/admin/accounts" replace />} />
                         <Route path="inquiries" element={<AdminInquiriesPage />} />
-                        <Route path="webhooks" element={<SlackSettingsPage />} />
+                        <Route path="delivery" element={<AdminDeliveryPage />} />
+                        <Route path="webhooks" element={<Navigate to="/admin/delivery?tab=webhooks" replace />} />
                       </Route>
                     </Route>
                   </Route>
                   <Route path="/sources" element={<Navigate to="/admin/sources" replace />} />
-                  <Route path="/slack" element={<Navigate to="/admin/webhooks" replace />} />
+                  <Route path="/slack" element={<Navigate to="/admin/delivery?tab=webhooks" replace />} />
                 </Route>
               </Route>
             </Route>

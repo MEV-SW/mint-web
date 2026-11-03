@@ -1,10 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { createWebhook, deleteWebhook, listWebhooks, testAllWebhooks, testWebhook, updateWebhook } from '../api/slackApi'
 import { Btn } from '../components/common/Btn'
 import { Modal } from '../components/common/Modal'
 import { OverflowMenu } from '../components/common/OverflowMenu'
-import { PageShell } from '../components/layout/PageShell'
 import { useToast } from '../components/common/Toast'
 import { useConfirm } from '../components/common/useConfirm'
 import type { SlackWebhook, WebhookProvider, WebhookTestAllResponse } from '../api/slackApi'
@@ -43,7 +42,8 @@ const URL_PLACEHOLDER: Record<WebhookProvider, string> = {
   teams: 'https://….environment.api.powerplatform.com/powerautomate/…',
 }
 
-export function SlackSettingsPage() {
+/** mint-server#228: the 웹훅 tab of 관리 › 외부전달 (`tabs` is the shared tab bar; actions sit on its right). */
+export function WebhookPanel({ tabs }: { tabs: ReactNode }) {
   const toast = useToast()
   const confirm = useConfirm()
   const qc = useQueryClient()
@@ -134,13 +134,10 @@ export function SlackSettingsPage() {
   const canSave = Boolean(url.trim() && channel.trim())
 
   return (
-    <PageShell
-      section="관리 · 웹훅"
-      title="웹훅 설정"
-      lead="Slack Incoming Webhook과 Teams 워크플로 웹훅 URL을 등록합니다. 전체 테스트는 켜진 연결 모두에, 연결별 테스트는 각 줄의 메뉴에서 보냅니다."
-      leadSingleLine
-      actions={
-        <>
+    <>
+      <div className="dlv-tabbar">
+        {tabs}
+        <div className="dlv-tab-actions">
           <Btn
             variant="outline"
             onClick={() => test.mutate()}
@@ -151,9 +148,8 @@ export function SlackSettingsPage() {
           <Btn variant="primary" icon="plus" onClick={() => setShowAdd(true)}>
             웹훅 추가
           </Btn>
-        </>
-      }
-    >
+        </div>
+      </div>
       {testResult && (
         <div
           className={cx('card card-pad webhook-test-result', testResult.failed > 0 && 'has-failed')}
@@ -322,6 +318,6 @@ export function SlackSettingsPage() {
           )}
         </Modal>
       )}
-    </PageShell>
+    </>
   )
 }

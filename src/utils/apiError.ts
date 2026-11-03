@@ -8,3 +8,9 @@ export function apiErrorStatus(error: unknown): number | null {
   const status = (error as { response?: { status?: number } })?.response?.status
   return typeof status === 'number' ? status : null
 }
+
+/** mint-server#228: machine code next to `detail` (e.g. "recipients_changed"), or null. */
+export function apiErrorCode(error: unknown): string | null {
+  const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code
+  return typeof code === 'string' ? code : null
+}
