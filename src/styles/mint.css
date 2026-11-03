@@ -5392,6 +5392,16 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .aic-guide-note { margin: 12px 0 8px; font-size: 13px; color: var(--ink2); }
 .aic-code { display: flex; gap: 8px; align-items: flex-start; }
 .aic-code pre { flex: 1; min-width: 0; margin: 0; padding: 12px 14px; overflow-x: auto; border: 1px solid var(--line); background: var(--paper); font-size: 12.5px; line-height: 1.6; }
+.aic-code pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.aic-steps { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 18px; }
+.aic-step h3 { margin: 0 0 6px; font-size: 14px; }
+.aic-step p { margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: var(--ink2); overflow-wrap: anywhere; }
+.aic-snippet { margin-top: 8px; }
+.aic-snippet-label { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; color: var(--ink2); }
+.aic-more { margin-top: 20px; }
+.aic-trouble { margin: 0; padding: 0 16px 14px; display: grid; gap: 12px; }
+.aic-trouble dt { font-size: 13.5px; font-weight: 650; }
+.aic-trouble dd { margin: 2px 0 0; display: grid; gap: 2px; font-size: 13px; line-height: 1.6; color: var(--text-muted); }
 @media (max-width: 767px) {
   .aic-issue-row { grid-template-columns: 1fr; }
   .aic-issue-btn { width: 100%; }
