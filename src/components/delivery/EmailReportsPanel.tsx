@@ -192,7 +192,7 @@ export function EmailReportsPanel({ tabs }: { tabs: ReactNode }) {
             }}
           />
         </div>
-        <AutoSettingsCard />
+        <AutoSettingsCard onGenerated={(id) => setSelectedKey(`g:${id}`)} />
         <HistoryCard expanded={expandedBatch} onExpand={setExpandedBatch} canSend={Boolean(status.data?.enabled && status.data?.configured)} />
       </div>
       {showUpload && (

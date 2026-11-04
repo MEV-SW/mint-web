@@ -144,6 +144,18 @@ export async function listDeliveryReports(): Promise<DeliveryReport[]> {
   return (await apiClient.get<DeliveryReport[]>(`${BASE}/reports`, { params: { limit: 50 } })).data
 }
 
+/** Every report, page by page (the list endpoint returns at most 50 at a time). */
+export async function listAllDeliveryReports(): Promise<DeliveryReport[]> {
+  const all: DeliveryReport[] = []
+  let cursor: string | undefined
+  for (;;) {
+    const page = (await apiClient.get<DeliveryReport[]>(`${BASE}/reports`, { params: { limit: 50, cursor } })).data
+    all.push(...page)
+    if (page.length < 50) return all
+    cursor = page[page.length - 1].created_at
+  }
+}
+
 export async function getDeliveryReport(id: string): Promise<DeliveryReportDetail> {
   return (await apiClient.get<DeliveryReportDetail>(`${BASE}/reports/${id}`)).data
 }

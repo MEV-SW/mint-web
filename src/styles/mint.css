@@ -5556,3 +5556,6 @@ table.tbl { width: 100%; border-collapse: collapse; }
   .dlv-review-actions .dlv-push { grid-column: 1 / -1; grid-row: 1; margin-left: 0; }
   .dlv-report-top { flex-direction: column-reverse; align-items: flex-start; gap: 2px; }
 }
+.dlv-auto-make { margin-top: 12px; }
+.dlv-make-line { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+.dlv-make-warn { margin: 0 0 8px; font-size: 13px; line-height: 1.6; }
