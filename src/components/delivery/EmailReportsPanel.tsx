@@ -1,11 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   addRecipient,
   addRecipientsBulk,
+  BATCH_PAGE,
   cancelBatch,
   deleteDeliveryReport,
   deleteRecipient,
+  dismissGeneration,
   downloadReportHtml,
   downloadReportPdf,
   getBatch,
@@ -23,6 +25,7 @@ import {
   retryBatch,
   sendReport,
   sendTest,
+  setRecipientsActive,
   updateRecipient,
   uploadDeliveryReport,
   type Batch,
@@ -42,11 +45,11 @@ import { OverflowMenu } from '../common/OverflowMenu'
 import { useToast } from '../common/Toast'
 import { useConfirm } from '../common/useConfirm'
 import { AutoSettingsCard, ReviewCard, StateText } from './AutoReportParts'
-import { draftTitle, kstDateTime, kstShort, reportState, targetMonth } from './autoReportState'
+import { draftTitle, KIND_LABEL, kstDateTime, kstShort, reportEditRule, reportState, targetMonth } from './autoReportState'
+import { ReportInfoModal } from './ReportInfoModal'
 
 /** mint-server#228 — 관리 › 외부전달 › 이메일 보고서 (Design 시안 02~06, 승인 2026-11-03). */
 
-const KIND_LABEL: Record<DeliveryReportKind, string> = { monthly: '월간', quarterly: '분기' }
 const PDF_MAX = 10 * 1024 * 1024
 const HTML_MAX = 200 * 1024
 
@@ -154,6 +157,7 @@ export function EmailReportsPanel({ tabs }: { tabs: ReactNode }) {
             current={current}
             past={past}
             month={month}
+            maxGenerations={autoSettings.data?.max_generations ?? null}
             loading={reports.isLoading}
             selectedKey={selected?.key ?? null}
             onSelect={setSelectedKey}
@@ -230,7 +234,8 @@ function groupItems(reports: DeliveryReport[], generations: Generation[], month:
     if (!latest.has(g.edition_id)) latest.set(g.edition_id, g)
   }
   for (const [editionId, g] of latest) {
-    if (liveEditions.has(editionId) || !(g.status === 'running' || g.status === 'failed' || g.status === 'skipped')) continue
+    // mint-server#235 §1-3: decided after picking the latest, so an older failure does not come back.
+    if (g.dismissed_at || liveEditions.has(editionId) || !(g.status === 'running' || g.status === 'failed' || g.status === 'skipped')) continue
     current.push({ key: `g:${g.id}`, kind: 'generation', generation: g, editionName: names.get(editionId) ?? '' })
   }
   return { current, past }
@@ -256,6 +261,7 @@ function ReportsCard({
   current,
   past,
   month,
+  maxGenerations,
   loading,
   selectedKey,
   onSelect,
@@ -265,6 +271,7 @@ function ReportsCard({
   current: ReportItem[]
   past: ReportItem[]
   month: string
+  maxGenerations: number | null
   loading: boolean
   selectedKey: string | null
   onSelect: (key: string) => void
@@ -275,6 +282,16 @@ function ReportsCard({
   const confirm = useConfirm()
   const qc = useQueryClient()
   const [showAllPast, setShowAllPast] = useState(false)
+  const [infoId, setInfoId] = useState<string | null>(null)
+  const infoReport = infoId ? ([...current, ...past].find((i) => i.kind === 'report' && i.report.id === infoId) ?? null) : null
+  const dismiss = useMutation({
+    mutationFn: dismissGeneration,
+    onSuccess: () => {
+      toast('목록에서 지웠습니다. 생성 기록과 이번 달 횟수는 그대로입니다.')
+      void qc.invalidateQueries({ queryKey: ['delivery-generations'] })
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '지우지 못했습니다.', 'err'),
+  })
   const remove = useMutation({
     mutationFn: deleteDeliveryReport,
     onSuccess: () => {
@@ -297,6 +314,16 @@ function ReportsCard({
     if (ok) remove.mutate(report.id)
   }
 
+  async function requestDismiss(generationId: string, title: string) {
+    const limit = maxGenerations === null ? '' : `(최대 ${maxGenerations}회)`
+    const ok = await confirm({
+      title: `「${title}」 실패 항목을 목록에서 지울까요?`,
+      body: `보고서 목록에서만 사라집니다. 생성 기록은 남고, 이번 달 생성 횟수${limit}에도 그대로 들어갑니다. 다시 만들려면 자동 발송 카드의 지금 만들기를 쓰세요. 다시 만들다 실패하면 목록에 새로 나타납니다.`,
+      confirmLabel: '지우기',
+    })
+    if (ok) dismiss.mutate(generationId)
+  }
+
   const createdOn = current.find((i) => i.kind === 'report')
   const shownPast = showAllPast ? past : past.slice(0, PAST_VISIBLE)
   const row = (item: ReportItem) => {
@@ -313,8 +340,27 @@ function ReportsCard({
             <span className="dlv-report-meta">
               {periodOfMonth(month)} · 월간 · {state === 'generating' ? `자동 생성 중 (${kstDateTime(g.created_at)} 시작)` : `자동 생성 실패 ${shortTime(g.finished_at ?? g.created_at)}`}
             </span>
-            <span className="dlv-report-meta">{state === 'generating' ? '다 만들면 관리자에게 알립니다' : '발송 예정 시각 전에 다시 만들고 승인해야 보냅니다'}</span>
+            {state === 'generating' ? (
+              <span className="dlv-report-meta">다 만들면 관리자에게 알립니다</span>
+            ) : (
+              <span className="dlv-report-meta dlv-report-reason" title={g.error ?? undefined}>
+                사유: {g.error ?? '알 수 없음'}
+              </span>
+            )}
           </button>
+          {state === 'failed' && (
+            <OverflowMenu
+              label={`${draftTitle(month, item.editionName)} 메뉴`}
+              items={[
+                {
+                  key: 'dismiss',
+                  label: '목록에서 지우기…',
+                  disabled: dismiss.isPending,
+                  onClick: () => void requestDismiss(g.id, draftTitle(month, item.editionName)),
+                },
+              ]}
+            />
+          )}
         </li>
       )
     }
@@ -345,6 +391,7 @@ function ReportsCard({
         <OverflowMenu
           label={`${report.title} 메뉴`}
           items={[
+            { key: 'info', label: reportEditRule(report).mode === 'none' ? '정보 보기…' : '정보 수정…', onClick: () => setInfoId(report.id) },
             { key: 'pdf', label: 'PDF 내려받기', onClick: () => download(() => downloadReportPdf(report)) },
             { key: 'html', label: '메일 본문 HTML 내려받기', onClick: () => download(() => downloadReportHtml(report)) },
             {
@@ -397,6 +444,7 @@ function ReportsCard({
           )}
         </>
       )}
+      {infoReport?.kind === 'report' && <ReportInfoModal key={infoReport.report.id} report={infoReport.report} onClose={() => setInfoId(null)} />}
     </Card>
   )
 }
@@ -530,6 +578,13 @@ function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded:
 
 // --- 받는 사람 -----------------------------------------------------------------------------
 
+type RecipientFilter = 'all' | 'on' | 'off'
+const RECIPIENT_FILTERS: [RecipientFilter, string][] = [
+  ['all', '전체'],
+  ['on', '켜짐'],
+  ['off', '꺼짐'],
+]
+
 function RecipientsCard() {
   const toast = useToast()
   const confirm = useConfirm()
@@ -538,9 +593,24 @@ function RecipientsCard() {
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<RecipientFilter>('all')
+  const [editing, setEditing] = useState<{ id: string; value: string } | null>(null)
+  // The confirmed people are fixed when the dialog opens, so a refetch cannot change who is sent (§2-1).
+  const [bulkTarget, setBulkTarget] = useState<{ on: boolean; people: Recipient[] } | null>(null)
   const recipients = useQuery({ queryKey: ['delivery-recipients'], queryFn: listRecipients })
   const list = recipients.data ?? []
   const activeCount = list.filter((r) => r.is_active).length
+  // mint-server#235 §3-1: the list holds everyone (at most 500), so searching stays in the browser.
+  const needle = query.trim().toLowerCase()
+  const visible = list.filter((r) => {
+    if (filter === 'on' && !r.is_active) return false
+    if (filter === 'off' && r.is_active) return false
+    return !needle || r.name.toLowerCase().includes(needle) || r.email.toLowerCase().includes(needle)
+  })
+  const narrowed = needle !== '' || filter !== 'all'
+  const toOn = visible.filter((r) => !r.is_active).length
+  const toOff = visible.length - toOn
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['delivery-recipients'] })
@@ -577,6 +647,28 @@ function RecipientsCard() {
     onSuccess: refresh,
     onError: (e) => toast(apiErrorDetail(e) || '바꾸지 못했습니다.', 'err'),
   })
+  const rename = useMutation({
+    mutationFn: ({ id, value }: { id: string; value: string }) => updateRecipient(id, { name: value.trim() }),
+    onSuccess: () => {
+      setEditing(null)
+      refresh()
+      toast('이름을 고쳤습니다.')
+    },
+    onError: (e) => toast(apiErrorDetail(e) || '이름을 고치지 못했습니다.', 'err'),
+  })
+  const bulk = useMutation({
+    mutationFn: ({ on, people }: { on: boolean; people: Recipient[] }) => setRecipientsActive(people.map((r) => r.id), on),
+    onSuccess: (result, { on }) => {
+      setBulkTarget(null)
+      refresh()
+      toast(`${result.updated}명을 ${on ? '켰' : '껐'}습니다. 켜진 사람은 모두 ${result.active_recipients}명입니다.`)
+    },
+    onError: (e) => {
+      setBulkTarget(null)
+      refresh()
+      toast(apiErrorDetail(e) || '바꾸지 못했습니다.', 'err')
+    },
+  })
   const remove = useMutation({
     mutationFn: (id: string) => deleteRecipient(id),
     onSuccess: refresh,
@@ -608,34 +700,210 @@ function RecipientsCard() {
           {error}
         </p>
       )}
-      <ul className={cx('dlv-recipient-list', !showAll && 'is-collapsed')}>
-        {list.map((r) => (
-          <li key={r.id} className={cx('dlv-recipient', !r.is_active && 'is-off')}>
-            <strong>{r.name || '이름 없음'}</strong>
-            <span className="dlv-mono">{r.email}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={r.is_active}
-              aria-label={`${r.name || r.email} 받기`}
-              className={cx('switch', r.is_active && 'on')}
-              disabled={toggle.isPending}
-              onClick={() => toggle.mutate(r)}
+      {list.length > 0 && (
+        <>
+          <div className="dlv-recipient-tools">
+            <input
+              className="input"
+              type="search"
+              placeholder="이름 또는 주소로 찾기"
+              aria-label="받는 사람 찾기"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setEditing(null)
+              }}
             />
-            <button type="button" className="dlv-text-btn" onClick={() => void requestRemove(r)}>
-              삭제
-            </button>
-          </li>
-        ))}
-      </ul>
-      {list.length > 4 && !showAll && (
+            <div className="seg" role="radiogroup" aria-label="켜짐 꺼짐 필터">
+              {RECIPIENT_FILTERS.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={filter === value}
+                  className={filter === value ? 'on' : undefined}
+                  onClick={() => {
+                    setFilter(value)
+                    setEditing(null)
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="dlv-recipient-bulk">
+            <span>{narrowed ? `${list.length}명 중 ${visible.length}명 표시` : `${list.length}명`}</span>
+            <span className="dlv-recipient-bulk-actions">
+              <Btn variant="outline" size="sm" disabled={!toOn || bulk.isPending} onClick={() => setBulkTarget({ on: true, people: visible })}>
+                {narrowed ? '보이는 사람' : '전체'} 켜기 {toOn}명
+              </Btn>
+              <Btn variant="outline" size="sm" disabled={!toOff || bulk.isPending} onClick={() => setBulkTarget({ on: false, people: visible })}>
+                {narrowed ? '보이는 사람' : '전체'} 끄기 {toOff}명
+              </Btn>
+            </span>
+          </div>
+        </>
+      )}
+      {visible.length > 0 && (
+        <ul className={cx('dlv-recipient-list', !showAll && 'is-collapsed', visible.length > 8 && 'is-scroll')}>
+          {visible.map((r) =>
+            editing?.id === r.id ? (
+              <li key={r.id} className="dlv-recipient is-editing">
+                <input
+                  className="input"
+                  aria-label="이름"
+                  maxLength={64}
+                  autoFocus
+                  value={editing.value}
+                  onChange={(e) => setEditing({ id: r.id, value: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) rename.mutate(editing)
+                    if (e.key === 'Escape') setEditing(null)
+                  }}
+                />
+                <span className="dlv-mono">{r.email}</span>
+                <Btn variant="primary" size="sm" disabled={rename.isPending} onClick={() => rename.mutate(editing)}>
+                  저장
+                </Btn>
+                <Btn variant="outline" size="sm" onClick={() => setEditing(null)}>
+                  취소
+                </Btn>
+              </li>
+            ) : (
+              <li key={r.id} className={cx('dlv-recipient', !r.is_active && 'is-off')}>
+                <strong>{r.name || '이름 없음'}</strong>
+                <span className="dlv-mono">{r.email}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={r.is_active}
+                  aria-label={`${r.name || r.email} 받기`}
+                  className={cx('switch', r.is_active && 'on')}
+                  disabled={toggle.isPending}
+                  onClick={() => toggle.mutate(r)}
+                />
+                <button type="button" className="dlv-text-btn" onClick={() => setEditing({ id: r.id, value: r.name })}>
+                  수정
+                </button>
+                <button type="button" className="dlv-text-btn" onClick={() => void requestRemove(r)}>
+                  삭제
+                </button>
+              </li>
+            ),
+          )}
+        </ul>
+      )}
+      {visible.length > 4 && !showAll && (
         <button type="button" className="dlv-more dlv-narrow-only" onClick={() => setShowAll(true)}>
-          {list.length}명 중 4명 표시 · 모두 보기
+          {visible.length}명 중 4명 표시 · 모두 보기
         </button>
       )}
       {!list.length && !recipients.isLoading && <p className="dlv-empty">아직 받는 사람이 없습니다.</p>}
+      {list.length > 0 && !visible.length && (
+        <p className="dlv-empty">
+          {needle ? (
+            <>
+              「{query.trim()}」에 맞는 {filter === 'on' ? '켜진 ' : filter === 'off' ? '꺼진 ' : ''}사람이 없습니다.{' '}
+              <button type="button" className="dlv-text-btn" onClick={() => setQuery('')}>
+                찾기 지우기
+              </button>
+            </>
+          ) : filter === 'on' ? (
+            '켜진 사람이 없습니다.'
+          ) : (
+            '꺼진 사람이 없습니다.'
+          )}
+        </p>
+      )}
       <p className="dlv-hint dlv-wide-only">여러 명은 쉼표·줄바꿈·세미콜론·공백으로 구분해 한 번에 붙여넣을 수 있습니다. 이름을 함께 넣으려면 &quot;이름 &lt;주소&gt;&quot;를 쉼표나 줄바꿈으로 구분해 주세요. 꺼진 사람은 목록에 남지만 보내지 않습니다. 받는 사람은 서로의 주소를 볼 수 없게 한 사람씩 보냅니다.</p>
+      {bulkTarget && (
+        <BulkConfirm
+          on={bulkTarget.on}
+          total={list.length}
+          activeCount={activeCount}
+          visible={bulkTarget.people}
+          narrowed={narrowed}
+          condition={[needle && `「${query.trim()}」`, filter === 'on' ? '켜짐' : filter === 'off' ? '꺼짐' : ''].filter(Boolean).join(' · ')}
+          pending={bulk.isPending}
+          onClose={() => setBulkTarget(null)}
+          onConfirm={() => bulk.mutate(bulkTarget)}
+        />
+      )}
     </Card>
+  )
+}
+
+function BulkConfirm({
+  on,
+  total,
+  activeCount,
+  visible,
+  narrowed,
+  condition,
+  pending,
+  onClose,
+  onConfirm,
+}: {
+  on: boolean
+  total: number
+  activeCount: number
+  visible: Recipient[]
+  narrowed: boolean
+  condition: string
+  pending: boolean
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  const change = visible.filter((r) => r.is_active !== on).length
+  const same = visible.length - change
+  const after = on ? activeCount + change : activeCount - change
+  return (
+    <Modal
+      title={narrowed ? `보이는 사람 중 ${change}명을 ${on ? '켤' : '끌'}까요?` : `${on ? '꺼진' : '켜진'} ${change}명을 모두 ${on ? '켤' : '끌'}까요?`}
+      onClose={onClose}
+      footer={
+        <>
+          <Btn variant="outline" onClick={onClose}>
+            취소
+          </Btn>
+          <Btn variant="primary" disabled={pending || !change} onClick={onConfirm}>
+            {change}명 {on ? '켜기' : '끄기'}
+          </Btn>
+        </>
+      }
+    >
+      <dl className="dlv-confirm">
+        {narrowed && (
+          <>
+            <dt>찾은 조건</dt>
+            <dd className="is-plain">{condition}</dd>
+            <dt>보이는 사람</dt>
+            <dd className="is-plain">{visible.length}명</dd>
+          </>
+        )}
+        <dt>{on ? '새로 켜는' : '새로 끄는'} 사람</dt>
+        <dd>{change}명</dd>
+        {same > 0 && (
+          <>
+            <dt>이미 {on ? '켜진' : '꺼진'} 사람</dt>
+            <dd className="is-plain">{same}명 (그대로)</dd>
+          </>
+        )}
+        {narrowed && (
+          <>
+            <dt>나머지</dt>
+            <dd className="is-plain">{total - visible.length}명 (바꾸지 않음)</dd>
+          </>
+        )}
+        <dt>{on ? '켠' : '끈'} 뒤 켜진 사람</dt>
+        <dd>{after}명</dd>
+      </dl>
+      <p className="dlv-hint">
+        {on ? '' : '지금 켜고 꺼 둔 상태는 되돌릴 수 없습니다. '}
+        승인한 초안과 지금 보내기는 보내는 시각에 켜져 있는 사람에게 갑니다. 이미 그 보고서를 받은 사람은 빠지므로 보내기 확인 창의 인원과 다를 수 있습니다.
+      </p>
+    </Modal>
   )
 }
 
@@ -923,16 +1191,33 @@ function SendConfirm({
 // --- 발송 기록 ------------------------------------------------------------------------------
 
 function HistoryCard({ expanded, onExpand, canSend }: { expanded: string | null; onExpand: (id: string | null) => void; canSend: boolean }) {
-  const batches = useQuery({
-    queryKey: ['delivery-batches'],
-    queryFn: listBatches,
-    refetchInterval: (query) => (query.state.data?.some((b) => b.status === 'queued' || b.status === 'sending') ? 3000 : false),
+  const [hideTest, setHideTest] = useState(false)
+  const batches = useInfiniteQuery({
+    queryKey: ['delivery-batches', hideTest],
+    queryFn: ({ pageParam }) => listBatches(hideTest, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => (last.length > BATCH_PAGE ? last[BATCH_PAGE - 1].created_at : undefined),
+    refetchInterval: (query) =>
+      query.state.data?.pages.some((page) => page.some((b) => b.status === 'queued' || b.status === 'sending')) ? 3000 : false,
   })
-  const list = batches.data ?? []
+  const list = (batches.data?.pages ?? []).flatMap((page) => page.slice(0, BATCH_PAGE))
   return (
-    <Card title="발송 기록" className="dlv-history" id="dlv-history" aside={<span className="dlv-aside">최근 {list.length}건</span>}>
+    <Card
+      title="발송 기록"
+      className="dlv-history"
+      id="dlv-history"
+      aside={
+        <span className="dlv-history-tools">
+          <label className="dlv-check">
+            <input type="checkbox" checked={hideTest} onChange={(e) => setHideTest(e.target.checked)} />
+            테스트 숨기기
+          </label>
+          <span className="dlv-aside">{list.length}건 표시</span>
+        </span>
+      }
+    >
       {!list.length ? (
-        <p className="dlv-empty">{batches.isLoading ? '불러오는 중…' : '아직 보낸 기록이 없습니다.'}</p>
+        <p className="dlv-empty">{batches.isLoading ? '불러오는 중…' : hideTest ? '테스트 말고 보낸 기록이 아직 없습니다.' : '아직 보낸 기록이 없습니다.'}</p>
       ) : (
         <div className="dlv-history-table" role="table" aria-label="발송 기록">
           <div className="dlv-history-row is-head" role="row">
@@ -947,7 +1232,7 @@ function HistoryCard({ expanded, onExpand, canSend }: { expanded: string | null;
           </div>
           {list.map((batch) => {
             const result = resultLabel(batch)
-            const hasDetail = batch.kind !== 'test' && (failedCount(batch) > 0 || batch.unknown > 0)
+            const hasDetail = batch.kind !== 'test' && batch.total > 0
             const open = expanded === batch.id
             return (
               <Fragment key={batch.id}>
@@ -983,6 +1268,11 @@ function HistoryCard({ expanded, onExpand, canSend }: { expanded: string | null;
           })}
         </div>
       )}
+      {batches.hasNextPage && (
+        <button type="button" className="dlv-more" disabled={batches.isFetchingNextPage} onClick={() => void batches.fetchNextPage()}>
+          {batches.isFetchingNextPage ? '불러오는 중…' : '이전 기록 더 보기 ▾'}
+        </button>
+      )}
     </Card>
   )
 }
@@ -991,7 +1281,13 @@ function HistoryDetail({ batch, canSend }: { batch: Batch; canSend: boolean }) {
   const toast = useToast()
   const qc = useQueryClient()
   const [confirmPreview, setConfirmPreview] = useState<SendPreview | null>(null)
-  const detail = useQuery({ queryKey: ['delivery-batch-deliveries', batch.id], queryFn: () => getBatchDeliveries(batch.id) })
+  const [find, setFind] = useState('')
+  // The list polls while a batch is open, so its progress in the key keeps this detail current.
+  const detail = useQuery({
+    queryKey: ['delivery-batch-deliveries', batch.id, batch.status, batch.done],
+    queryFn: () => getBatchDeliveries(batch.id),
+    placeholderData: (previous) => previous,
+  })
   const preview = useMutation({
     mutationFn: () => getRetryPreview(batch.id),
     onSuccess: (data) => (data.count ? setConfirmPreview(data) : toast('다시 보낼 사람이 없습니다.', 'err')),
@@ -1019,37 +1315,96 @@ function HistoryDetail({ batch, canSend }: { batch: Batch; canSend: boolean }) {
   const data = detail.data
   if (!data) return <div className="dlv-history-detail">불러오는 중…</div>
   const reportDeleted = !batch.report_id
+  const needle = find.trim().toLowerCase()
+  const match = (r: { name: string; email: string }) => !needle || r.name.toLowerCase().includes(needle) || r.email.toLowerCase().includes(needle)
+  const inProgress = (status: string) => status === 'queued' || status === 'sending'
+  const waiting = data.not_received.filter((r) => inProgress(r.status))
+  const failed = data.not_received.filter((r) => !inProgress(r.status))
+  const received = [...data.received].sort((a, b) => Number(!a.name) - Number(!b.name) || a.name.localeCompare(b.name, 'ko') || a.email.localeCompare(b.email))
+  const shownReceived = received.filter(match)
+  const shownFailed = failed.filter(match)
+  const shownWaiting = waiting.filter(match)
+  const noMatch = <p className="dlv-empty">찾는 사람이 이 목록에 없습니다.</p>
   return (
     <div className="dlv-history-detail">
-      <strong className="dlv-history-detail-title">받지 못한 사람 {data.not_received.length}명</strong>
-      <ul>
-        {data.not_received.map((r, i) => (
-          <li key={`${r.email}-${i}`}>
-            <strong>{r.name || '이름 없음'}</strong>
-            <span className="dlv-mono">{r.email}</span>
-            <span className={r.status === 'unknown' ? 'dlv-warn' : 'dlv-error'}>{r.error_label ?? (r.status === 'unknown' ? '확인 필요' : '실패')}</span>
-          </li>
-        ))}
-      </ul>
-      {data.received.length > 0 && (
-        <p className="dlv-hint">
-          받은 사람 {data.received.length}명: {data.received.map((r) => r.name || '이름 없음').join(', ')}
-        </p>
+      {data.received.length + data.not_received.length > 20 && (
+        <input
+          className="input dlv-history-find"
+          type="search"
+          placeholder="이 발송에서 이름 또는 주소로 찾기"
+          aria-label="이 발송에서 찾기"
+          value={find}
+          onChange={(e) => setFind(e.target.value)}
+        />
       )}
-      <Btn
-        variant="outline"
-        size="sm"
-        disabled={!canSend || reportDeleted || data.retry_count === 0 || preview.isPending}
-        onClick={() => preview.mutate()}
-      >
-        실패한 {data.retry_count}명에게 다시 보내기
-      </Btn>
-      {reportDeleted ? (
-        <p className="dlv-hint">보고서가 지워져 다시 보낼 수 없습니다.</p>
-      ) : (
-        data.retry_count < data.not_received.length && (
-          <p className="dlv-hint">결과 확인이 필요하거나 꺼진·지워진 사람, 이미 받은 사람은 다시 보내지 않습니다.</p>
-        )
+      {failed.length > 0 && (
+        <div className="dlv-history-detail-group">
+          <strong className="dlv-history-detail-title">받지 못한 사람 {failed.length}명</strong>
+          {shownFailed.length ? (
+            <ul>
+              {shownFailed.map((r, i) => (
+                <li key={`${r.email}-${i}`}>
+                  <strong>{r.name || '이름 없음'}</strong>
+                  <span className="dlv-mono">{r.email}</span>
+                  <span className={r.status === 'unknown' ? 'dlv-warn' : 'dlv-error'}>{r.error_label ?? (r.status === 'unknown' ? '확인 필요' : '실패')}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            noMatch
+          )}
+          <Btn
+            variant="outline"
+            size="sm"
+            disabled={!canSend || reportDeleted || data.retry_count === 0 || preview.isPending}
+            onClick={() => preview.mutate()}
+          >
+            실패한 {data.retry_count}명에게 다시 보내기
+          </Btn>
+          {reportDeleted ? (
+            <p className="dlv-hint">보고서가 지워져 다시 보낼 수 없습니다.</p>
+          ) : (
+            data.retry_count < failed.length && <p className="dlv-hint">결과 확인이 필요하거나 꺼진·지워진 사람, 이미 받은 사람은 다시 보내지 않습니다.</p>
+          )}
+        </div>
+      )}
+      {waiting.length > 0 && (
+        <div className="dlv-history-detail-group">
+          <strong className="dlv-history-detail-title">아직 보내는 중 {waiting.length}명</strong>
+          {shownWaiting.length ? (
+            <ul className={shownWaiting.length > 8 ? 'is-scroll' : undefined}>
+              {shownWaiting.map((r, i) => (
+                <li key={`${r.email}-${i}`}>
+                  <strong>{r.name || '이름 없음'}</strong>
+                  <span className="dlv-mono">{r.email}</span>
+                  <span className="dlv-history-sent">보내는 중</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            noMatch
+          )}
+        </div>
+      )}
+      {(received.length > 0 || (!failed.length && !waiting.length)) && (
+        <div className="dlv-history-detail-group">
+          <strong className="dlv-history-detail-title">
+            받은 사람 {received.length}명{needle ? ` 중 ${shownReceived.length}명 표시` : ''}
+          </strong>
+          {shownReceived.length ? (
+            <ul className={shownReceived.length > 8 ? 'is-scroll' : undefined}>
+              {shownReceived.map((r, i) => (
+                <li key={`${r.email}-${i}`} className="is-received">
+                  <strong>{r.name || '이름 없음'}</strong>
+                  <span className="dlv-mono">{r.email}</span>
+                  <span className="dlv-history-sent">{kstShort(r.sent_at)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            noMatch
+          )}
+        </div>
       )}
       {confirmPreview && (
         <SendConfirm

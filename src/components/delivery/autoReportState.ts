@@ -1,4 +1,6 @@
-import type { DeliveryReport, Generation } from '../../api/deliveryApi'
+import type { DeliveryReport, DeliveryReportKind, Generation } from '../../api/deliveryApi'
+
+export const KIND_LABEL: Record<DeliveryReportKind, string> = { monthly: '월간', quarterly: '분기' }
 
 /** mint-server#232 — shared helpers for the auto-report UI (KST times, states). */
 
@@ -77,12 +79,44 @@ export function generationBlock(
   month: string,
   reports: DeliveryReport[],
   generations: Generation[],
-): 'draft' | 'sent' | 'running' | null {
+  maxGenerations?: number,
+): 'draft' | 'sent' | 'running' | 'limit' | null {
   if (generations.some((g) => g.edition_id === editionId && g.report_month === month && g.status === 'running')) return 'running'
   const drafts = reports.filter((r) => r.origin === 'auto' && r.edition_id === editionId && r.report_month === month)
   if (drafts.some((r) => r.send_status === 'sent' || r.send_status === 'partial' || r.send_status === 'sending')) return 'sent'
   if (drafts.some((r) => r.review_status === 'pending' || r.review_status === 'approved')) return 'draft'
+  // mint-server#235 §1-4: attempt counts every try, hidden ones too. The server has the final say.
+  const latest = latestGeneration(generations.filter((g) => g.edition_id === editionId && g.report_month === month))
+  if (latest && maxGenerations !== undefined && latest.attempt >= maxGenerations) return 'limit'
   return null
+}
+
+export function latestGeneration(generations: Generation[]): Generation | null {
+  return generations.reduce<Generation | null>((best, g) => (!best || g.created_at > best.created_at ? g : best), null)
+}
+
+/** The topic particle for a Korean word ("개발은", "전기차는"); 은(는) when the last letter is not Hangul. */
+export function topicParticle(word: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00
+  if (Number.isNaN(code) || code < 0 || code > 11171) return '은(는)'
+  return code % 28 ? '은' : '는'
+}
+
+export type EditRule = { mode: 'all' | 'names' | 'none'; note: string | null }
+
+/** mint-server#235 §4-2, Design 시안 3. The server enforces the same rule with 409. */
+export function reportEditRule(report: DeliveryReport): EditRule {
+  if (report.send_status === 'sending') return { mode: 'none', note: '보내는 중에는 고칠 수 없습니다. 발송이 끝난 뒤 고쳐 주세요.' }
+  if (report.origin !== 'auto') return { mode: 'all', note: null }
+  if (report.review_status === 'rejected' || report.review_status === 'superseded') {
+    return { mode: 'none', note: '버린 초안은 고칠 수 없습니다. 내용을 확인할 수만 있습니다.' }
+  }
+  if (report.send_status === 'sent' || report.send_status === 'partial') return { mode: 'none', note: '이미 보낸 자동 생성 보고서는 고칠 수 없습니다.' }
+  if (report.review_status === 'approved') {
+    return { mode: 'none', note: '승인한 초안은 승인한 내용 그대로 보내므로 고칠 수 없습니다. 고치려면 초안을 버리고 다시 만들어 주세요.' }
+  }
+  if (report.review_status === 'pending' || (report.review_status === 'expired' && report.send_status === 'draft')) return { mode: 'names', note: null }
+  return { mode: 'none', note: '발송을 시도한 자동 생성 보고서는 고칠 수 없습니다.' }
 }
 
 /** Has this month's send time (saved day and HH:MM, KST) passed? Then a new draft cannot be approved. */

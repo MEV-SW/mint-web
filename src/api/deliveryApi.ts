@@ -131,7 +131,7 @@ export interface TestSendResult {
 
 export interface BatchDeliveries {
   batch: Batch
-  received: { name: string }[]
+  received: { name: string; email: string; sent_at: string | null }[]
   not_received: BatchFailure[]
   retry_count: number
 }
@@ -224,6 +224,13 @@ export async function listRecipients(): Promise<Recipient[]> {
   return (await apiClient.get<Recipient[]>(`${BASE}/recipients`)).data
 }
 
+export async function updateDeliveryReport(
+  id: string,
+  changes: Partial<Pick<DeliveryReport, 'title' | 'email_subject' | 'kind' | 'period_start' | 'period_end'>>,
+): Promise<DeliveryReport> {
+  return (await apiClient.patch<DeliveryReport>(`${BASE}/reports/${id}`, changes)).data
+}
+
 export async function addRecipient(email: string, name: string): Promise<Recipient> {
   return (await apiClient.post<Recipient>(`${BASE}/recipients`, { email, name })).data
 }
@@ -234,6 +241,11 @@ export async function addRecipientsBulk(text: string): Promise<{ added: number; 
 
 export async function updateRecipient(id: string, changes: { name?: string; is_active?: boolean }): Promise<Recipient> {
   return (await apiClient.patch<Recipient>(`${BASE}/recipients/${id}`, changes)).data
+}
+
+/** mint-server#235 §2: the listed people only, in one request. */
+export async function setRecipientsActive(ids: string[], isActive: boolean): Promise<{ updated: number; active_recipients: number }> {
+  return (await apiClient.post(`${BASE}/recipients/bulk-active`, { ids, is_active: isActive })).data
 }
 
 export async function deleteRecipient(id: string): Promise<void> {
@@ -270,8 +282,12 @@ export async function cancelBatch(batchId: string): Promise<BatchProgress> {
   return (await apiClient.post<BatchProgress>(`${BASE}/batches/${batchId}/cancel`)).data
 }
 
-export async function listBatches(): Promise<Batch[]> {
-  return (await apiClient.get<Batch[]>(`${BASE}/batches`, { params: { limit: 20 } })).data
+export const BATCH_PAGE = 20
+
+/** One row more than a page, so the caller knows whether there is a next page (mint-server#235 §5-3). */
+export async function listBatches(excludeTest: boolean, cursor?: string): Promise<Batch[]> {
+  const params = { limit: BATCH_PAGE + 1, ...(excludeTest ? { exclude_test: true } : {}), ...(cursor ? { cursor } : {}) }
+  return (await apiClient.get<Batch[]>(`${BASE}/batches`, { params })).data
 }
 
 export async function getBatchDeliveries(batchId: string): Promise<BatchDeliveries> {
@@ -291,6 +307,7 @@ export interface AutoSettings {
   send_day: number
   send_time: string
   notify_webhook: boolean
+  max_generations: number
   next: { send_at: string; generate_at: string; report_month: string; approved: number; pending: number }
 }
 
@@ -321,6 +338,7 @@ export interface Generation {
   created_at: string
   finished_at: string | null
   job_id: string | null
+  dismissed_at: string | null
 }
 
 export async function getAutoSettings(): Promise<AutoSettings> {
@@ -333,6 +351,10 @@ export async function saveAutoSettings(input: AutoSettingsInput): Promise<AutoSe
 
 export async function listGenerations(): Promise<Generation[]> {
   return (await apiClient.get<Generation[]>(`${AUTO}/generations`, { params: { limit: 50 } })).data
+}
+
+export async function dismissGeneration(id: string): Promise<Generation> {
+  return (await apiClient.post<Generation>(`${AUTO}/generations/${id}/dismiss`)).data
 }
 
 export async function generateReport(editionId: string, month: string): Promise<Generation> {

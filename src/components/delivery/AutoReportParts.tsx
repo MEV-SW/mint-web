@@ -30,6 +30,7 @@ import {
   scheduleGapMinutes,
   sendTimePassed,
   targetMonth,
+  topicParticle,
   type AutoState,
 } from './autoReportState'
 
@@ -71,6 +72,8 @@ export function ReviewCard({
   const toast = useToast()
   const qc = useQueryClient()
   const [dialog, setDialog] = useState<'approve' | 'reject' | 'regenerate' | null>(null)
+  const [reasonOpen, setReasonOpen] = useState(false)
+  const failReason = generation?.error ?? '알 수 없음'
   const preview = useQuery({
     queryKey: ['delivery-preview', report?.id],
     queryFn: () => getMailPreview(report!.id),
@@ -159,13 +162,20 @@ export function ReviewCard({
           </>
         )}
         {state === 'failed' && (
-          <p>
-            초안을 만들지 못했습니다.
-            <br />
-            <span className="dlv-error">사유: {generation?.error ?? '알 수 없음'}</span>
-            <br />
-            발송 예정 시각 전에 다시 만들고 승인해야 보냅니다.
-          </p>
+          <>
+            <p>초안을 만들지 못했습니다.</p>
+            <p className={reasonOpen ? undefined : 'dlv-reason-clamp'}>
+              <span className="dlv-error">사유: {failReason}</span>
+            </p>
+            {failReason.length > 120 && (
+              <p>
+                <button type="button" className="dlv-text-btn" aria-expanded={reasonOpen} onClick={() => setReasonOpen((v) => !v)}>
+                  {reasonOpen ? '접기 ▴' : '전체 보기 ▾'}
+                </button>
+              </p>
+            )}
+            <p>발송 예정 시각 전에 다시 만들고 승인해야 보냅니다.</p>
+          </>
         )}
       </div>
       {report && !preview.data && (
@@ -416,15 +426,21 @@ function AutoSettingsForm({ initial, onGenerated }: { initial: AutoSettings; onG
   const savedEditions = initial.editions.filter((e) => e.selected)
   const editionsChanged = editions.size !== savedEditions.length || savedEditions.some((e) => !editions.has(e.id))
   const stateKnown = Boolean(reports.data && generations.data)
-  const makeable = stateKnown
-    ? savedEditions.filter((e) => !generationBlock(e.id, month, reports.data ?? [], generations.data ?? []))
-    : []
+  const maxGenerations = initial.max_generations
+  const blockOf = (editionId: string) => generationBlock(editionId, month, reports.data ?? [], generations.data ?? [], maxGenerations)
+  const makeable = stateKnown ? savedEditions.filter((e) => !blockOf(e.id)) : []
+  const limited = stateKnown ? savedEditions.filter((e) => blockOf(e.id) === 'limit') : []
+  const limitedNames = limited.map((e) => e.name).join(', ')
+  const limitNote = limited.length
+    ? `${limitedNames}${topicParticle(limitedNames)} 이번 달 생성 횟수 ${maxGenerations}회를 다 써서 만들지 않습니다.`
+    : ''
+  const allLimited = limited.length > 0 && limited.length === savedEditions.length
   const make = useMutation({
     // The screen's lists are cached and capped, and the server would replace an approved or sent
     // draft, so decide again from fresh data at the moment of the click.
     mutationFn: async () => {
       const [freshReports, freshGenerations] = await Promise.all([listAllDeliveryReports(), listGenerations()])
-      const targets = savedEditions.filter((e) => !generationBlock(e.id, month, freshReports, freshGenerations))
+      const targets = savedEditions.filter((e) => !generationBlock(e.id, month, freshReports, freshGenerations, maxGenerations))
       const results = await Promise.allSettled(targets.map((e) => generateReport(e.id, month)))
       return { results, attempted: makeable.length }
     },
@@ -456,9 +472,13 @@ function AutoSettingsForm({ initial, onGenerated }: { initial: AutoSettings; onG
         ? reports.isError || generations.isError
           ? '초안 상태를 확인하지 못해 만들 수 없습니다.'
           : '초안 상태를 확인하는 중입니다.'
-        : !makeable.length
-          ? `${monthLabel(month)} 초안이 이미 있거나 만드는 중입니다. 검토 대기 초안은 초안 검토에서 다시 만들 수 있습니다.`
-          : `${monthLabel(month)} 초안을 지금 만듭니다. 자동으로 보내지 않습니다.`
+        : allLimited
+          ? `${savedEditions.length > 1 ? '모든 분야가' : `${limitedNames}${topicParticle(limitedNames)}`} 이번 달 생성 횟수 ${maxGenerations}회를 다 써서 더 만들 수 없습니다. 목록에서 지운 항목도 횟수에 들어갑니다.`
+          : !makeable.length
+            ? `${monthLabel(month)} 초안이 이미 있거나 만드는 중입니다. 검토 대기 초안은 초안 검토에서 다시 만들 수 있습니다. ${limitNote}`.trim()
+            : limited.length
+              ? `${monthLabel(month)} ${makeable.map((e) => e.name).join(', ')} 초안을 지금 만듭니다. 자동으로 보내지 않습니다. ${limitNote}`
+              : `${monthLabel(month)} 초안을 지금 만듭니다. 자동으로 보내지 않습니다.`
   const makeDisabled = !savedEditions.length || editionsChanged || !stateKnown || !makeable.length || make.isPending
   const deadlinePassed = sendTimePassed(initial.send_day, initial.send_time)
 
@@ -557,7 +577,7 @@ function AutoSettingsForm({ initial, onGenerated }: { initial: AutoSettings; onG
         </Btn>
       </div>
       <div className="dlv-auto-foot dlv-auto-make">
-        <p className="dlv-hint">{makeHint}</p>
+        <p className={cx('dlv-hint', allLimited && 'dlv-error')}>{makeHint}</p>
         <Btn variant="outline" disabled={makeDisabled} onClick={() => setConfirmMake(true)}>
           {make.isPending ? '요청 중…' : '지금 만들기'}
         </Btn>
@@ -582,15 +602,16 @@ function AutoSettingsForm({ initial, onGenerated }: { initial: AutoSettings; onG
               {monthLabel(month)} {e.name} 초안을 만듭니다. 자동으로 보내지 않습니다.
             </p>
           ))}
-          {makeable.length < savedEditions.length && (
+          {makeable.length + limited.length < savedEditions.length && (
             <p className="dlv-hint">
               {savedEditions
-                .filter((e) => !makeable.includes(e))
+                .filter((e) => !makeable.includes(e) && !limited.includes(e))
                 .map((e) => e.name)
                 .join(', ')}
               : 이 달 초안이 이미 있거나 만드는 중이라 만들지 않습니다.
             </p>
           )}
+          {limited.length > 0 && <p className="dlv-hint">{limitNote}</p>}
           {deadlinePassed && (
             <p className="dlv-error dlv-make-warn">
               이번 달 발송 시각(매달 {initial.send_day}일 {initial.send_time})이 이미 지났습니다. 이 초안은 확인할 수 있지만 승인해 자동으로 보낼 수는 없습니다.
