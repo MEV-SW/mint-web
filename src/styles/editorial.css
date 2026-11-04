@@ -5386,16 +5386,21 @@ a.report-cal-entry:hover strong {
 }
 
 /* ===== Admin sidebar (R5, mint-web#93) ===== */
-/* Same rail as the fixed top nav (#114): sidebar starts at the nav's left
-   content edge and the body ends at its right content edge. */
+/* Same rail as the fixed top nav: the sidebar panel starts at the left end of
+   the nav's bottom rule, its text starts at the logo's left edge, and the body
+   ends at the nav's right content edge. */
+/* A left scrollbar gutter would inset the panel from the rule, and nothing can paint in it. */
+.app-topnav .content:has(> .admin-layout) {
+  scrollbar-gutter: stable;
+}
 .admin-layout {
   display: grid;
   grid-template-columns: 244px minmax(0, 1fr);
   align-items: start;
   min-height: 100%;
-  width: 100%;
   max-width: var(--design-max);
-  margin-left: auto;
+  /* The nav's left edge: centered in .main, which is 4px narrower from 1444px. */
+  margin-left: max(0px, calc((100vw - 4px - var(--design-max)) / 2));
   margin-right: auto;
   padding-left: var(--page-pad);
   padding-right: var(--page-pad);
@@ -5415,13 +5420,14 @@ a.report-cal-entry:hover strong {
   top: 0;
   align-self: stretch;
   min-height: 100%;
-  padding: 26px 14px 40px;
+  margin-left: calc(-1 * var(--page-pad));
+  padding: 26px 14px 40px var(--page-pad);
   background: var(--panel);
   border-right: 1px solid var(--line);
   box-sizing: border-box;
 }
 .admin-sidebar-head {
-  padding: 0 10px 18px;
+  padding: 0 10px 18px 0;
   border-bottom: 1px solid var(--line2);
   margin-bottom: 10px;
 }
@@ -5517,6 +5523,13 @@ a.report-cal-entry:hover strong {
 .admin-nav-badge.is-loading {
   background: transparent;
   color: var(--ink3);
+}
+/* The labels start at the logo; the link's hover and active fill stays 10px wider. */
+.admin-sidebar .admin-nav-group-title {
+  padding-left: 0;
+}
+.admin-sidebar .admin-nav-link {
+  margin-left: -10px;
 }
 .admin-mobile-bar,
 .admin-sheet-backdrop {
