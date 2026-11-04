@@ -1,4 +1,4 @@
-import type { DeliveryReport } from '../../api/deliveryApi'
+import type { DeliveryReport, Generation } from '../../api/deliveryApi'
 
 /** mint-server#232 — shared helpers for the auto-report UI (KST times, states). */
 
@@ -60,4 +60,35 @@ export function kstShort(iso: string | null | undefined): string {
 export function scheduleGapMinutes(genDay: number, genTime: string, sendDay: number, sendTime: string): number {
   const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
   return (sendDay - genDay) * 1440 + minutes(sendTime) - minutes(genTime)
+}
+
+/** "2026-10-01" → "2026년 10월". */
+export function monthLabel(month: string): string {
+  return `${month.slice(0, 4)}년 ${Number(month.slice(5, 7))}월`
+}
+
+/**
+ * Why "지금 만들기" must not start for this edition and month, or null when it may.
+ * The server replaces any pending/approved draft of the month when a new one is registered, even one
+ * already sent (review_status stays approved after sending), so the button has to refuse those.
+ */
+export function generationBlock(
+  editionId: string,
+  month: string,
+  reports: DeliveryReport[],
+  generations: Generation[],
+): 'draft' | 'sent' | 'running' | null {
+  if (generations.some((g) => g.edition_id === editionId && g.report_month === month && g.status === 'running')) return 'running'
+  const drafts = reports.filter((r) => r.origin === 'auto' && r.edition_id === editionId && r.report_month === month)
+  if (drafts.some((r) => r.send_status === 'sent' || r.send_status === 'partial' || r.send_status === 'sending')) return 'sent'
+  if (drafts.some((r) => r.review_status === 'pending' || r.review_status === 'approved')) return 'draft'
+  return null
+}
+
+/** Has this month's send time (saved day and HH:MM, KST) passed? Then a new draft cannot be approved. */
+export function sendTimePassed(sendDay: number, sendTime: string, now = new Date()): boolean {
+  const k = new Date(now.getTime() + 9 * 3600_000)
+  const minutes = Number(sendTime.slice(0, 2)) * 60 + Number(sendTime.slice(3, 5))
+  const current = k.getUTCDate() * 1440 + k.getUTCHours() * 60 + k.getUTCMinutes()
+  return current >= sendDay * 1440 + minutes
 }

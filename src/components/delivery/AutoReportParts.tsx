@@ -6,6 +6,9 @@ import {
   generateReport,
   getAutoSettings,
   getMailPreview,
+  listAllDeliveryReports,
+  listDeliveryReports,
+  listGenerations,
   rejectDraft,
   saveAutoSettings,
   type AutoSettings,
@@ -17,7 +20,18 @@ import { cx } from '../../utils/cx'
 import { Btn } from '../common/Btn'
 import { Modal } from '../common/Modal'
 import { useToast } from '../common/Toast'
-import { STATE_LABEL, draftTitle, kstDateTime, reportState, scheduleGapMinutes, type AutoState } from './autoReportState'
+import {
+  STATE_LABEL,
+  draftTitle,
+  generationBlock,
+  kstDateTime,
+  monthLabel,
+  reportState,
+  scheduleGapMinutes,
+  sendTimePassed,
+  targetMonth,
+  type AutoState,
+} from './autoReportState'
 
 /** mint-server#232 — 자동 생성 초안 검토와 자동 발송 설정 (Design 시안 E1~E5·M1, 승인 2026-11-03). */
 
@@ -339,7 +353,7 @@ function formatBytes(bytes: number): string {
 const DAYS = Array.from({ length: 28 }, (_, i) => i + 1)
 const TIMES = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`)
 
-export function AutoSettingsCard() {
+export function AutoSettingsCard({ onGenerated }: { onGenerated: (generationId: string) => void }) {
   const settings = useQuery({ queryKey: ['delivery-auto-settings'], queryFn: getAutoSettings })
   if (!settings.data) {
     return (
@@ -351,10 +365,13 @@ export function AutoSettingsCard() {
       </section>
     )
   }
-  return <AutoSettingsForm key={JSON.stringify(settings.data)} initial={settings.data} />
+  // Only saved values reset the form; a new draft changes `next` and must not drop unsaved edits.
+  const { enabled, editions, generate_day, generate_time, send_day, send_time, notify_webhook } = settings.data
+  const savedKey = JSON.stringify([enabled, editions, generate_day, generate_time, send_day, send_time, notify_webhook])
+  return <AutoSettingsForm key={savedKey} initial={settings.data} onGenerated={onGenerated} />
 }
 
-function AutoSettingsForm({ initial }: { initial: AutoSettings }) {
+function AutoSettingsForm({ initial, onGenerated }: { initial: AutoSettings; onGenerated: (generationId: string) => void }) {
   const toast = useToast()
   const qc = useQueryClient()
   const [enabled, setEnabled] = useState(initial.enabled)
@@ -390,6 +407,60 @@ function AutoSettingsForm({ initial }: { initial: AutoSettings }) {
       return next
     })
   const next = initial.next
+
+  // 지금 만들기 (spec §6): saved editions, last month in KST. Works with the server flag off.
+  const [confirmMake, setConfirmMake] = useState(false)
+  const reports = useQuery({ queryKey: ['delivery-reports'], queryFn: listDeliveryReports })
+  const generations = useQuery({ queryKey: ['delivery-generations'], queryFn: listGenerations })
+  const month = targetMonth()
+  const savedEditions = initial.editions.filter((e) => e.selected)
+  const editionsChanged = editions.size !== savedEditions.length || savedEditions.some((e) => !editions.has(e.id))
+  const stateKnown = Boolean(reports.data && generations.data)
+  const makeable = stateKnown
+    ? savedEditions.filter((e) => !generationBlock(e.id, month, reports.data ?? [], generations.data ?? []))
+    : []
+  const make = useMutation({
+    // The screen's lists are cached and capped, and the server would replace an approved or sent
+    // draft, so decide again from fresh data at the moment of the click.
+    mutationFn: async () => {
+      const [freshReports, freshGenerations] = await Promise.all([listAllDeliveryReports(), listGenerations()])
+      const targets = savedEditions.filter((e) => !generationBlock(e.id, month, freshReports, freshGenerations))
+      const results = await Promise.allSettled(targets.map((e) => generateReport(e.id, month)))
+      return { results, attempted: makeable.length }
+    },
+    onError: (e) => {
+      setConfirmMake(false)
+      toast(apiErrorDetail(e) || '초안 상태를 확인하지 못해 만들지 않았습니다.', 'err')
+    },
+    onSuccess: ({ results, attempted }) => {
+      setConfirmMake(false)
+      for (const key of ['delivery-generations', 'delivery-reports', 'delivery-auto-settings']) {
+        void qc.invalidateQueries({ queryKey: [key] })
+      }
+      const started = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
+      if (started.length) {
+        toast('초안을 만들고 있습니다. 창을 닫아도 서버에서 계속 만듭니다. 다 만들면 관리자에게 알립니다.')
+        onGenerated(started[0].id)
+      }
+      for (const r of results) {
+        if (r.status === 'rejected') toast(apiErrorDetail(r.reason) || '초안을 만들지 못했습니다.', 'err')
+      }
+      if (results.length < attempted) toast('그 사이 초안이 생긴 분야는 만들지 않았습니다.', 'err')
+    },
+  })
+  const makeHint = !savedEditions.length
+    ? '분야를 고르고 저장한 뒤 만들 수 있습니다.'
+    : editionsChanged
+      ? '바꾼 분야를 저장한 뒤 만들 수 있습니다.'
+      : !stateKnown
+        ? reports.isError || generations.isError
+          ? '초안 상태를 확인하지 못해 만들 수 없습니다.'
+          : '초안 상태를 확인하는 중입니다.'
+        : !makeable.length
+          ? `${monthLabel(month)} 초안이 이미 있거나 만드는 중입니다. 검토 대기 초안은 초안 검토에서 다시 만들 수 있습니다.`
+          : `${monthLabel(month)} 초안을 지금 만듭니다. 자동으로 보내지 않습니다.`
+  const makeDisabled = !savedEditions.length || editionsChanged || !stateKnown || !makeable.length || make.isPending
+  const deadlinePassed = sendTimePassed(initial.send_day, initial.send_time)
 
   return (
     <section className="card dlv-card dlv-auto" aria-labelledby="dlv-auto-title">
@@ -485,6 +556,49 @@ function AutoSettingsForm({ initial }: { initial: AutoSettings }) {
           설정 저장
         </Btn>
       </div>
+      <div className="dlv-auto-foot dlv-auto-make">
+        <p className="dlv-hint">{makeHint}</p>
+        <Btn variant="outline" disabled={makeDisabled} onClick={() => setConfirmMake(true)}>
+          {make.isPending ? '요청 중…' : '지금 만들기'}
+        </Btn>
+      </div>
+      {confirmMake && (
+        <Modal
+          title="초안을 지금 만들까요?"
+          onClose={() => setConfirmMake(false)}
+          footer={
+            <>
+              <Btn variant="outline" onClick={() => setConfirmMake(false)}>
+                취소
+              </Btn>
+              <Btn variant="primary" disabled={make.isPending || !makeable.length} onClick={() => make.mutate()}>
+                {make.isPending ? '요청 중…' : '지금 만들기'}
+              </Btn>
+            </>
+          }
+        >
+          {makeable.map((e) => (
+            <p key={e.id} className="dlv-make-line">
+              {monthLabel(month)} {e.name} 초안을 만듭니다. 자동으로 보내지 않습니다.
+            </p>
+          ))}
+          {makeable.length < savedEditions.length && (
+            <p className="dlv-hint">
+              {savedEditions
+                .filter((e) => !makeable.includes(e))
+                .map((e) => e.name)
+                .join(', ')}
+              : 이 달 초안이 이미 있거나 만드는 중이라 만들지 않습니다.
+            </p>
+          )}
+          {deadlinePassed && (
+            <p className="dlv-error dlv-make-warn">
+              이번 달 발송 시각(매달 {initial.send_day}일 {initial.send_time})이 이미 지났습니다. 이 초안은 확인할 수 있지만 승인해 자동으로 보낼 수는 없습니다.
+            </p>
+          )}
+          <p className="dlv-hint">AI 생성 비용이 드는 작업이라 보통 몇 분 걸립니다. 다 만들면 관리자에게 알립니다.</p>
+        </Modal>
+      )}
     </section>
   )
 }
