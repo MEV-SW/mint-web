@@ -5559,3 +5559,56 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .dlv-auto-make { margin-top: 12px; }
 .dlv-make-line { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
 .dlv-make-warn { margin: 0 0 8px; font-size: 13px; line-height: 1.6; }
+
+/* mint-server#235 이메일 보고서 세부 관리 */
+
+/* 받는 사람: 찾기·필터 */
+.dlv-recipient-tools { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; padding-top: 14px; border-top: 1px solid var(--line2); }
+.dlv-recipient-tools .input { flex: 1; min-width: 0; }
+.dlv-recipient-tools .seg { flex: none; }
+.dlv-recipient-bulk { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 12.5px; color: var(--ink2); }
+.dlv-recipient-bulk-actions { display: flex; gap: 8px; }
+
+/* 받는 사람: 줄과 긴 목록 */
+.dlv-recipient { grid-template-columns: minmax(80px, 0.6fr) minmax(0, 1.4fr) auto auto auto; }
+.dlv-recipient-list.is-scroll { max-height: 372px; overflow-y: auto; border-top: 1px solid var(--line2); border-bottom: 1px solid var(--line2); }
+.dlv-recipient.is-editing { grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1.2fr) auto auto; }
+.dlv-recipient.is-editing .input { height: 32px; font-size: 13.5px; }
+
+/* 보고서 목록: 실패 사유 */
+.dlv-report-main { overflow: hidden; }
+.dlv-report-reason { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.dlv-reason-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+
+/* 보고서 정보 창 */
+.dlv-lock-note { margin: 0 0 18px; padding: 10px 12px; background: var(--tint); font-size: 13px; line-height: 1.55; color: var(--ink2); }
+.modal .input:disabled { background: var(--tint); color: var(--ink2); cursor: not-allowed; }
+.seg.is-locked { opacity: 0.6; }
+.seg.is-locked button { cursor: not-allowed; }
+.dlv-confirm dd.is-plain { font-weight: 500; }
+
+/* 발송 기록 */
+.dlv-history-tools { display: inline-flex; align-items: center; gap: 14px; }
+.dlv-history-tools .dlv-check { font-size: 12.5px; color: var(--ink2); }
+.dlv-history-detail-group + .dlv-history-detail-group { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.dlv-history-find { max-width: 320px; height: 34px; margin-bottom: 10px; font-size: 13px; }
+.dlv-history-detail ul.is-scroll { max-height: 264px; overflow-y: auto; padding-right: 8px; }
+.dlv-history-detail li.is-received.no-addr { grid-template-columns: minmax(70px, 0.5fr) minmax(0, 2.4fr); }
+.dlv-history-sent { font-size: 12.5px; color: var(--ink2); }
+
+@media (max-width: 767px) {
+  .dlv-recipient-tools { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .dlv-recipient-tools .seg { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .dlv-recipient-bulk { display: grid; }
+  .dlv-recipient-bulk-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .dlv-recipient { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+  .dlv-recipient .switch { grid-column: 2; }
+  .dlv-recipient .dlv-text-btn { grid-column: auto; }
+  .dlv-recipient-list.is-scroll { max-height: 420px; }
+  .dlv-recipient.is-editing { grid-template-columns: minmax(0, 1fr) auto auto; row-gap: 6px; }
+  .dlv-recipient.is-editing .input { grid-column: 1 / -1; grid-row: 1; }
+  .dlv-recipient.is-editing .dlv-mono { grid-column: 1; grid-row: 2; }
+  .dlv-history-tools { gap: 10px; }
+  .dlv-history-find { max-width: none; }
+  .dlv-history-detail li.is-received, .dlv-history-detail li.is-received.no-addr { grid-template-columns: minmax(0, 1fr); }
+}
